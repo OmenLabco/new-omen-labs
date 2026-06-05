@@ -17,13 +17,13 @@ export default function OrderConfirmed() {
 
         <div className="flex items-center justify-center gap-2 mb-3">
           <div className="h-px w-6 bg-primary" />
-          <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-primary">Payment Confirmed</span>
+          <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-primary">Order Received</span>
           <div className="h-px w-6 bg-primary" />
         </div>
 
         <h1 className="text-3xl font-bold tracking-tight mb-3">Order Received</h1>
         <p className="text-muted-foreground leading-relaxed mb-8">
-          Your order has been placed successfully. You'll receive a confirmation email shortly with your order details and tracking information.
+          Your order has been received. We'll email you shortly to confirm payment and shipping details.
         </p>
 
         <div className="p-4 rounded-xl border border-border bg-card mb-8 text-left">

@@ -1,11 +1,31 @@
-import { Link, useOutletContext } from 'react-router-dom';
-import { ArrowLeft, Package, Wrench } from 'lucide-react';
+import { useState } from 'react';
+import { Link, useOutletContext, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Package, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cart } from '@/lib/cart';
+
+const FIELDS = [
+  { name: 'name', label: 'Full Name', required: true, half: true },
+  { name: 'email', label: 'Email', required: true, half: true, type: 'email' },
+  { name: 'phone', label: 'Phone (optional)', half: true },
+  { name: 'country', label: 'Country', half: true, default: 'United States' },
+  { name: 'address', label: 'Address', required: true },
+  { name: 'address2', label: 'Apt / Suite (optional)' },
+  { name: 'city', label: 'City', required: true, third: true },
+  { name: 'state', label: 'State', third: true },
+  { name: 'zip', label: 'ZIP', required: true, third: true },
+];
 
 export default function Checkout() {
-  const { cartItems } = useOutletContext();
+  const { cartItems, loadCart } = useOutletContext();
+  const navigate = useNavigate();
   const items = cartItems || [];
   const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
+
+  const [form, setForm] = useState({ country: 'United States' });
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   if (items.length === 0) {
     return (
@@ -18,6 +38,31 @@ export default function Checkout() {
       </div>
     );
   }
+
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      const resp = await fetch('/api/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customer: { ...form, notes }, items, total }),
+      });
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        throw new Error(data.error || 'Something went wrong submitting your order.');
+      }
+      cart.clear();
+      loadCart();
+      navigate('/order-confirmed');
+    } catch (err) {
+      setError(err.message);
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen py-16 px-6">
@@ -59,16 +104,57 @@ export default function Checkout() {
           </div>
         </div>
 
-        {/* Payment coming soon notice */}
-        <div className="p-6 rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] flex items-start gap-4">
-          <Wrench className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-medium text-amber-500 mb-1">Payment Integration Coming Soon</p>
-            <p className="text-sm text-muted-foreground">
-              We're setting up our new secure payment processor. To place an order now, please contact us directly.
-            </p>
+        {/* Shipping / order form */}
+        <form onSubmit={handleSubmit} className="p-6 rounded-2xl border border-border bg-card">
+          <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-5">Shipping Details</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
+            {FIELDS.map((f) => (
+              <div
+                key={f.name}
+                className={f.third ? 'sm:col-span-2' : f.half ? 'sm:col-span-3' : 'sm:col-span-6'}
+              >
+                <label className="block font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
+                  {f.label}
+                </label>
+                <input
+                  name={f.name}
+                  type={f.type || 'text'}
+                  required={f.required}
+                  value={form[f.name] || ''}
+                  onChange={handleChange}
+                  className="w-full h-11 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+            ))}
+            <div className="sm:col-span-6">
+              <label className="block font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
+                Order Notes (optional)
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
           </div>
-        </div>
+
+          {error && (
+            <p className="mt-4 text-sm text-destructive">{error}</p>
+          )}
+
+          <Button type="submit" disabled={submitting} className="w-full h-12 mt-6 text-sm font-medium tracking-wide">
+            {submitting ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting Order…</>
+            ) : (
+              `Place Order — $${total.toFixed(2)}`
+            )}
+          </Button>
+
+          <p className="mt-4 text-[12px] text-muted-foreground text-center">
+            We'll email you to confirm payment and shipping. No card is charged on this page.
+          </p>
+        </form>
 
         <p className="mt-6 font-mono text-[10px] text-muted-foreground text-center uppercase tracking-wider">
           For Research Use Only

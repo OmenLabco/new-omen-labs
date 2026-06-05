@@ -2,8 +2,9 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import path from 'path'
 
+// BASE_PATH lets the same code deploy to Cloudflare/root ('/') and GitHub Pages ('/new-omen-labs/').
 export default defineConfig({
-  base: '/new-omen-labs/',
+  base: process.env.BASE_PATH || '/',
   plugins: [react()],
   resolve: {
     alias: {
