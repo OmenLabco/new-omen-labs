@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /usr /opt /Users/drakob -name \"npm\" -type f 2>/dev/null | head -5)"
+    ]
+  }
+}
