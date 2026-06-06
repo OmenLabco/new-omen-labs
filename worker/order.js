@@ -18,10 +18,10 @@ const esc = (s = '') =>
   ));
 
 function orderNumber() {
-  const d = new Date();
-  const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `OL-${stamp}-${rand}`;
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return `OMEN-${code}`;
 }
 
 export async function handleOrder(request, env) {
