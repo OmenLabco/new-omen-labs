@@ -164,6 +164,9 @@ export default function ProductDetail() {
               <p className="mt-4 font-mono text-[10px] text-destructive text-center uppercase tracking-wider">
                 For Research Use Only
               </p>
+              <p className="mt-1.5 font-mono text-[10px] text-muted-foreground text-center uppercase tracking-wider">
+                All sales are final — no returns or exchanges
+              </p>
             </div>
           </div>
 

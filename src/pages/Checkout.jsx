@@ -154,6 +154,9 @@ export default function Checkout() {
           <p className="mt-4 text-[12px] text-muted-foreground text-center">
             We'll email you to confirm payment and shipping. No card is charged on this page.
           </p>
+          <p className="mt-2 font-mono text-[10px] text-destructive text-center uppercase tracking-wider">
+            All sales are final — no returns or exchanges
+          </p>
         </form>
 
         <p className="mt-6 font-mono text-[10px] text-muted-foreground text-center uppercase tracking-wider">

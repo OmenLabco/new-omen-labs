@@ -80,9 +80,9 @@ export default function Footer() {
             <span className="font-mono text-[11px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
               Privacy Policy
             </span>
-            <span className="font-mono text-[11px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+            <Link to="/terms" className="font-mono text-[11px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
               Terms of Service
-            </span>
+            </Link>
           </div>
         </div>
       </div>
