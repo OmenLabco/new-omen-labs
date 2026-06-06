@@ -1,21 +1,18 @@
-// Order handler — saves the order to D1 (if configured) and emails it via Resend (if configured).
+// Order handler — saves the order to D1 (if configured) and sends branded emails via Resend.
 //
 // Environment:
 //   DB               - D1 database binding (optional; orders saved if present)
-//   RESEND_API_KEY   - Resend API key (optional; email sent if present)
-//   ORDER_TO_EMAIL   - where orders are sent (default: support@omenlabs.co)
-//   ORDER_FROM_EMAIL - verified sender (default: Omen Labs Orders <orders@omenlabs.co>)
+//   RESEND_API_KEY   - Resend API key (optional; emails sent if present)
+//   ORDER_TO_EMAIL   - owner notification inbox (default: support@omenlabs.co)
+//   ORDER_FROM_EMAIL - verified sender (default: Omen Labs <orders@omenlabs.co>)
+
+import { renderOrderConfirmation, renderOwnerNotification, sendEmail } from './email.js';
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
-
-const esc = (s = '') =>
-  String(s).replace(/[&<>"']/g, (c) => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
-  ));
 
 function orderNumber() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -75,66 +72,41 @@ export async function handleOrder(request, env) {
     }
   }
 
-  // 2) Email via Resend if configured (best effort — order is already saved)
+  // Build an order object for the email templates
+  const order = {
+    order_number,
+    customer_name: customer.name,
+    customer_email: customer.email,
+    customer_phone: customer.phone || '',
+    address: customer.address,
+    address2: customer.address2 || '',
+    city: customer.city,
+    state: customer.state || '',
+    zip: customer.zip,
+    country: customer.country || 'United States',
+    notes: customer.notes || '',
+    items,
+    total: Number(total),
+  };
+
+  // 2) Emails via Resend (best effort — order is already saved)
   if (env.RESEND_API_KEY) {
-    const to = env.ORDER_TO_EMAIL || 'support@omenlabs.co';
-    const from = env.ORDER_FROM_EMAIL || 'Omen Labs Orders <orders@omenlabs.co>';
-
-    const rows = items
-      .map(
-        (i) => `<tr>
-          <td style="padding:8px;border-bottom:1px solid #eee">${esc(i.product_name)}</td>
-          <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${esc(i.quantity)}</td>
-          <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">$${Number(i.price).toFixed(2)}</td>
-          <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">$${(Number(i.price) * Number(i.quantity)).toFixed(2)}</td>
-        </tr>`
-      )
-      .join('');
-
-    const html = `
-      <div style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:0 auto;color:#111">
-        <h2>New Order — ${esc(order_number)}</h2>
-        <h3>Customer</h3>
-        <p>
-          <strong>${esc(customer.name)}</strong><br/>
-          ${esc(customer.email)}${customer.phone ? ' · ' + esc(customer.phone) : ''}<br/>
-          ${esc(customer.address)}${customer.address2 ? ', ' + esc(customer.address2) : ''}<br/>
-          ${esc(customer.city)}, ${esc(customer.state || '')} ${esc(customer.zip)}<br/>
-          ${esc(customer.country || 'United States')}
-        </p>
-        ${customer.notes ? `<p><strong>Notes:</strong> ${esc(customer.notes)}</p>` : ''}
-        <h3>Order</h3>
-        <table style="width:100%;border-collapse:collapse;font-size:14px">
-          <thead><tr>
-            <th style="padding:8px;text-align:left;border-bottom:2px solid #333">Item</th>
-            <th style="padding:8px;text-align:center;border-bottom:2px solid #333">Qty</th>
-            <th style="padding:8px;text-align:right;border-bottom:2px solid #333">Unit</th>
-            <th style="padding:8px;text-align:right;border-bottom:2px solid #333">Subtotal</th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <p style="text-align:right;font-size:18px;margin-top:16px"><strong>Total: $${Number(total).toFixed(2)}</strong></p>
-        <p style="color:#888;font-size:12px;margin-top:24px">${created_date} · For Research Use Only</p>
-      </div>`;
-
-    try {
-      await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          from,
-          to: [to],
-          reply_to: customer.email,
-          subject: `New Order ${order_number} — ${customer.name} — $${Number(total).toFixed(2)}`,
-          html,
-        }),
-      });
-    } catch {
-      // ignore email failure; order is saved
-    }
+    const ownerInbox = env.ORDER_TO_EMAIL || 'support@omenlabs.co';
+    // Customer confirmation (branded "Order Confirmed")
+    await sendEmail(env, {
+      to: customer.email,
+      subject: `Order Confirmed — ${order_number}`,
+      html: renderOrderConfirmation(order),
+    });
+    // Owner notification with full shipping details
+    await sendEmail(env, {
+      to: ownerInbox,
+      subject: `New Order ${order_number} — ${customer.name} — $${Number(total).toFixed(2)}`,
+      html: renderOwnerNotification(order),
+      replyTo: customer.email,
+    });
   }
 
-  // If neither storage nor email is configured, the order has nowhere to go.
   if (!env.DB && !env.RESEND_API_KEY) {
     return json({ error: 'Order service not configured.' }, 500);
   }
