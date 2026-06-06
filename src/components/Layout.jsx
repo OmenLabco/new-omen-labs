@@ -5,7 +5,6 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 import ScrollProgress from './ScrollProgress';
 import CartDock from './CartDock';
-import AgeGate from './AgeGate';
 
 export default function Layout() {
   const [cartOpen, setCartOpen] = useState(false);
@@ -37,7 +36,6 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AgeGate />
       <ScrollProgress />
       <Navbar cartCount={cartItems.reduce((s, i) => s + i.quantity, 0)} onCartOpen={() => setCartOpen(true)} />
       <main>

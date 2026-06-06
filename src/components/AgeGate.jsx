@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import OmenLogo from './OmenLogo';
 import { Button } from '@/components/ui/button';
 
 const STORAGE_KEY = 'omenlabs_age_verified';
+const EXEMPT_PATHS = ['/terms', '/restricted'];
 
 export default function AgeGate() {
   const [verified, setVerified] = useState(true); // assume true until we check (avoids flash)
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     setVerified(localStorage.getItem(STORAGE_KEY) === 'true');
@@ -17,10 +21,11 @@ export default function AgeGate() {
   };
 
   const decline = () => {
-    window.location.href = 'https://www.google.com';
+    navigate('/restricted');
   };
 
-  if (verified) return null;
+  // Don't gate the terms or the restricted page
+  if (verified || EXEMPT_PATHS.includes(location.pathname)) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur-md px-6">
@@ -49,8 +54,11 @@ export default function AgeGate() {
         </div>
 
         <p className="mt-8 text-[13px] text-muted-foreground leading-relaxed max-w-md mx-auto">
-          By entering you confirm you are of legal age and agree to our terms of service. Products are for research use
-          only.
+          By entering you confirm you are of legal age and agree to our{' '}
+          <Link to="/terms" className="underline hover:text-foreground transition-colors">
+            terms of service
+          </Link>
+          . Products are for research use only.
         </p>
       </div>
     </div>

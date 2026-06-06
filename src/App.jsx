@@ -2,6 +2,9 @@ import { Toaster } from "@/components/ui/toaster"
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import Layout from './components/Layout';
+import AgeGate from './components/AgeGate';
+import Terms from './pages/Terms';
+import AccessRestricted from './pages/AccessRestricted';
 import Home from './pages/Home';
 import Catalog from './pages/Catalog';
 import ProductDetail from './pages/ProductDetail';
@@ -17,9 +20,12 @@ import AdminOrders from './pages/AdminOrders';
 function App() {
   return (
     <Router basename={import.meta.env.BASE_URL}>
+      <AgeGate />
       <Routes>
+        <Route path="/restricted" element={<AccessRestricted />} />
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="/catalog" element={<Catalog />} />
           <Route path="/product/:slug" element={<ProductDetail />} />
           <Route path="/about" element={<About />} />
