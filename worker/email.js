@@ -1,4 +1,4 @@
-// Shared branded HTML email templates for Omen Labs (recreates the Base44 order email design).
+// Shared branded HTML email templates for Omen Labs — dark theme matching the storefront.
 
 export const esc = (s = '') =>
   String(s).replace(/[&<>"']/g, (c) => (
@@ -9,35 +9,54 @@ export const esc = (s = '') =>
 export const STATUS_MESSAGE = {
   processing: "Your order has been received and is being processed. You'll receive a shipping notification once your compounds are dispatched.",
   confirmed: 'Your order has been confirmed and is being prepared for shipment.',
-  shipped: 'Good news — your order is on its way!',
+  shipped: 'Good news — your order is on its way! Use the tracking number below to follow its progress.',
   out_for_delivery: 'Your order is out for delivery and should arrive today.',
   delivered: 'Your order has been delivered. Thank you for choosing Omen Labs.',
 };
 
+// Palette
+const BG = '#0a0e1a';
+const CARD = '#0c1222';
+const PANEL = '#0e1426';
+const BORDER = '#1b2438';
+const ROW_BORDER = '#161d30';
+const BLUE = '#5b8bf7';
+const WHITE = '#ffffff';
+const MUTED = '#9aa3b8';
+const MONO = "'SF Mono',ui-monospace,Menlo,Consolas,monospace";
+
 function layout(inner) {
   return `<!doctype html>
 <html>
-<body style="margin:0;background:#f4f4f5;padding:24px 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif">
+<body style="margin:0;background:${BG};padding:32px 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e6e6e9">
-      <tr><td style="background:#0a0c14;padding:26px 32px;text-align:center">
-        <span style="color:#ffffff;font-size:13px;letter-spacing:6px;font-weight:600">OMEN&nbsp;LABS</span>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:${CARD};border-radius:16px;border:1px solid ${BORDER}">
+      <tr><td style="padding:40px 40px 0">
+        <div style="color:${BLUE};font-family:${MONO};font-size:12px;letter-spacing:5px;text-transform:uppercase">OMEN&nbsp;LABS</div>
+        ${inner}
       </td></tr>
-      <tr><td style="padding:32px">${inner}</td></tr>
-      <tr><td style="padding:18px 32px;border-top:1px solid #eeeeee;text-align:center">
-        <span style="color:#9a9aa2;font-size:10px;letter-spacing:1.5px;text-transform:uppercase">For Research Use Only — Not for Human Consumption</span>
+      <tr><td style="padding:28px 40px 36px">
+        <div style="border-top:1px solid ${BORDER};padding-top:22px">
+          <p style="color:${MUTED};font-size:13px;line-height:1.6;margin:0">Questions? Reply to this email or contact us at <a href="mailto:support@omenlabs.co" style="color:${BLUE};text-decoration:none">support@omenlabs.co</a></p>
+          <p style="color:#566076;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;margin:16px 0 0">For Research Use Only — Not for Human Consumption</p>
+        </div>
       </td></tr>
     </table>
-    <p style="color:#b0b0b6;font-size:11px;margin-top:16px">© ${new Date().getFullYear()} Omen Labs · omenlabs.co</p>
+    <p style="color:#3f475c;font-size:11px;margin-top:16px">© ${new Date().getFullYear()} Omen Labs · omenlabs.co</p>
   </td></tr></table>
 </body>
 </html>`;
 }
 
+const heading = (t) => `<h1 style="color:${WHITE};font-size:30px;font-weight:700;margin:14px 0 0;letter-spacing:-0.5px">${esc(t)}</h1>`;
+const divider = () => `<div style="border-top:1px solid ${BORDER};margin:28px 0"></div>`;
+const para = (t) => `<p style="color:${MUTED};font-size:16px;line-height:1.65;margin:0 0 14px">${t}</p>`;
+const label = (t) => `<div style="color:${BLUE};font-family:${MONO};font-size:12px;letter-spacing:2px;text-transform:uppercase;margin:0 0 8px">${esc(t)}</div>`;
+
 function orderNumberBlock(order) {
-  return `<div style="background:#f4f4f5;border-radius:10px;padding:16px;text-align:center;margin:24px 0">
-    <div style="font-size:11px;letter-spacing:1.5px;color:#8a8a90;text-transform:uppercase">Order Number</div>
-    <div style="font-size:20px;font-weight:700;font-family:'SF Mono',Menlo,monospace;margin-top:6px;color:#0a0c14">${esc(order.order_number)}</div>
+  return `<div style="margin:26px 0">
+    ${label('Order Number')}
+    <div style="color:${WHITE};font-family:${MONO};font-size:22px;font-weight:700">#${esc(order.order_number)}</div>
   </div>`;
 }
 
@@ -46,27 +65,32 @@ function itemsTable(order) {
   const rows = items
     .map(
       (i) => `<tr>
-        <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#222">${esc(i.product_name || i.name)} <span style="color:#999">× ${esc(i.quantity)}</span></td>
-        <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#222;text-align:right">$${(Number(i.price) * Number(i.quantity)).toFixed(2)}</td>
+        <td style="padding:16px 20px;border-bottom:1px solid ${ROW_BORDER};font-size:15px;color:#e5e8ef">${esc(i.product_name || i.name)}</td>
+        <td style="padding:16px 20px;border-bottom:1px solid ${ROW_BORDER};font-size:15px;color:#c2c8d4;text-align:center">${esc(i.quantity)}</td>
+        <td style="padding:16px 20px;border-bottom:1px solid ${ROW_BORDER};font-size:15px;color:#e5e8ef;text-align:right">$${(Number(i.price) * Number(i.quantity)).toFixed(2)}</td>
       </tr>`
     )
     .join('');
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px">
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;background:${PANEL};border:1px solid ${BORDER};border-radius:12px;border-collapse:separate;overflow:hidden">
+      <tr>
+        <td style="padding:14px 20px;font-family:${MONO};font-size:11px;letter-spacing:1px;text-transform:uppercase;color:${BLUE}">Product</td>
+        <td style="padding:14px 20px;font-family:${MONO};font-size:11px;letter-spacing:1px;text-transform:uppercase;color:${BLUE};text-align:center">Qty</td>
+        <td style="padding:14px 20px;font-family:${MONO};font-size:11px;letter-spacing:1px;text-transform:uppercase;color:${BLUE};text-align:right">Amount</td>
+      </tr>
       ${rows}
       <tr>
-        <td style="padding:14px 0 0;font-size:15px;font-weight:700;color:#0a0c14">Total</td>
-        <td style="padding:14px 0 0;font-size:15px;font-weight:700;color:#0a0c14;text-align:right">$${Number(order.total).toFixed(2)}</td>
+        <td style="padding:18px 20px;font-family:${MONO};font-size:11px;letter-spacing:1px;text-transform:uppercase;color:${BLUE}">Total</td>
+        <td></td>
+        <td style="padding:18px 20px;font-size:18px;font-weight:700;color:${WHITE};text-align:right">$${Number(order.total).toFixed(2)}</td>
       </tr>
     </table>`;
 }
 
-const h1 = (t) => `<h1 style="font-size:24px;font-weight:700;color:#0a0c14;margin:0 0 8px">${esc(t)}</h1>`;
-const para = (t) => `<p style="font-size:15px;line-height:1.6;color:#444;margin:0 0 4px">${t}</p>`;
-
 // Customer order confirmation — recreates the Base44 "Order Confirmed" email
 export function renderOrderConfirmation(order) {
   return layout(`
-    ${h1('Order Confirmed')}
+    ${heading('Order Confirmed')}
+    ${divider()}
     ${para(`Hi ${esc(order.customer_name || 'there')},`)}
     ${para("Your order has been received and is being processed. You'll receive a shipping notification once your compounds are dispatched.")}
     ${orderNumberBlock(order)}
@@ -76,16 +100,14 @@ export function renderOrderConfirmation(order) {
 
 // Customer status update email
 export function renderStatusUpdate(order, status) {
-  const label = (status || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-  const msg = STATUS_MESSAGE[status] || `Your order status is now: ${esc(label)}.`;
+  const lbl = (status || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  const msg = STATUS_MESSAGE[status] || `Your order status is now: ${lbl}.`;
   const tracking = order.tracking_number
-    ? `<div style="background:#f4f4f5;border-radius:10px;padding:14px 16px;margin:20px 0">
-        <span style="font-size:11px;letter-spacing:1px;color:#8a8a90;text-transform:uppercase">Tracking Number</span><br/>
-        <span style="font-size:15px;font-family:'SF Mono',Menlo,monospace;color:#0a0c14">${esc(order.tracking_number)}</span>
-      </div>`
+    ? `<div style="margin:26px 0">${label('Tracking Number')}<div style="color:${WHITE};font-family:${MONO};font-size:16px">${esc(order.tracking_number)}</div></div>`
     : '';
   return layout(`
-    ${h1(label)}
+    ${heading(lbl)}
+    ${divider()}
     ${para(`Hi ${esc(order.customer_name || 'there')},`)}
     ${para(esc(msg))}
     ${tracking}
@@ -98,15 +120,16 @@ export function renderStatusUpdate(order, status) {
 export function renderOwnerNotification(order) {
   const c = order;
   return layout(`
-    ${h1('New Order Received')}
+    ${heading('New Order Received')}
+    ${divider()}
+    ${label('Customer')}
+    ${para(`<span style="color:#e5e8ef;font-weight:600">${esc(c.customer_name)}</span><br/>
+      ${esc(c.customer_email)}${c.customer_phone ? ' · ' + esc(c.customer_phone) : ''}<br/>
+      ${esc(c.address)}${c.address2 ? ', ' + esc(c.address2) : ''}<br/>
+      ${esc(c.city)}, ${esc(c.state || '')} ${esc(c.zip)}<br/>
+      ${esc(c.country || 'United States')}`)}
+    ${c.notes ? para(`<span style="color:${BLUE}">Notes:</span> ${esc(c.notes)}`) : ''}
     ${orderNumberBlock(order)}
-    <p style="font-size:13px;letter-spacing:1px;color:#8a8a90;text-transform:uppercase;margin:0 0 6px">Customer</p>
-    ${para(`<strong>${esc(c.customer_name)}</strong>`)}
-    ${para(`${esc(c.customer_email)}${c.customer_phone ? ' · ' + esc(c.customer_phone) : ''}`)}
-    ${para(`${esc(c.address)}${c.address2 ? ', ' + esc(c.address2) : ''}`)}
-    ${para(`${esc(c.city)}, ${esc(c.state || '')} ${esc(c.zip)}`)}
-    ${para(esc(c.country || 'United States'))}
-    ${c.notes ? para(`<strong>Notes:</strong> ${esc(c.notes)}`) : ''}
     ${itemsTable(order)}
   `);
 }
