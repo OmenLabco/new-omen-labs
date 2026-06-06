@@ -24,37 +24,33 @@ export default function AgeGate() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur-md px-6">
-      <div className="max-w-md w-full text-center rounded-2xl border border-border bg-card p-8 shadow-2xl">
-        <div className="flex justify-center mb-6">
-          <OmenLogo size={40} className="text-primary" />
+      <div className="max-w-lg w-full text-center rounded-2xl border border-border bg-card p-10 shadow-2xl">
+        <div className="flex justify-center mb-4">
+          <OmenLogo size={44} className="text-foreground" />
         </div>
 
-        <div className="flex items-center justify-center gap-2 mb-3">
-          <div className="h-px w-6 bg-primary" />
-          <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-primary">Age Verification</span>
-          <div className="h-px w-6 bg-primary" />
-        </div>
-
-        <h1 className="text-2xl font-bold tracking-tight mb-3">You must be 21 or older</h1>
-        <p className="text-sm text-muted-foreground leading-relaxed mb-2">
-          All products are sold strictly <strong>for laboratory and research use only</strong> — not for human or
-          animal consumption.
+        <p className="font-mono text-[12px] uppercase tracking-[0.4em] text-muted-foreground mb-6">
+          Omen Labs
         </p>
-        <p className="text-sm text-muted-foreground leading-relaxed mb-8">
-          By entering, you confirm that you are at least 21 years of age and agree to our Terms of Use.
+
+        <h1 className="text-4xl font-bold tracking-tight mb-5">Age Verification</h1>
+        <p className="text-base text-muted-foreground leading-relaxed mb-9 max-w-md mx-auto">
+          This site contains research compounds intended for adults only. You must be{' '}
+          <strong className="text-foreground">21 years or older</strong> to enter.
         </p>
 
         <div className="flex flex-col gap-3">
-          <Button onClick={accept} className="w-full h-12 text-sm font-medium tracking-wide">
-            I am 21 or older — Enter
+          <Button onClick={accept} className="w-full h-14 text-base font-semibold tracking-wide">
+            Yes, I am 21 or older
           </Button>
-          <Button onClick={decline} variant="outline" className="w-full h-11 text-sm">
-            I am under 21 — Exit
+          <Button onClick={decline} variant="outline" className="w-full h-14 text-base">
+            No, I am under 21
           </Button>
         </div>
 
-        <p className="mt-6 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-          For Research Use Only — Not for Human Consumption
+        <p className="mt-8 text-[13px] text-muted-foreground leading-relaxed max-w-md mx-auto">
+          By entering you confirm you are of legal age and agree to our terms of service. Products are for research use
+          only.
         </p>
       </div>
     </div>
