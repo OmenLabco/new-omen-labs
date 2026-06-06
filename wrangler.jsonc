@@ -2,6 +2,10 @@
   "name": "new-omen-labs",
   "main": "worker/index.js",
   "compatibility_date": "2024-11-01",
+  "routes": [
+    { "pattern": "omenlabs.co", "custom_domain": true },
+    { "pattern": "www.omenlabs.co", "custom_domain": true }
+  ],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
