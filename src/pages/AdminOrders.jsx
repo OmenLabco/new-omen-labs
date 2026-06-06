@@ -1,48 +1,117 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, ChevronDown, ChevronUp, Search } from 'lucide-react';
-// TODO: connect to your order database when payment processor is set up
+import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import OrderEditForm from '@/components/admin/OrderEditForm';
+import { adminAuth, adminLogin, fetchOrders } from '@/lib/adminApi';
+
+const STATUS_COLORS = {
+  processing: 'text-yellow-400 bg-yellow-400/10',
+  confirmed: 'text-blue-400 bg-blue-400/10',
+  shipped: 'text-purple-400 bg-purple-400/10',
+  out_for_delivery: 'text-orange-400 bg-orange-400/10',
+  delivered: 'text-green-400 bg-green-400/10',
+};
+
+function LoginScreen({ onSuccess }) {
+  const [pw, setPw] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setBusy(true);
+    const ok = await adminLogin(pw);
+    setBusy(false);
+    if (ok) onSuccess();
+    else setError('Incorrect password.');
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center px-6">
+      <form onSubmit={submit} className="w-full max-w-sm rounded-2xl border border-border bg-card p-8">
+        <div className="flex justify-center mb-5">
+          <div className="h-12 w-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+            <Lock className="h-5 w-5 text-primary" />
+          </div>
+        </div>
+        <h1 className="text-xl font-bold text-center mb-1">Admin Access</h1>
+        <p className="text-sm text-muted-foreground text-center mb-6">Enter your admin password to continue.</p>
+        <input
+          type="password"
+          value={pw}
+          onChange={(e) => setPw(e.target.value)}
+          placeholder="Password"
+          autoFocus
+          className="w-full h-11 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+        {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+        <Button type="submit" disabled={busy} className="w-full h-11 mt-5">
+          {busy ? 'Checking…' : 'Sign In'}
+        </Button>
+      </form>
+    </div>
+  );
+}
 
 export default function AdminOrders() {
+  const [authed, setAuthed] = useState(!!adminAuth.get());
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState(null);
 
-  const fetchOrders = async () => {
-    // TODO: fetch orders from your payment processor / database
-    const results = [];
-    setOrders(results);
-    setLoading(false);
+  const load = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      setOrders(await fetchOrders());
+    } catch (e) {
+      if (e.message === 'unauthorized') {
+        setAuthed(false);
+      } else {
+        setError(e.message);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => {
+    if (authed) load();
+  }, [authed]);
 
-  const filtered = orders.filter(o =>
-    !search ||
-    o.order_number?.toLowerCase().includes(search.toLowerCase()) ||
-    o.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
-    o.customer_email?.toLowerCase().includes(search.toLowerCase())
+  const logout = () => {
+    adminAuth.clear();
+    setAuthed(false);
+    setOrders([]);
+  };
+
+  if (!authed) return <LoginScreen onSuccess={() => setAuthed(true)} />;
+
+  const filtered = orders.filter(
+    (o) =>
+      !search ||
+      o.order_number?.toLowerCase().includes(search.toLowerCase()) ||
+      o.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
+      o.customer_email?.toLowerCase().includes(search.toLowerCase())
   );
-
-  const STATUS_COLORS = {
-    processing: 'text-yellow-400 bg-yellow-400/10',
-    confirmed: 'text-blue-400 bg-blue-400/10',
-    shipped: 'text-purple-400 bg-purple-400/10',
-    out_for_delivery: 'text-orange-400 bg-orange-400/10',
-    delivered: 'text-green-400 bg-green-400/10',
-  };
 
   return (
     <div className="min-h-screen py-20 px-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-10">
-          <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Admin</span>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight">Orders</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{orders.length} total orders</p>
+        <div className="mb-10 flex items-start justify-between">
+          <div>
+            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Admin</span>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight">Orders</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{orders.length} total orders</p>
+          </div>
+          <Button variant="outline" onClick={logout} className="gap-2 h-9">
+            <LogOut className="h-4 w-4" /> Sign out
+          </Button>
         </div>
 
         {/* Search */}
@@ -51,11 +120,13 @@ export default function AdminOrders() {
           <input
             type="text"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by order number, name, or email..."
             className="w-full h-11 pl-10 pr-4 rounded-xl border border-border bg-background font-mono text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
+
+        {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
 
         {/* Orders List */}
         {loading ? (
@@ -69,11 +140,10 @@ export default function AdminOrders() {
           </div>
         ) : (
           <div className="space-y-2">
-            {filtered.map(order => {
+            {filtered.map((order) => {
               const isOpen = expandedId === order.id;
               return (
                 <div key={order.id} className="rounded-2xl border border-border overflow-hidden">
-                  {/* Row */}
                   <button
                     onClick={() => setExpandedId(isOpen ? null : order.id)}
                     className="w-full flex items-center gap-4 px-5 py-4 hover:bg-accent/40 transition-colors text-left"
@@ -92,12 +162,11 @@ export default function AdminOrders() {
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="font-mono text-sm font-semibold">${order.total?.toFixed(2) || '—'}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(order.created_date).toLocaleDateString()}</p>
+                      <p className="text-xs text-muted-foreground">{order.created_date ? new Date(order.created_date).toLocaleDateString() : '—'}</p>
                     </div>
                     {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
                   </button>
 
-                  {/* Expanded Edit Form */}
                   <AnimatePresence>
                     {isOpen && (
                       <motion.div
@@ -110,7 +179,7 @@ export default function AdminOrders() {
                         <OrderEditForm
                           order={order}
                           onSaved={(updated) => {
-                            setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+                            setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
                             setExpandedId(null);
                           }}
                         />

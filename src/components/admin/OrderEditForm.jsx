@@ -1,7 +1,7 @@
 import { useState } from 'react';
-// TODO: connect to your order database when payment processor is set up
 import { Button } from '@/components/ui/button';
 import { Check } from 'lucide-react';
+import { saveOrder } from '@/lib/adminApi';
 
 const STATUSES = ['processing', 'confirmed', 'shipped', 'out_for_delivery', 'delivered'];
 const CARRIERS = ['USPS', 'UPS', 'FedEx', 'DHL', 'Other'];
@@ -16,19 +16,29 @@ export default function OrderEditForm({ order, onSaved }) {
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
 
   const set = (field, value) => setForm(f => ({ ...f, [field]: value }));
 
   const handleSave = async () => {
     setSaving(true);
-    // TODO: update order via your payment processor / database API
-    const updated = { ...order, ...form };
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      onSaved({ ...order, ...form });
-    }, 800);
+    setError('');
+    try {
+      const updated = await saveOrder({
+        id: order.id,
+        status: form.status,
+        tracking_number: form.tracking_number,
+      });
+      setSaving(false);
+      setSaved(true);
+      setTimeout(() => {
+        setSaved(false);
+        onSaved(updated || { ...order, ...form });
+      }, 800);
+    } catch (e) {
+      setSaving(false);
+      setError(e.message || 'Failed to save.');
+    }
   };
 
   return (
@@ -38,7 +48,7 @@ export default function OrderEditForm({ order, onSaved }) {
         <div className="text-xs text-muted-foreground space-y-1">
           {order.items.map((item, i) => (
             <div key={i} className="flex justify-between">
-              <span>{item.name} × {item.quantity}</span>
+              <span>{item.product_name || item.name} × {item.quantity}</span>
               <span className="font-mono">${(item.price * item.quantity).toFixed(2)}</span>
             </div>
           ))}
@@ -111,6 +121,8 @@ export default function OrderEditForm({ order, onSaved }) {
           className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
         />
       </div>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving || saved} className="h-9 px-6 gap-2">
