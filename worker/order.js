@@ -1,10 +1,9 @@
-// Cloudflare Pages Function — POST /api/order
-// Receives a checkout order and emails it to support@omenlabs.co via Resend.
+// Order handler — emails a checkout order to support@omenlabs.co via Resend.
 //
-// Required environment variables (set in Cloudflare Pages → Settings → Environment variables):
-//   RESEND_API_KEY  - your Resend API key (secret)
-//   ORDER_TO_EMAIL  - where orders are sent (default: support@omenlabs.co)
-//   ORDER_FROM_EMAIL- verified sender on your domain (default: orders@omenlabs.co)
+// Required environment variables (Cloudflare → Worker → Settings → Variables):
+//   RESEND_API_KEY   - your Resend API key (secret)
+//   ORDER_TO_EMAIL   - where orders are sent (default: support@omenlabs.co)
+//   ORDER_FROM_EMAIL - verified sender on your domain (default: orders@omenlabs.co)
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -17,7 +16,7 @@ const esc = (s = '') =>
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
   ));
 
-export async function onRequestPost({ request, env }) {
+export async function handleOrder(request, env) {
   let body;
   try {
     body = await request.json();
@@ -27,7 +26,6 @@ export async function onRequestPost({ request, env }) {
 
   const { customer = {}, items = [], total = 0 } = body;
 
-  // Basic validation
   if (!customer.name || !customer.email || !customer.address || !customer.city || !customer.zip) {
     return json({ error: 'Missing required shipping fields.' }, 400);
   }
