@@ -16,10 +16,9 @@ async function getFonts() {
   return fontCache;
 }
 
-const esc = (s = '') =>
-  String(s).replace(/[&<>"']/g, (c) => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
-  ));
+// Satori renders plain text (it does NOT decode HTML entities), so we only strip
+// the characters that would break the markup, leaving quotes/apostrophes as-is.
+const esc = (s = '') => String(s).replace(/[<>]/g, '');
 
 const NAVY = '#0a0e1a';
 const PANEL = '#0e1426';
@@ -65,8 +64,17 @@ export async function receiptImage(order, { title = 'Order Confirmed', message, 
       </div>`
     : '';
 
-  // Height estimate
-  const height = 470 + items.length * 62 + (tracking ? 80 : 0) + (msg.length > 90 ? 60 : 0);
+  // Height estimate (generous so the Total row is never clipped)
+  const msgLines = Math.max(1, Math.ceil(msg.length / 44));
+  const height =
+    340 + // header + divider + order-number chrome + padding
+    44 + // greeting line
+    msgLines * 34 + // message
+    items.length * 62 + // item rows
+    50 + // table header
+    70 + // total row
+    (tracking ? 110 : 0) +
+    24; // bottom buffer
 
   const markup = `
   <div style="display:flex;flex-direction:column;width:600px;background:${NAVY};padding:44px;font-family:Inter">
