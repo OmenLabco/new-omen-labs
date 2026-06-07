@@ -135,12 +135,27 @@ export function renderOwnerNotification(order) {
 }
 
 // Image-based email — the receipt is a PNG (immune to Gmail dark-mode inversion).
-export function renderImageEmail({ imageUrl, order }) {
+// Includes a hidden preheader + a real text summary so it isn't "image-only"
+// (image-only emails get spam-filtered).
+export function renderImageEmail({ imageUrl, order, heading = 'Order Confirmed' }) {
+  const items = Array.isArray(order.items) ? order.items : [];
+  const itemsText = items
+    .map((i) => `${esc(i.product_name || i.name)} × ${esc(i.quantity)} — $${(Number(i.price) * Number(i.quantity)).toFixed(2)}`)
+    .join('<br/>');
   return `<!doctype html>
 <html>
+<head><meta charset="utf-8"></head>
 <body style="margin:0;background:#0a0e1a;padding:20px 10px;font-family:-apple-system,Arial,sans-serif">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(heading)} — Order #${esc(order.order_number)} · Total $${Number(order.total).toFixed(2)}</div>
   <div style="max-width:600px;margin:0 auto">
-    <img src="${imageUrl}" width="600" alt="Order #${esc(order.order_number)} — Order Confirmed. Questions? support@omenlabs.co" style="display:block;width:100%;max-width:600px;border-radius:16px;border:0" />
+    <img src="${imageUrl}" width="600" alt="${esc(heading)} — Order #${esc(order.order_number)}" style="display:block;width:100%;max-width:600px;border-radius:16px;border:0" />
+    <div style="color:#8892b0;font-size:13px;line-height:1.7;margin:18px 4px 0">
+      <strong style="color:#c8cce0">${esc(heading)} — Order #${esc(order.order_number)}</strong><br/>
+      ${itemsText}<br/>
+      <strong style="color:#c8cce0">Total: $${Number(order.total).toFixed(2)}</strong><br/><br/>
+      Questions? Reply to this email or contact us at
+      <a href="mailto:support@omenlabs.co" style="color:#5a82ff;text-decoration:none">support@omenlabs.co</a>
+    </div>
   </div>
 </body>
 </html>`;
