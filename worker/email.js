@@ -134,6 +134,23 @@ export function renderOwnerNotification(order) {
   `);
 }
 
+// Image-based email — the receipt is a PNG (immune to Gmail dark-mode inversion).
+export function renderImageEmail({ imageUrl, order }) {
+  return `<!doctype html>
+<html>
+<body style="margin:0;background:#0a0e1a;padding:20px 10px;font-family:-apple-system,Arial,sans-serif">
+  <div style="max-width:600px;margin:0 auto">
+    <img src="${imageUrl}" width="600" alt="Order ${esc(order.order_number)}" style="display:block;width:100%;max-width:600px;border-radius:16px;border:0" />
+    <p style="color:#9aa3b8;font-size:13px;line-height:1.6;text-align:center;margin:16px 0 0">
+      Order #${esc(order.order_number)} &middot; Questions? Reply to this email or contact
+      <a href="mailto:support@omenlabs.co" style="color:#5b8bf7;text-decoration:none">support@omenlabs.co</a>
+    </p>
+    <p style="color:#566076;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;text-align:center;margin:10px 0 0">For Research Use Only — Not for Human Consumption</p>
+  </div>
+</body>
+</html>`;
+}
+
 // Helper to send via Resend
 export async function sendEmail(env, { to, subject, html, replyTo }) {
   if (!env.RESEND_API_KEY) return;
