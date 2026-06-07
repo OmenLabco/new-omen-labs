@@ -1,11 +1,12 @@
-// Shared branded HTML email templates for Omen Labs — dark theme matching the storefront.
+// Shared branded HTML email templates for Omen Labs.
+// Light-themed base so it matches the device: white in light mode, and the mail
+// client adapts it to dark in dark mode (no forced color-scheme lock).
 
 export const esc = (s = '') =>
   String(s).replace(/[&<>"']/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
   ));
 
-// Customer-facing status messages
 export const STATUS_MESSAGE = {
   processing: "Your order has been received and is being processed. You'll receive a shipping notification once your compounds are dispatched.",
   confirmed: 'Your order has been confirmed and is being prepared for shipment.',
@@ -14,15 +15,16 @@ export const STATUS_MESSAGE = {
   delivered: 'Your order has been delivered. Thank you for choosing Omen Labs.',
 };
 
-// Palette
-const BG = '#0a0e1a';
-const CARD = '#0c1222';
-const PANEL = '#0e1426';
-const BORDER = '#1b2438';
-const ROW_BORDER = '#161d30';
-const BLUE = '#5b8bf7';
-const WHITE = '#ffffff';
-const MUTED = '#9aa3b8';
+// Light palette
+const BG = '#f3f4f6';
+const CARD = '#ffffff';
+const PANEL = '#f7f8fa';
+const BORDER = '#e6e8ec';
+const ROW_BORDER = '#eef0f3';
+const BLUE = '#2f5fe0';
+const INK = '#0a0e1a';
+const TEXT = '#1f2430';
+const MUTED = '#5b6472';
 const MONO = "'SF Mono',ui-monospace,Menlo,Consolas,monospace";
 
 function layout(inner) {
@@ -31,12 +33,8 @@ function layout(inner) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="dark">
-<meta name="supported-color-schemes" content="dark">
-<style>
-  :root { color-scheme: dark; supported-color-schemes: dark; }
-  body, table, td { color-scheme: dark; }
-</style>
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
 </head>
 <body style="margin:0;background:${BG};padding:32px 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
@@ -48,17 +46,17 @@ function layout(inner) {
       <tr><td style="padding:28px 40px 36px">
         <div style="border-top:1px solid ${BORDER};padding-top:22px">
           <p style="color:${MUTED};font-size:13px;line-height:1.6;margin:0">Questions? Reply to this email or contact us at <a href="mailto:support@omenlabs.co" style="color:${BLUE};text-decoration:none">support@omenlabs.co</a></p>
-          <p style="color:#566076;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;margin:16px 0 0">For Research Use Only — Not for Human Consumption</p>
+          <p style="color:#9aa0ac;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;margin:16px 0 0">For Research Use Only — Not for Human Consumption</p>
         </div>
       </td></tr>
     </table>
-    <p style="color:#3f475c;font-size:11px;margin-top:16px">© ${new Date().getFullYear()} Omen Labs · omenlabs.co</p>
+    <p style="color:#9aa0ac;font-size:11px;margin-top:16px">© ${new Date().getFullYear()} Omen Labs · omenlabs.co</p>
   </td></tr></table>
 </body>
 </html>`;
 }
 
-const heading = (t) => `<h1 style="color:${WHITE};font-size:30px;font-weight:700;margin:14px 0 0;letter-spacing:-0.5px">${esc(t)}</h1>`;
+const heading = (t) => `<h1 style="color:${INK};font-size:30px;font-weight:700;margin:14px 0 0;letter-spacing:-0.5px">${esc(t)}</h1>`;
 const divider = () => `<div style="border-top:1px solid ${BORDER};margin:28px 0"></div>`;
 const para = (t) => `<p style="color:${MUTED};font-size:16px;line-height:1.65;margin:0 0 14px">${t}</p>`;
 const label = (t) => `<div style="color:${BLUE};font-family:${MONO};font-size:12px;letter-spacing:2px;text-transform:uppercase;margin:0 0 8px">${esc(t)}</div>`;
@@ -66,7 +64,7 @@ const label = (t) => `<div style="color:${BLUE};font-family:${MONO};font-size:12
 function orderNumberBlock(order) {
   return `<div style="margin:26px 0">
     ${label('Order Number')}
-    <div style="color:${WHITE};font-family:${MONO};font-size:22px;font-weight:700">#${esc(order.order_number)}</div>
+    <div style="color:${INK};font-family:${MONO};font-size:22px;font-weight:700">#${esc(order.order_number)}</div>
   </div>`;
 }
 
@@ -75,9 +73,9 @@ function itemsTable(order) {
   const rows = items
     .map(
       (i) => `<tr>
-        <td style="padding:16px 20px;border-bottom:1px solid ${ROW_BORDER};font-size:15px;color:#e5e8ef">${esc(i.product_name || i.name)}</td>
-        <td style="padding:16px 20px;border-bottom:1px solid ${ROW_BORDER};font-size:15px;color:#c2c8d4;text-align:center">${esc(i.quantity)}</td>
-        <td style="padding:16px 20px;border-bottom:1px solid ${ROW_BORDER};font-size:15px;color:#e5e8ef;text-align:right">$${(Number(i.price) * Number(i.quantity)).toFixed(2)}</td>
+        <td style="padding:16px 20px;border-bottom:1px solid ${ROW_BORDER};font-size:15px;color:${TEXT}">${esc(i.product_name || i.name)}</td>
+        <td style="padding:16px 20px;border-bottom:1px solid ${ROW_BORDER};font-size:15px;color:${MUTED};text-align:center">${esc(i.quantity)}</td>
+        <td style="padding:16px 20px;border-bottom:1px solid ${ROW_BORDER};font-size:15px;color:${TEXT};text-align:right">$${(Number(i.price) * Number(i.quantity)).toFixed(2)}</td>
       </tr>`
     )
     .join('');
@@ -91,12 +89,11 @@ function itemsTable(order) {
       <tr>
         <td style="padding:18px 20px;font-family:${MONO};font-size:11px;letter-spacing:1px;text-transform:uppercase;color:${BLUE}">Total</td>
         <td></td>
-        <td style="padding:18px 20px;font-size:18px;font-weight:700;color:${WHITE};text-align:right">$${Number(order.total).toFixed(2)}</td>
+        <td style="padding:18px 20px;font-size:18px;font-weight:700;color:${INK};text-align:right">$${Number(order.total).toFixed(2)}</td>
       </tr>
     </table>`;
 }
 
-// Customer order confirmation — recreates the Base44 "Order Confirmed" email
 export function renderOrderConfirmation(order) {
   return layout(`
     ${heading('Order Confirmed')}
@@ -108,12 +105,11 @@ export function renderOrderConfirmation(order) {
   `);
 }
 
-// Customer status update email
 export function renderStatusUpdate(order, status) {
   const lbl = (status || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   const msg = STATUS_MESSAGE[status] || `Your order status is now: ${lbl}.`;
   const tracking = order.tracking_number
-    ? `<div style="margin:26px 0">${label('Tracking Number')}<div style="color:${WHITE};font-family:${MONO};font-size:16px">${esc(order.tracking_number)}</div></div>`
+    ? `<div style="margin:26px 0">${label('Tracking Number')}<div style="color:${INK};font-family:${MONO};font-size:16px">${esc(order.tracking_number)}</div></div>`
     : '';
   return layout(`
     ${heading(lbl)}
@@ -126,14 +122,13 @@ export function renderStatusUpdate(order, status) {
   `);
 }
 
-// Internal owner notification (sent to support@) with full shipping details
 export function renderOwnerNotification(order) {
   const c = order;
   return layout(`
     ${heading('New Order Received')}
     ${divider()}
     ${label('Customer')}
-    ${para(`<span style="color:#e5e8ef;font-weight:600">${esc(c.customer_name)}</span><br/>
+    ${para(`<span style="color:${TEXT};font-weight:600">${esc(c.customer_name)}</span><br/>
       ${esc(c.customer_email)}${c.customer_phone ? ' · ' + esc(c.customer_phone) : ''}<br/>
       ${esc(c.address)}${c.address2 ? ', ' + esc(c.address2) : ''}<br/>
       ${esc(c.city)}, ${esc(c.state || '')} ${esc(c.zip)}<br/>
@@ -144,7 +139,6 @@ export function renderOwnerNotification(order) {
   `);
 }
 
-// Helper to send via Resend
 export async function sendEmail(env, { to, subject, html, replyTo }) {
   if (!env.RESEND_API_KEY) return;
   const from = env.ORDER_FROM_EMAIL || 'Omen Labs <orders@omenlabs.co>';
