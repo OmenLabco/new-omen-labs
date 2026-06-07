@@ -4,10 +4,7 @@
 //   DB             - D1 database binding
 //   ADMIN_PASSWORD - secret password for admin access
 
-import { renderImageEmail, sendEmail } from './email.js';
-import { signOrder } from './token.js';
-
-const SITE = 'https://omenlabs.co';
+import { renderStatusUpdate, sendEmail } from './email.js';
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -18,12 +15,10 @@ const json = (data, status = 200) =>
 async function sendStatusEmail(env, order, status) {
   if (!env.RESEND_API_KEY || !order.customer_email) return;
   const label = (status || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-  const token = await signOrder(order.order_number, env.ADMIN_PASSWORD);
-  const imageUrl = `${SITE}/api/receipt-image?o=${encodeURIComponent(order.order_number)}&t=${token}&type=status&status=${encodeURIComponent(status)}`;
   await sendEmail(env, {
     to: order.customer_email,
     subject: `Order ${order.order_number} — ${label}`,
-    html: renderImageEmail({ imageUrl, order: { ...order, items: safeParse(order.items) } }),
+    html: renderStatusUpdate({ ...order, items: safeParse(order.items) }, status),
   });
 }
 

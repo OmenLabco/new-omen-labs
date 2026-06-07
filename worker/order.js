@@ -6,10 +6,7 @@
 //   ORDER_TO_EMAIL   - owner notification inbox (default: support@omenlabs.co)
 //   ORDER_FROM_EMAIL - verified sender (default: Omen Labs <orders@omenlabs.co>)
 
-import { renderImageEmail, renderOwnerNotification, sendEmail } from './email.js';
-import { signOrder } from './token.js';
-
-const SITE = 'https://omenlabs.co';
+import { renderOrderConfirmation, renderOwnerNotification, sendEmail } from './email.js';
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -95,13 +92,11 @@ export async function handleOrder(request, env) {
   // 2) Emails via Resend (best effort — order is already saved)
   if (env.RESEND_API_KEY) {
     const ownerInbox = env.ORDER_TO_EMAIL || 'support@omenlabs.co';
-    const token = await signOrder(order_number, env.ADMIN_PASSWORD);
-    const imageUrl = `${SITE}/api/receipt-image?o=${encodeURIComponent(order_number)}&t=${token}&type=confirmation`;
-    // Customer confirmation (image receipt — navy in all email clients)
+    // Customer confirmation (branded "Order Confirmed")
     await sendEmail(env, {
       to: customer.email,
       subject: `Order Confirmed — ${order_number}`,
-      html: renderImageEmail({ imageUrl, order }),
+      html: renderOrderConfirmation(order),
     });
     // Owner notification with full shipping details
     await sendEmail(env, {
