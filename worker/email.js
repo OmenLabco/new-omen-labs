@@ -27,7 +27,17 @@ const MONO = "'SF Mono',ui-monospace,Menlo,Consolas,monospace";
 
 function layout(inner) {
   return `<!doctype html>
-<html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
+<style>
+  :root { color-scheme: dark; supported-color-schemes: dark; }
+  body, table, td { color-scheme: dark; }
+</style>
+</head>
 <body style="margin:0;background:${BG};padding:32px 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:${CARD};border-radius:16px;border:1px solid ${BORDER}">
