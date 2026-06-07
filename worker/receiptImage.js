@@ -74,7 +74,7 @@ export async function receiptImage(order, { title = 'Order Confirmed', message, 
     50 + // table header
     70 + // total row
     (tracking ? 110 : 0) +
-    24; // bottom buffer
+    130; // questions + footer + bottom buffer
 
   const markup = `
   <div style="display:flex;flex-direction:column;width:600px;background:${NAVY};padding:44px;font-family:Inter">
@@ -99,6 +99,9 @@ export async function receiptImage(order, { title = 'Order Confirmed', message, 
         <div style="display:flex;width:30%;justify-content:flex-end;color:${WHITE};font-size:26px;font-weight:700">$${Number(order.total).toFixed(2)}</div>
       </div>
     </div>
+    <div style="display:flex;color:${MUTED};font-size:17px;line-height:1.5;margin-top:30px">Questions? Reply to this email or contact us at support@omenlabs.co</div>
+    <div style="display:flex;width:100%;height:1px;background:${BORDER};margin:26px 0 0"></div>
+    <div style="display:flex;color:#3a3f55;font-size:12px;letter-spacing:1px;margin-top:20px">FOR RESEARCH USE ONLY — NOT FOR HUMAN CONSUMPTION · OMENLABS.CO</div>
   </div>`;
 
   return new ImageResponse(markup, {
