@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import OrderEditForm from '@/components/admin/OrderEditForm';
-import { adminAuth, adminLogin, fetchOrders, fetchAffiliates } from '@/lib/adminApi';
+import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers } from '@/lib/adminApi';
 
 const STATUS_COLORS = {
   processing: 'text-yellow-400 bg-yellow-400/10',
@@ -94,6 +94,43 @@ function AffiliatesView({ onLogout }) {
   );
 }
 
+function CustomersView({ onLogout }) {
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchCustomers()
+      .then(setCustomers)
+      .catch((e) => (e.message === 'unauthorized' ? onLogout() : setError(e.message)))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" /></div>;
+  if (error) return <p className="text-destructive text-sm">{error}</p>;
+  if (customers.length === 0) return <div className="text-center py-16 text-muted-foreground text-sm">No customer accounts yet.</div>;
+
+  return (
+    <div className="space-y-2">
+      {customers.map((c) => (
+        <div key={c.email} className="flex items-center justify-between p-4 rounded-2xl border border-border">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-sm truncate">{c.name}</span>
+              <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">{c.tier}</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">{c.email}</p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="font-mono text-sm font-semibold">{c.points} pts</p>
+            <p className="text-xs text-muted-foreground">{c.order_count} orders · ${Number(c.lifetime_spend || 0).toFixed(2)}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function AdminOrders() {
   const [authed, setAuthed] = useState(!!adminAuth.get());
   const [tab, setTab] = useState('orders');
@@ -146,8 +183,8 @@ export default function AdminOrders() {
         <div className="mb-10 flex items-start justify-between">
           <div>
             <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Admin</span>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight">{tab === 'orders' ? 'Orders' : 'Affiliates'}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{tab === 'orders' ? `${orders.length} total orders` : 'Affiliate partners'}</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight">{tab === 'orders' ? 'Orders' : tab === 'affiliates' ? 'Affiliates' : 'Customers'}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{tab === 'orders' ? `${orders.length} total orders` : tab === 'affiliates' ? 'Affiliate partners' : 'Reward members'}</p>
           </div>
           <Button variant="outline" onClick={logout} className="gap-2 h-9">
             <LogOut className="h-4 w-4" /> Sign out
@@ -156,7 +193,7 @@ export default function AdminOrders() {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 rounded-xl border border-border p-1 w-fit">
-          {['orders', 'affiliates'].map((t) => (
+          {['orders', 'affiliates', 'customers'].map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -169,6 +206,8 @@ export default function AdminOrders() {
 
         {tab === 'affiliates' ? (
           <AffiliatesView onLogout={logout} />
+        ) : tab === 'customers' ? (
+          <CustomersView onLogout={logout} />
         ) : (
         <>
         {/* Search */}

@@ -1,5 +1,5 @@
 import { handleOrder } from './order.js';
-import { listOrders, updateOrder, adminLogin, listAffiliates } from './admin.js';
+import { listOrders, updateOrder, adminLogin, listAffiliates, listCustomers } from './admin.js';
 import { receiptImage } from './receiptImage.js';
 import { verifyOrder } from './token.js';
 import { signupAffiliate, loginAffiliate, affiliateStats, validateCode } from './affiliate.js';
@@ -92,6 +92,10 @@ export default {
     if (pathname === '/api/admin/affiliates') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
       return listAffiliates(request, env);
+    }
+    if (pathname === '/api/admin/customers') {
+      if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+      return listCustomers(request, env);
     }
     if (pathname === '/api/admin/orders') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });

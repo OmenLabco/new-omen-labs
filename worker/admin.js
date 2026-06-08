@@ -70,6 +70,25 @@ export async function listAffiliates(request, env) {
   return json({ affiliates: results || [] });
 }
 
+// GET /api/admin/customers — list customers with points, spend, tier, order count
+export async function listCustomers(request, env) {
+  if (!authorized(request, env)) return json({ error: 'Unauthorized' }, 401);
+  if (!env.DB) return json({ customers: [] });
+
+  const { results } = await env.DB.prepare(
+    `SELECT c.email, c.name, c.points, c.lifetime_spend, c.created_date,
+            COUNT(o.id) AS order_count
+     FROM customers c
+     LEFT JOIN orders o ON LOWER(o.customer_email) = LOWER(c.email)
+     GROUP BY c.email, c.name, c.points, c.lifetime_spend, c.created_date
+     ORDER BY c.lifetime_spend DESC`
+  ).all();
+
+  const tierOf = (s) => (s >= 1000 ? 'Gold' : s >= 250 ? 'Silver' : 'Bronze');
+  const customers = (results || []).map((c) => ({ ...c, tier: tierOf(Number(c.lifetime_spend || 0)) }));
+  return json({ customers });
+}
+
 // POST /api/admin/orders/update — update status / tracking for one order
 export async function updateOrder(request, env) {
   if (!authorized(request, env)) return json({ error: 'Unauthorized' }, 401);
