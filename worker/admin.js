@@ -51,6 +51,25 @@ export async function listOrders(request, env) {
   return json({ orders });
 }
 
+// GET /api/admin/affiliates — list affiliates with their sales + commission totals
+export async function listAffiliates(request, env) {
+  if (!authorized(request, env)) return json({ error: 'Unauthorized' }, 401);
+  if (!env.DB) return json({ affiliates: [] });
+
+  const { results } = await env.DB.prepare(
+    `SELECT a.code, a.name, a.email, a.created_date,
+            COUNT(o.id) AS order_count,
+            COALESCE(SUM(o.total), 0) AS total_sales,
+            COALESCE(SUM(o.commission), 0) AS total_commission
+     FROM affiliates a
+     LEFT JOIN orders o ON o.affiliate_code = a.code
+     GROUP BY a.code, a.name, a.email, a.created_date
+     ORDER BY total_commission DESC`
+  ).all();
+
+  return json({ affiliates: results || [] });
+}
+
 // POST /api/admin/orders/update — update status / tracking for one order
 export async function updateOrder(request, env) {
   if (!authorized(request, env)) return json({ error: 'Unauthorized' }, 401);

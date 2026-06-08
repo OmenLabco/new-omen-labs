@@ -8,6 +8,7 @@
 
 import { renderImageEmail, renderOwnerNotification, sendEmail } from './email.js';
 import { signOrder } from './token.js';
+import { getAffiliateByCode, AFFILIATE_CUSTOMER_DISCOUNT, AFFILIATE_COMMISSION_RATE } from './affiliate.js';
 
 const SITE = 'https://omenlabs.co';
 const CRYPTO_DISCOUNT_RATE = 0.10; // 10% off when paying with crypto
@@ -38,7 +39,7 @@ export async function handleOrder(request, env) {
     return json({ error: 'Invalid request body.' }, 400);
   }
 
-  const { customer = {}, items = [], payment_method = 'manual', billing = null, shipping_method = 'ground' } = body;
+  const { customer = {}, items = [], payment_method = 'manual', billing = null, shipping_method = 'ground', affiliate_code = null } = body;
 
   if (!customer.name || !customer.email || !customer.address || !customer.city || !customer.zip) {
     return json({ error: 'Missing required shipping fields.' }, 400);
@@ -50,7 +51,15 @@ export async function handleOrder(request, env) {
   // Authoritative server-side pricing
   const subtotal = items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0);
   const isCrypto = payment_method === 'crypto';
-  const discount = isCrypto ? +(subtotal * CRYPTO_DISCOUNT_RATE).toFixed(2) : 0;
+  const cryptoDiscount = isCrypto ? +(subtotal * CRYPTO_DISCOUNT_RATE).toFixed(2) : 0;
+
+  // Validate affiliate code against the database
+  const affiliate = affiliate_code ? await getAffiliateByCode(env, affiliate_code) : null;
+  const affCode = affiliate ? affiliate.code : null;
+  const affiliateDiscount = affiliate ? +(subtotal * AFFILIATE_CUSTOMER_DISCOUNT).toFixed(2) : 0;
+  const commission = affiliate ? +(subtotal * AFFILIATE_COMMISSION_RATE).toFixed(2) : 0;
+
+  const discount = +(cryptoDiscount + affiliateDiscount).toFixed(2);
   const shipOpt = SHIPPING_OPTIONS[shipping_method] || SHIPPING_OPTIONS.ground;
   const shipping_cost = shipOpt.price;
   const shippingLabel = shipOpt.label;
@@ -66,8 +75,8 @@ export async function handleOrder(request, env) {
     try {
       await env.DB.prepare(
         `INSERT INTO orders
-         (order_number, customer_name, customer_email, customer_phone, address, address2, city, state, zip, country, notes, items, subtotal, shipping_cost, shipping_method, discount, total, payment_method, billing, status, created_date)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+         (order_number, customer_name, customer_email, customer_phone, address, address2, city, state, zip, country, notes, items, subtotal, shipping_cost, shipping_method, discount, crypto_discount, affiliate_discount, affiliate_code, commission, total, payment_method, billing, status, created_date)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
       )
         .bind(
           order_number,
@@ -86,6 +95,10 @@ export async function handleOrder(request, env) {
           shipping_cost,
           shippingLabel,
           discount,
+          cryptoDiscount,
+          affiliateDiscount,
+          affCode,
+          commission,
           total,
           paymentLabel,
           billingJson,
@@ -116,6 +129,10 @@ export async function handleOrder(request, env) {
     shipping_cost,
     shipping_method: shippingLabel,
     discount,
+    crypto_discount: cryptoDiscount,
+    affiliate_discount: affiliateDiscount,
+    affiliate_code: affCode,
+    commission,
     total,
     payment_method: paymentLabel,
     billing,

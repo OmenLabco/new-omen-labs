@@ -63,8 +63,9 @@ export async function receiptImage(order, { title = 'Order Confirmed', message, 
 
   const subtotal = Number(order.subtotal ?? items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0));
   const shipping = Number(order.shipping_cost ?? 0);
-  const discount = Number(order.discount ?? 0);
-  const total = Number(order.total ?? subtotal + shipping - discount);
+  const cryptoDiscount = Number(order.crypto_discount ?? 0);
+  const affiliateDiscount = Number(order.affiliate_discount ?? 0);
+  const total = Number(order.total ?? subtotal + shipping - cryptoDiscount - affiliateDiscount);
 
   const shippingAddr = {
     name: order.customer_name,
@@ -101,7 +102,7 @@ export async function receiptImage(order, { title = 'Order Confirmed', message, 
     170 + // addresses
     60 + // payment
     items.length * 62 +
-    (2 + (discount > 0 ? 1 : 0) + 1) * 40 + // totals rows
+    (2 + (cryptoDiscount > 0 ? 1 : 0) + (affiliateDiscount > 0 ? 1 : 0) + 1) * 40 + // totals rows
     (tracking ? 100 : 0) +
     150; // questions + footer + buffer
 
@@ -139,7 +140,8 @@ export async function receiptImage(order, { title = 'Order Confirmed', message, 
       <div style="display:flex;flex-direction:column;padding:16px 24px">
         ${totalRow('Subtotal', `$${subtotal.toFixed(2)}`)}
         ${totalRow(order.shipping_method ? `Shipping (${order.shipping_method})` : 'Shipping', `$${shipping.toFixed(2)}`)}
-        ${discount > 0 ? totalRow('Crypto discount (10%)', `-$${discount.toFixed(2)}`, { color: BLUE, valueColor: BLUE }) : ''}
+        ${affiliateDiscount > 0 ? totalRow('Affiliate discount (10%)', `-$${affiliateDiscount.toFixed(2)}`, { color: BLUE, valueColor: BLUE }) : ''}
+        ${cryptoDiscount > 0 ? totalRow('Crypto discount (10%)', `-$${cryptoDiscount.toFixed(2)}`, { color: BLUE, valueColor: BLUE }) : ''}
         ${totalRow('Total', `$${total.toFixed(2)}`, { color: WHITE, valueColor: WHITE, bold: true, size: 24 })}
       </div>
     </div>

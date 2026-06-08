@@ -1,7 +1,8 @@
 import { handleOrder } from './order.js';
-import { listOrders, updateOrder, adminLogin } from './admin.js';
+import { listOrders, updateOrder, adminLogin, listAffiliates } from './admin.js';
 import { receiptImage } from './receiptImage.js';
 import { verifyOrder } from './token.js';
+import { signupAffiliate, loginAffiliate, affiliateStats, validateCode } from './affiliate.js';
 
 const STATUS_MESSAGE = {
   processing: "Your order has been received and is being processed. You'll receive a shipping notification once your compounds are dispatched.",
@@ -51,9 +52,31 @@ export default {
       return new Response(resp.body, { status: resp.status, headers });
     }
 
+    // Affiliate program
+    if (pathname === '/api/affiliate/signup') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return signupAffiliate(request, env);
+    }
+    if (pathname === '/api/affiliate/login') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return loginAffiliate(request, env);
+    }
+    if (pathname === '/api/affiliate/stats') {
+      if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+      return affiliateStats(request, env);
+    }
+    if (pathname === '/api/affiliate/validate') {
+      if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+      return validateCode(request, env);
+    }
+
     if (pathname === '/api/admin/login') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return adminLogin(request, env);
+    }
+    if (pathname === '/api/admin/affiliates') {
+      if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+      return listAffiliates(request, env);
     }
     if (pathname === '/api/admin/orders') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });

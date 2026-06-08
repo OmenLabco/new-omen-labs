@@ -15,11 +15,26 @@ CREATE TABLE IF NOT EXISTS orders (
   items TEXT,            -- JSON array of line items
   subtotal REAL,
   shipping_cost REAL,
+  shipping_method TEXT,
   discount REAL,
+  crypto_discount REAL,
+  affiliate_discount REAL,
+  affiliate_code TEXT,
+  commission REAL,
   total REAL,
   payment_method TEXT,
   billing TEXT,          -- JSON billing address (or null = same as shipping)
   status TEXT DEFAULT 'processing',
   tracking_number TEXT,
+  created_date TEXT
+);
+
+CREATE TABLE IF NOT EXISTS affiliates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  code TEXT UNIQUE,
+  name TEXT,
+  email TEXT UNIQUE,
+  password_hash TEXT,
+  payout_info TEXT,
   created_date TEXT
 );

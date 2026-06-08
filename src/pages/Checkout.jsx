@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Package, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cart } from '@/lib/cart';
+import { validateAffiliateCode } from '@/lib/affiliateApi';
 
 const CRYPTO_DISCOUNT_RATE = 0.10;
 const SHIPPING_OPTIONS = [
@@ -51,10 +52,44 @@ export default function Checkout() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
+  const [affInput, setAffInput] = useState('');
+  const [affiliate, setAffiliate] = useState(null); // { code, discountPct }
+  const [affMsg, setAffMsg] = useState('');
+  const [affChecking, setAffChecking] = useState(false);
+
+  const applyCode = async (raw) => {
+    const code = (raw ?? affInput).trim();
+    if (!code) return;
+    setAffChecking(true);
+    setAffMsg('');
+    try {
+      const res = await validateAffiliateCode(code);
+      if (res.valid) {
+        setAffiliate(res);
+        setAffMsg(`Code ${res.code} applied — ${res.discountPct}% off!`);
+      } else {
+        setAffiliate(null);
+        setAffMsg('That code is not valid.');
+      }
+    } catch {
+      setAffMsg('Could not check code. Try again.');
+    } finally {
+      setAffChecking(false);
+    }
+  };
+
+  // Auto-apply ?ref=CODE from affiliate share links
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get('ref');
+    if (ref) { setAffInput(ref); applyCode(ref); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
-  const discount = payment === 'crypto' ? subtotal * CRYPTO_DISCOUNT_RATE : 0;
+  const cryptoDiscount = payment === 'crypto' ? subtotal * CRYPTO_DISCOUNT_RATE : 0;
+  const affiliateDiscount = affiliate ? subtotal * 0.10 : 0;
   const shipping = (SHIPPING_OPTIONS.find((o) => o.id === shipMethod) || SHIPPING_OPTIONS[0]).price;
-  const total = subtotal - discount + shipping;
+  const total = subtotal - cryptoDiscount - affiliateDiscount + shipping;
 
   if (items.length === 0) {
     return (
@@ -84,6 +119,7 @@ export default function Checkout() {
           items,
           payment_method: payment,
           shipping_method: shipMethod,
+          affiliate_code: affiliate ? affiliate.code : null,
           billing: billingSame ? null : billing,
         }),
       });
@@ -140,9 +176,14 @@ export default function Checkout() {
               <span>Shipping</span><span>${shipping.toFixed(2)}</span>
             </div>
             {/* shipping method chosen below */}
-            {discount > 0 && (
+            {affiliateDiscount > 0 && (
               <div className="flex justify-between text-emerald-500">
-                <span>Crypto discount (10%)</span><span>-${discount.toFixed(2)}</span>
+                <span>Affiliate discount (10%)</span><span>-${affiliateDiscount.toFixed(2)}</span>
+              </div>
+            )}
+            {cryptoDiscount > 0 && (
+              <div className="flex justify-between text-emerald-500">
+                <span>Crypto discount (10%)</span><span>-${cryptoDiscount.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between items-center pt-2 border-t border-border">
@@ -150,6 +191,23 @@ export default function Checkout() {
               <span className="text-2xl font-bold">${total.toFixed(2)}</span>
             </div>
           </div>
+        </div>
+
+        {/* Affiliate / referral code */}
+        <div className="p-6 rounded-2xl border border-border bg-card mb-6">
+          <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-5">Referral Code</h2>
+          <div className="flex gap-2">
+            <input
+              value={affInput}
+              onChange={(e) => setAffInput(e.target.value)}
+              placeholder="Enter a code for 10% off"
+              className="flex-1 h-11 px-3 rounded-lg border border-border bg-background text-sm uppercase focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+            <Button type="button" variant="outline" onClick={() => applyCode()} disabled={affChecking} className="h-11 px-5">
+              {affChecking ? '…' : 'Apply'}
+            </Button>
+          </div>
+          {affMsg && <p className={`text-sm mt-2 ${affiliate ? 'text-emerald-500' : 'text-destructive'}`}>{affMsg}</p>}
         </div>
 
         {/* Shipping method */}
