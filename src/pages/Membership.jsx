@@ -33,7 +33,7 @@ export default function Membership() {
             <h2 className="text-2xl font-bold">Omen VIP</h2>
           </div>
           <div className="flex items-end gap-1 mb-8">
-            <span className="text-5xl font-bold tracking-tight">$14.99</span>
+            <span className="text-5xl font-bold tracking-tight">$19.99</span>
             <span className="text-muted-foreground mb-1.5">/ month</span>
           </div>
 
