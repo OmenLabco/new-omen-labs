@@ -76,7 +76,7 @@ function Dashboard({ onLogout }) {
   if (error) return <p className="text-center text-destructive">{error}</p>;
   if (!data) return <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" /></div>;
 
-  const { name, points, pointsValue, lifetimeSpend, tier, nextTier, recent } = data;
+  const { name, points, pointsValue, lifetimeSpend, membership, recent } = data;
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -102,10 +102,11 @@ function Dashboard({ onLogout }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         <div className="p-5 rounded-2xl border border-border bg-card">
           <Award className="h-5 w-5 text-primary mb-3" />
-          <p className="text-2xl font-bold">{tier.name}</p>
-          <p className="text-xs text-muted-foreground mt-1">{tier.multiplier}× points{tier.freeShipping ? ' · free shipping' : ''}</p>
-          {nextTier && (
-            <p className="text-xs text-muted-foreground mt-3">Spend ${nextTier.remaining.toFixed(2)} more to reach <span className="text-foreground font-medium">{nextTier.name}</span></p>
+          <p className="text-2xl font-bold">{membership?.active ? 'Omen VIP' : 'Free account'}</p>
+          {membership?.active ? (
+            <p className="text-xs text-muted-foreground mt-1">2× points · free shipping</p>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-3">Upgrade for 2× points + free shipping — <Link to="/membership" className="text-primary">see Omen VIP →</Link></p>
           )}
         </div>
         <div className="p-5 rounded-2xl border border-border bg-card">

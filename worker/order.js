@@ -18,7 +18,7 @@ import {
 } from './affiliate.js';
 import {
   customerFromToken,
-  membershipTier,
+  membershipStatus,
   POINTS_PER_DOLLAR,
   POINTS_REDEEM_VALUE,
   REDEEM_STEP,
@@ -78,9 +78,9 @@ export async function handleOrder(request, env) {
   const tier = affiliate ? commissionTier(await affiliateSalesCount(env, affiliate.code)) : null;
   const commission = affiliate ? +(subtotal * tier.rate).toFixed(2) : 0;
 
-  // Logged-in customer: tier benefits + points
+  // Logged-in customer: membership perks + points
   const account = customer_token ? await customerFromToken(env, customer_token) : null;
-  const acctTier = account ? membershipTier(account.lifetime_spend || 0) : null;
+  const acctTier = account ? membershipStatus(account) : null;
 
   // Points redemption (logged-in only): increments of REDEEM_STEP, capped by balance and subtotal
   let pointsRedeemed = 0;

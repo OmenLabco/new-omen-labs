@@ -6,16 +6,18 @@ export const POINTS_PER_DOLLAR = 1;
 export const POINTS_REDEEM_VALUE = 0.05; // $ per point → 100 pts = $5
 export const REDEEM_STEP = 100;          // redeem in increments of 100 pts
 
-// Free, spend-based membership tiers
-export function membershipTier(lifetimeSpend = 0) {
-  if (lifetimeSpend >= 1000) return { name: 'Gold', multiplier: 1.5, freeShipping: true, min: 1000 };
-  if (lifetimeSpend >= 250) return { name: 'Silver', multiplier: 1.25, freeShipping: false, min: 250 };
-  return { name: 'Bronze', multiplier: 1, freeShipping: false, min: 0 };
-}
-export function nextTierInfo(lifetimeSpend = 0) {
-  if (lifetimeSpend >= 1000) return null;
-  if (lifetimeSpend >= 250) return { name: 'Gold', remaining: +(1000 - lifetimeSpend).toFixed(2) };
-  return { name: 'Silver', remaining: +(250 - lifetimeSpend).toFixed(2) };
+// Paid membership (Omen VIP). Perks apply only to active paid members.
+export const VIP_MULTIPLIER = 2; // 2× points for members
+
+export function membershipStatus(customer) {
+  const active = !!customer && customer.membership === 'vip' &&
+    (!customer.membership_expires || new Date(customer.membership_expires).getTime() > Date.now());
+  return {
+    active,
+    name: active ? 'Omen VIP' : 'Member',
+    multiplier: active ? VIP_MULTIPLIER : 1,
+    freeShipping: active,
+  };
 }
 
 const json = (data, status = 200) =>
@@ -53,16 +55,14 @@ async function authedCustomer(request, env) {
 }
 
 function publicStats(cust) {
-  const tier = membershipTier(cust.lifetime_spend || 0);
-  const next = nextTierInfo(cust.lifetime_spend || 0);
+  const m = membershipStatus(cust);
   return {
     name: cust.name,
     email: cust.email,
     points: cust.points || 0,
     pointsValue: +(((cust.points || 0) * POINTS_REDEEM_VALUE)).toFixed(2),
     lifetimeSpend: +(cust.lifetime_spend || 0).toFixed(2),
-    tier: { name: tier.name, multiplier: tier.multiplier, freeShipping: tier.freeShipping },
-    nextTier: next,
+    membership: { active: m.active, name: m.name, multiplier: m.multiplier, freeShipping: m.freeShipping },
   };
 }
 

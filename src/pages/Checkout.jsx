@@ -118,13 +118,13 @@ export default function Checkout() {
   const pointsValue = redeem && account ? Math.min(redeemablePoints * 0.05, preDiscount) : 0;
   const pointsToRedeem = pointsValue > 0 ? redeemablePoints : 0;
 
-  const freeShipping = !!account?.tier?.freeShipping;
+  const freeShipping = !!account?.membership?.freeShipping;
   const baseShipping = (SHIPPING_OPTIONS.find((o) => o.id === shipMethod) || SHIPPING_OPTIONS[0]).price;
   const shipping = freeShipping ? 0 : baseShipping;
   const total = subtotal - cryptoDiscount - affiliateDiscount - pointsValue + shipping;
 
   // Points the customer will earn on this order
-  const pointsWillEarn = Math.floor(subtotal * (account?.tier?.multiplier || 1));
+  const pointsWillEarn = Math.floor(subtotal * (account?.membership?.multiplier || 1));
 
   if (items.length === 0) {
     return (
@@ -210,7 +210,7 @@ export default function Checkout() {
               <span>Subtotal</span><span>${subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>Shipping{freeShipping ? ' (Free — ' + account.tier.name + ')' : ''}</span><span>${shipping.toFixed(2)}</span>
+              <span>Shipping{freeShipping ? ' (Free — ' + account.membership.name + ')' : ''}</span><span>${shipping.toFixed(2)}</span>
             </div>
             {pointsValue > 0 && (
               <div className="flex justify-between text-emerald-500">
@@ -239,7 +239,7 @@ export default function Checkout() {
           <div className="p-6 rounded-2xl border border-primary/20 bg-primary/[0.04] mb-6">
             <div className="flex items-center justify-between mb-1">
               <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-primary">Omen Rewards</h2>
-              <span className="text-xs text-muted-foreground">{account.tier?.name} · {account.points} pts</span>
+              <span className="text-xs text-muted-foreground">{account.membership?.name} · {account.points} pts</span>
             </div>
             <p className="text-sm text-muted-foreground">You'll earn <strong className="text-foreground">{pointsWillEarn} points</strong> on this order.</p>
             {redeemablePoints >= 100 && (
