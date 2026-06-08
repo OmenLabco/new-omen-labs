@@ -140,7 +140,7 @@ export async function receiptImage(order, { title = 'Order Confirmed', message, 
       <div style="display:flex;flex-direction:column;padding:16px 24px">
         ${totalRow('Subtotal', `$${subtotal.toFixed(2)}`)}
         ${totalRow(order.shipping_method ? `Shipping (${order.shipping_method})` : 'Shipping', `$${shipping.toFixed(2)}`)}
-        ${affiliateDiscount > 0 ? totalRow('Affiliate discount (10%)', `-$${affiliateDiscount.toFixed(2)}`, { color: BLUE, valueColor: BLUE }) : ''}
+        ${affiliateDiscount > 0 ? totalRow(`Affiliate discount (${subtotal > 0 ? Math.round((affiliateDiscount / subtotal) * 100) : 0}%)`, `-$${affiliateDiscount.toFixed(2)}`, { color: BLUE, valueColor: BLUE }) : ''}
         ${cryptoDiscount > 0 ? totalRow('Crypto discount (10%)', `-$${cryptoDiscount.toFixed(2)}`, { color: BLUE, valueColor: BLUE }) : ''}
         ${totalRow('Total', `$${total.toFixed(2)}`, { color: WHITE, valueColor: WHITE, bold: true, size: 24 })}
       </div>

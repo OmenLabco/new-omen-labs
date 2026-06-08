@@ -8,7 +8,14 @@
 
 import { renderImageEmail, renderOwnerNotification, sendEmail } from './email.js';
 import { signOrder } from './token.js';
-import { getAffiliateByCode, AFFILIATE_CUSTOMER_DISCOUNT, AFFILIATE_COMMISSION_RATE } from './affiliate.js';
+import {
+  getAffiliateByCode,
+  commissionTier,
+  affiliateSalesCount,
+  isNewCustomer,
+  NEW_CUSTOMER_DISCOUNT,
+  RETURNING_CUSTOMER_DISCOUNT,
+} from './affiliate.js';
 
 const SITE = 'https://omenlabs.co';
 const CRYPTO_DISCOUNT_RATE = 0.10; // 10% off when paying with crypto
@@ -56,8 +63,13 @@ export async function handleOrder(request, env) {
   // Validate affiliate code against the database
   const affiliate = affiliate_code ? await getAffiliateByCode(env, affiliate_code) : null;
   const affCode = affiliate ? affiliate.code : null;
-  const affiliateDiscount = affiliate ? +(subtotal * AFFILIATE_CUSTOMER_DISCOUNT).toFixed(2) : 0;
-  const commission = affiliate ? +(subtotal * AFFILIATE_COMMISSION_RATE).toFixed(2) : 0;
+  // New customers get 20% off; returning customers get 10%
+  const newCustomer = affiliate ? await isNewCustomer(env, customer.email) : false;
+  const custDiscountRate = newCustomer ? NEW_CUSTOMER_DISCOUNT : RETURNING_CUSTOMER_DISCOUNT;
+  const affiliateDiscount = affiliate ? +(subtotal * custDiscountRate).toFixed(2) : 0;
+  // Tiered commission based on the affiliate's existing sales
+  const tier = affiliate ? commissionTier(await affiliateSalesCount(env, affiliate.code)) : null;
+  const commission = affiliate ? +(subtotal * tier.rate).toFixed(2) : 0;
 
   const discount = +(cryptoDiscount + affiliateDiscount).toFixed(2);
   const shipOpt = SHIPPING_OPTIONS[shipping_method] || SHIPPING_OPTIONS.ground;

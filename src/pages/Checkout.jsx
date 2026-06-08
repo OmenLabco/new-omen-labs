@@ -63,10 +63,10 @@ export default function Checkout() {
     setAffChecking(true);
     setAffMsg('');
     try {
-      const res = await validateAffiliateCode(code);
+      const res = await validateAffiliateCode(code, form.email);
       if (res.valid) {
         setAffiliate(res);
-        setAffMsg(`Code ${res.code} applied — ${res.discountPct}% off!`);
+        setAffMsg(`Code ${res.code} applied — ${res.discountPct}% off${res.newCustomer ? ' (new customer)' : ''}!`);
       } else {
         setAffiliate(null);
         setAffMsg('That code is not valid.');
@@ -85,9 +85,15 @@ export default function Checkout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Re-check the rate when the email changes (new vs returning customer affects %)
+  useEffect(() => {
+    if (affiliate && form.email) applyCode(affiliate.code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.email]);
+
   const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
   const cryptoDiscount = payment === 'crypto' ? subtotal * CRYPTO_DISCOUNT_RATE : 0;
-  const affiliateDiscount = affiliate ? subtotal * 0.10 : 0;
+  const affiliateDiscount = affiliate ? subtotal * ((affiliate.discountPct || 10) / 100) : 0;
   const shipping = (SHIPPING_OPTIONS.find((o) => o.id === shipMethod) || SHIPPING_OPTIONS[0]).price;
   const total = subtotal - cryptoDiscount - affiliateDiscount + shipping;
 
@@ -178,7 +184,7 @@ export default function Checkout() {
             {/* shipping method chosen below */}
             {affiliateDiscount > 0 && (
               <div className="flex justify-between text-emerald-500">
-                <span>Affiliate discount (10%)</span><span>-${affiliateDiscount.toFixed(2)}</span>
+                <span>Affiliate discount ({affiliate?.discountPct || 10}%)</span><span>-${affiliateDiscount.toFixed(2)}</span>
               </div>
             )}
             {cryptoDiscount > 0 && (

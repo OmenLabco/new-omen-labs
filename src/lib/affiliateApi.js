@@ -42,8 +42,9 @@ export async function affiliateStats() {
   return resp.json();
 }
 
-export async function validateAffiliateCode(code) {
-  const resp = await fetch(`/api/affiliate/validate?code=${encodeURIComponent(code)}`);
+export async function validateAffiliateCode(code, email = '') {
+  const q = `code=${encodeURIComponent(code)}${email ? `&email=${encodeURIComponent(email)}` : ''}`;
+  const resp = await fetch(`/api/affiliate/validate?${q}`);
   if (!resp.ok) return { valid: false };
   return resp.json();
 }

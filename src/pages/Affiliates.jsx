@@ -49,10 +49,24 @@ function AuthForms({ onAuthed }) {
         <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-primary">Affiliate Program</span>
         <div className="h-px w-6 bg-primary" />
       </div>
-      <h1 className="text-3xl font-bold tracking-tight text-center mb-3">Earn 15% per sale</h1>
-      <p className="text-sm text-muted-foreground text-center mb-8 leading-relaxed">
-        Create your own discount code, share it, and earn 15% commission on every order. Your customers get 10% off.
+      <h1 className="text-3xl font-bold tracking-tight text-center mb-3">Earn up to 17% per sale</h1>
+      <p className="text-sm text-muted-foreground text-center mb-5 leading-relaxed">
+        Create your own discount code and share it. New customers get <strong className="text-foreground">20% off</strong> their
+        first order (10% after), and you earn commission on every sale.
       </p>
+      <div className="grid grid-cols-3 gap-2 mb-8 text-center">
+        {[
+          { t: 'Silver', r: '5%', s: 'Start here' },
+          { t: 'Gold', r: '10%', s: '10+ sales' },
+          { t: 'Platinum', r: '17%', s: '30+ sales' },
+        ].map((x) => (
+          <div key={x.t} className="p-3 rounded-xl border border-border">
+            <p className="text-xs font-mono uppercase tracking-wider text-primary">{x.t}</p>
+            <p className="text-lg font-bold mt-1">{x.r}</p>
+            <p className="text-[10px] text-muted-foreground">{x.s}</p>
+          </div>
+        ))}
+      </div>
 
       <div className="flex rounded-xl border border-border p-1 mb-6">
         {['signup', 'login'].map((m) => (
@@ -99,7 +113,7 @@ function Dashboard({ onLogout }) {
   if (error) return <p className="text-center text-destructive">{error}</p>;
   if (!data) return <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" /></div>;
 
-  const { affiliate, stats, recent } = data;
+  const { affiliate, stats, recent, tier, nextTier } = data;
   const link = `https://omenlabs.co/?ref=${affiliate.code}`;
   const copy = () => { navigator.clipboard.writeText(affiliate.code); setCopied(true); setTimeout(() => setCopied(false), 1500); };
 
@@ -124,6 +138,21 @@ function Dashboard({ onLogout }) {
         </div>
         <p className="text-xs text-muted-foreground mt-3">Share link: <span className="text-foreground">{link}</span></p>
       </div>
+
+      {/* Tier card */}
+      {tier && (
+        <div className="p-5 rounded-2xl border border-border bg-card mb-6 flex items-center justify-between">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">Commission Tier</p>
+            <p className="text-xl font-bold">{tier.name} — {tier.rate}%</p>
+          </div>
+          {nextTier && (
+            <p className="text-xs text-muted-foreground text-right max-w-[45%]">
+              {nextTier.salesNeeded} more sale{nextTier.salesNeeded === 1 ? '' : 's'} to reach <span className="text-foreground font-medium">{nextTier.name}</span>
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">

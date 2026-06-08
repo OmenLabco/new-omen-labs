@@ -4,8 +4,27 @@
 //   DB             - D1 database binding
 //   ADMIN_PASSWORD - also used as a pepper for affiliate password hashing
 
-export const AFFILIATE_CUSTOMER_DISCOUNT = 0.10; // 10% off for the customer
-export const AFFILIATE_COMMISSION_RATE = 0.15;   // 15% of subtotal to the affiliate
+export const NEW_CUSTOMER_DISCOUNT = 0.20;       // 20% off for first-time customers
+export const RETURNING_CUSTOMER_DISCOUNT = 0.10; // 10% off for returning customers
+
+// Commission tiers based on the affiliate's number of attributed sales
+export function commissionTier(salesCount = 0) {
+  if (salesCount >= 30) return { name: 'Platinum', rate: 0.17, min: 30 };
+  if (salesCount >= 10) return { name: 'Gold', rate: 0.10, min: 10 };
+  return { name: 'Silver', rate: 0.05, min: 0 };
+}
+
+export async function affiliateSalesCount(env, code) {
+  if (!env.DB) return 0;
+  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM orders WHERE affiliate_code = ?').bind(code).first();
+  return row ? Number(row.n) : 0;
+}
+
+export async function isNewCustomer(env, email) {
+  if (!env.DB || !email) return true;
+  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM orders WHERE LOWER(customer_email) = ?').bind(email.toLowerCase()).first();
+  return !row || Number(row.n) === 0;
+}
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
@@ -89,18 +108,27 @@ export async function affiliateStats(request, env) {
   const totalSales = orders.reduce((s, o) => s + Number(o.total || 0), 0);
   const totalCommission = orders.reduce((s, o) => s + Number(o.commission || 0), 0);
 
+  const tier = commissionTier(orders.length);
+  const nextTier = tier.name === 'Silver' ? { name: 'Gold', at: 10 } : tier.name === 'Gold' ? { name: 'Platinum', at: 30 } : null;
+
   return json({
     affiliate: { name: aff.name, code: aff.code, email: aff.email },
     stats: { orders: orders.length, totalSales, totalCommission },
+    tier: { name: tier.name, rate: Math.round(tier.rate * 100) },
+    nextTier: nextTier ? { name: nextTier.name, salesNeeded: Math.max(0, nextTier.at - orders.length) } : null,
     recent: orders.slice(0, 50),
   });
 }
 
-// GET /api/affiliate/validate?code=XXX  (public — used by checkout)
+// GET /api/affiliate/validate?code=XXX&email=YYY  (public — used by checkout)
 export async function validateCode(request, env) {
   const url = new URL(request.url);
   const code = normCode(url.searchParams.get('code') || '');
+  const email = (url.searchParams.get('email') || '').trim();
   const aff = await getAffiliateByCode(env, code);
   if (!aff) return json({ valid: false });
-  return json({ valid: true, code: aff.code, discountPct: Math.round(AFFILIATE_CUSTOMER_DISCOUNT * 100) });
+  // If we know the customer's email, return the exact rate; otherwise assume new (20%).
+  const isNew = email ? await isNewCustomer(env, email) : true;
+  const rate = isNew ? NEW_CUSTOMER_DISCOUNT : RETURNING_CUSTOMER_DISCOUNT;
+  return json({ valid: true, code: aff.code, newCustomer: isNew, discountPct: Math.round(rate * 100) });
 }
