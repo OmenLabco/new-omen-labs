@@ -6,6 +6,8 @@ import AgeGate from './components/AgeGate';
 import Terms from './pages/Terms';
 import AccessRestricted from './pages/AccessRestricted';
 import Affiliates from './pages/Affiliates';
+import Account from './pages/Account';
+import Membership from './pages/Membership';
 import Home from './pages/Home';
 import Catalog from './pages/Catalog';
 import ProductDetail from './pages/ProductDetail';
@@ -28,6 +30,8 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/affiliates" element={<Affiliates />} />
+          <Route path="/account" element={<Account />} />
+          <Route path="/membership" element={<Membership />} />
           <Route path="/catalog" element={<Catalog />} />
           <Route path="/product/:slug" element={<ProductDetail />} />
           <Route path="/about" element={<About />} />

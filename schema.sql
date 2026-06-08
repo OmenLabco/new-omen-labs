@@ -21,11 +21,26 @@ CREATE TABLE IF NOT EXISTS orders (
   affiliate_discount REAL,
   affiliate_code TEXT,
   commission REAL,
+  points_earned INTEGER,
+  points_redeemed INTEGER,
+  points_value REAL,
   total REAL,
   payment_method TEXT,
   billing TEXT,          -- JSON billing address (or null = same as shipping)
   status TEXT DEFAULT 'processing',
   tracking_number TEXT,
+  created_date TEXT
+);
+
+CREATE TABLE IF NOT EXISTS customers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT UNIQUE,
+  name TEXT,
+  password_hash TEXT,
+  points INTEGER DEFAULT 0,
+  lifetime_spend REAL DEFAULT 0,
+  membership TEXT,
+  membership_expires TEXT,
   created_date TEXT
 );
 

@@ -16,6 +16,13 @@ import {
   NEW_CUSTOMER_DISCOUNT,
   RETURNING_CUSTOMER_DISCOUNT,
 } from './affiliate.js';
+import {
+  customerFromToken,
+  membershipTier,
+  POINTS_PER_DOLLAR,
+  POINTS_REDEEM_VALUE,
+  REDEEM_STEP,
+} from './customer.js';
 
 const SITE = 'https://omenlabs.co';
 const CRYPTO_DISCOUNT_RATE = 0.10; // 10% off when paying with crypto
@@ -46,7 +53,7 @@ export async function handleOrder(request, env) {
     return json({ error: 'Invalid request body.' }, 400);
   }
 
-  const { customer = {}, items = [], payment_method = 'manual', billing = null, shipping_method = 'ground', affiliate_code = null } = body;
+  const { customer = {}, items = [], payment_method = 'manual', billing = null, shipping_method = 'ground', affiliate_code = null, customer_token = null, points_to_redeem = 0 } = body;
 
   if (!customer.name || !customer.email || !customer.address || !customer.city || !customer.zip) {
     return json({ error: 'Missing required shipping fields.' }, 400);
@@ -71,12 +78,31 @@ export async function handleOrder(request, env) {
   const tier = affiliate ? commissionTier(await affiliateSalesCount(env, affiliate.code)) : null;
   const commission = affiliate ? +(subtotal * tier.rate).toFixed(2) : 0;
 
-  const discount = +(cryptoDiscount + affiliateDiscount).toFixed(2);
+  // Logged-in customer: tier benefits + points
+  const account = customer_token ? await customerFromToken(env, customer_token) : null;
+  const acctTier = account ? membershipTier(account.lifetime_spend || 0) : null;
+
+  // Points redemption (logged-in only): increments of REDEEM_STEP, capped by balance and subtotal
+  let pointsRedeemed = 0;
+  let pointsValue = 0;
+  if (account && points_to_redeem > 0) {
+    const maxByBalance = Math.floor((account.points || 0) / REDEEM_STEP) * REDEEM_STEP;
+    const requested = Math.floor(Number(points_to_redeem) / REDEEM_STEP) * REDEEM_STEP;
+    pointsRedeemed = Math.max(0, Math.min(requested, maxByBalance));
+    const maxValue = +(subtotal - cryptoDiscount - affiliateDiscount).toFixed(2);
+    pointsValue = Math.min(+(pointsRedeemed * POINTS_REDEEM_VALUE).toFixed(2), Math.max(0, maxValue));
+  }
+
+  const discount = +(cryptoDiscount + affiliateDiscount + pointsValue).toFixed(2);
   const shipOpt = SHIPPING_OPTIONS[shipping_method] || SHIPPING_OPTIONS.ground;
-  const shipping_cost = shipOpt.price;
-  const shippingLabel = shipOpt.label;
+  const freeShip = acctTier && acctTier.freeShipping;
+  const shipping_cost = freeShip ? 0 : shipOpt.price;
+  const shippingLabel = freeShip ? `${shipOpt.label} (Free — ${acctTier.name})` : shipOpt.label;
   const total = +(subtotal - discount + shipping_cost).toFixed(2);
   const paymentLabel = isCrypto ? 'Crypto (10% discount applied)' : 'Manual — invoice to follow';
+
+  // Points earned (on subtotal, multiplied by tier)
+  const pointsEarned = account ? Math.floor(subtotal * POINTS_PER_DOLLAR * acctTier.multiplier) : 0;
 
   const order_number = orderNumber();
   const created_date = new Date().toISOString();
@@ -87,8 +113,8 @@ export async function handleOrder(request, env) {
     try {
       await env.DB.prepare(
         `INSERT INTO orders
-         (order_number, customer_name, customer_email, customer_phone, address, address2, city, state, zip, country, notes, items, subtotal, shipping_cost, shipping_method, discount, crypto_discount, affiliate_discount, affiliate_code, commission, total, payment_method, billing, status, created_date)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+         (order_number, customer_name, customer_email, customer_phone, address, address2, city, state, zip, country, notes, items, subtotal, shipping_cost, shipping_method, discount, crypto_discount, affiliate_discount, affiliate_code, commission, points_earned, points_redeemed, points_value, total, payment_method, billing, status, created_date)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
       )
         .bind(
           order_number,
@@ -111,6 +137,9 @@ export async function handleOrder(request, env) {
           affiliateDiscount,
           affCode,
           commission,
+          pointsEarned,
+          pointsRedeemed,
+          pointsValue,
           total,
           paymentLabel,
           billingJson,
@@ -118,6 +147,15 @@ export async function handleOrder(request, env) {
           created_date
         )
         .run();
+
+      // Update the customer's points balance + lifetime spend
+      if (account) {
+        const newPoints = (account.points || 0) - pointsRedeemed + pointsEarned;
+        const newSpend = +((account.lifetime_spend || 0) + total).toFixed(2);
+        await env.DB.prepare('UPDATE customers SET points = ?, lifetime_spend = ? WHERE id = ?')
+          .bind(newPoints, newSpend, account.id)
+          .run();
+      }
     } catch (e) {
       return json({ error: 'Failed to save order.', detail: String(e) }, 500);
     }
@@ -145,6 +183,9 @@ export async function handleOrder(request, env) {
     affiliate_discount: affiliateDiscount,
     affiliate_code: affCode,
     commission,
+    points_earned: pointsEarned,
+    points_redeemed: pointsRedeemed,
+    points_value: pointsValue,
     total,
     payment_method: paymentLabel,
     billing,
@@ -172,5 +213,5 @@ export async function handleOrder(request, env) {
     return json({ error: 'Order service not configured.' }, 500);
   }
 
-  return json({ ok: true, order_number });
+  return json({ ok: true, order_number, points_earned: pointsEarned, points_redeemed: pointsRedeemed });
 }

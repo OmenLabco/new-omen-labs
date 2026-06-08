@@ -3,6 +3,7 @@ import { listOrders, updateOrder, adminLogin, listAffiliates } from './admin.js'
 import { receiptImage } from './receiptImage.js';
 import { verifyOrder } from './token.js';
 import { signupAffiliate, loginAffiliate, affiliateStats, validateCode } from './affiliate.js';
+import { signupCustomer, loginCustomer, customerMe } from './customer.js';
 
 const STATUS_MESSAGE = {
   processing: "Your order has been received and is being processed. You'll receive a shipping notification once your compounds are dispatched.",
@@ -50,6 +51,20 @@ export default {
       const headers = new Headers(resp.headers);
       headers.set('Cache-Control', 'public, max-age=31536000, immutable');
       return new Response(resp.body, { status: resp.status, headers });
+    }
+
+    // Customer accounts + rewards
+    if (pathname === '/api/customer/signup') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return signupCustomer(request, env);
+    }
+    if (pathname === '/api/customer/login') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return loginCustomer(request, env);
+    }
+    if (pathname === '/api/customer/me') {
+      if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+      return customerMe(request, env);
     }
 
     // Affiliate program

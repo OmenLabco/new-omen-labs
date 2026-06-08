@@ -65,7 +65,9 @@ export async function receiptImage(order, { title = 'Order Confirmed', message, 
   const shipping = Number(order.shipping_cost ?? 0);
   const cryptoDiscount = Number(order.crypto_discount ?? 0);
   const affiliateDiscount = Number(order.affiliate_discount ?? 0);
-  const total = Number(order.total ?? subtotal + shipping - cryptoDiscount - affiliateDiscount);
+  const pointsValue = Number(order.points_value ?? 0);
+  const pointsEarned = Number(order.points_earned ?? 0);
+  const total = Number(order.total ?? subtotal + shipping - cryptoDiscount - affiliateDiscount - pointsValue);
 
   const shippingAddr = {
     name: order.customer_name,
@@ -102,7 +104,8 @@ export async function receiptImage(order, { title = 'Order Confirmed', message, 
     170 + // addresses
     60 + // payment
     items.length * 62 +
-    (2 + (cryptoDiscount > 0 ? 1 : 0) + (affiliateDiscount > 0 ? 1 : 0) + 1) * 40 + // totals rows
+    (2 + (cryptoDiscount > 0 ? 1 : 0) + (affiliateDiscount > 0 ? 1 : 0) + (pointsValue > 0 ? 1 : 0) + 1) * 40 + // totals rows
+    (pointsEarned > 0 ? 40 : 0) + // points-earned note
     (tracking ? 100 : 0) +
     150; // questions + footer + buffer
 
@@ -142,10 +145,12 @@ export async function receiptImage(order, { title = 'Order Confirmed', message, 
         ${totalRow(order.shipping_method ? `Shipping (${order.shipping_method})` : 'Shipping', `$${shipping.toFixed(2)}`)}
         ${affiliateDiscount > 0 ? totalRow(`Affiliate discount (${subtotal > 0 ? Math.round((affiliateDiscount / subtotal) * 100) : 0}%)`, `-$${affiliateDiscount.toFixed(2)}`, { color: BLUE, valueColor: BLUE }) : ''}
         ${cryptoDiscount > 0 ? totalRow('Crypto discount (10%)', `-$${cryptoDiscount.toFixed(2)}`, { color: BLUE, valueColor: BLUE }) : ''}
+        ${pointsValue > 0 ? totalRow('Points redeemed', `-$${pointsValue.toFixed(2)}`, { color: BLUE, valueColor: BLUE }) : ''}
         ${totalRow('Total', `$${total.toFixed(2)}`, { color: WHITE, valueColor: WHITE, bold: true, size: 24 })}
       </div>
     </div>
 
+    ${pointsEarned > 0 ? `<div style="display:flex;color:#34d399;font-size:18px;font-weight:700;margin-top:22px">★ You earned ${pointsEarned} points on this order</div>` : ''}
     <div style="display:flex;color:${MUTED};font-size:17px;line-height:1.5;margin-top:30px">Questions? Reply to this email or contact us at support@omenlabs.co</div>
     <div style="display:flex;width:100%;height:1px;background:${BORDER};margin:26px 0 0"></div>
     <div style="display:flex;color:#3a3f55;font-size:12px;letter-spacing:1px;margin-top:20px">FOR RESEARCH USE ONLY — NOT FOR HUMAN CONSUMPTION · OMENLABS.CO</div>

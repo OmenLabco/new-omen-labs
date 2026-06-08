@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingBag, Menu, X } from 'lucide-react';
+import { ShoppingBag, Menu, X, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import OmenLogo from './OmenLogo';
 
@@ -24,6 +24,7 @@ export default function Navbar({ cartCount = 0, onCartOpen }) {
     { label: 'Protocols', to: '/protocols' },
     { label: 'About', to: '/about' },
     { label: 'FAQ', to: '/faq' },
+    { label: 'Membership', to: '/membership' },
     { label: 'Affiliates', to: '/affiliates' },
   ];
 
@@ -68,6 +69,13 @@ export default function Navbar({ cartCount = 0, onCartOpen }) {
             className="hidden md:block font-mono text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 border border-border rounded-lg hover:border-white/20"
           >
             Track Order
+          </Link>
+          <Link
+            to="/account"
+            className="p-2.5 hover:bg-white/[0.06] rounded-lg transition-colors border border-transparent hover:border-white/[0.08]"
+            aria-label="Account"
+          >
+            <User className="h-[18px] w-[18px] text-foreground" />
           </Link>
           <button
             onClick={onCartOpen}

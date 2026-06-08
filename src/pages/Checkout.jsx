@@ -4,6 +4,7 @@ import { ArrowLeft, Package, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cart } from '@/lib/cart';
 import { validateAffiliateCode } from '@/lib/affiliateApi';
+import { customerAuth, customerMe } from '@/lib/customerApi';
 
 const CRYPTO_DISCOUNT_RATE = 0.10;
 const SHIPPING_OPTIONS = [
@@ -57,6 +58,22 @@ export default function Checkout() {
   const [affMsg, setAffMsg] = useState('');
   const [affChecking, setAffChecking] = useState(false);
 
+  const [account, setAccount] = useState(null);
+  const [redeem, setRedeem] = useState(false);
+
+  // Load logged-in customer (points balance, tier) and prefill name/email
+  useEffect(() => {
+    if (customerAuth.isLoggedIn()) {
+      customerMe()
+        .then((me) => {
+          setAccount(me);
+          setForm((f) => ({ ...f, name: f.name || me.name, email: f.email || me.email }));
+        })
+        .catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const applyCode = async (raw) => {
     const code = (raw ?? affInput).trim();
     if (!code) return;
@@ -94,8 +111,20 @@ export default function Checkout() {
   const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
   const cryptoDiscount = payment === 'crypto' ? subtotal * CRYPTO_DISCOUNT_RATE : 0;
   const affiliateDiscount = affiliate ? subtotal * ((affiliate.discountPct || 10) / 100) : 0;
-  const shipping = (SHIPPING_OPTIONS.find((o) => o.id === shipMethod) || SHIPPING_OPTIONS[0]).price;
-  const total = subtotal - cryptoDiscount - affiliateDiscount + shipping;
+
+  // Points redemption (logged-in only): 100 pts = $5
+  const redeemablePoints = account ? Math.floor((account.points || 0) / 100) * 100 : 0;
+  const preDiscount = Math.max(0, subtotal - cryptoDiscount - affiliateDiscount);
+  const pointsValue = redeem && account ? Math.min(redeemablePoints * 0.05, preDiscount) : 0;
+  const pointsToRedeem = pointsValue > 0 ? redeemablePoints : 0;
+
+  const freeShipping = !!account?.tier?.freeShipping;
+  const baseShipping = (SHIPPING_OPTIONS.find((o) => o.id === shipMethod) || SHIPPING_OPTIONS[0]).price;
+  const shipping = freeShipping ? 0 : baseShipping;
+  const total = subtotal - cryptoDiscount - affiliateDiscount - pointsValue + shipping;
+
+  // Points the customer will earn on this order
+  const pointsWillEarn = Math.floor(subtotal * (account?.tier?.multiplier || 1));
 
   if (items.length === 0) {
     return (
@@ -126,6 +155,8 @@ export default function Checkout() {
           payment_method: payment,
           shipping_method: shipMethod,
           affiliate_code: affiliate ? affiliate.code : null,
+          customer_token: customerAuth.token() || null,
+          points_to_redeem: pointsToRedeem,
           billing: billingSame ? null : billing,
         }),
       });
@@ -179,9 +210,13 @@ export default function Checkout() {
               <span>Subtotal</span><span>${subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>Shipping</span><span>${shipping.toFixed(2)}</span>
+              <span>Shipping{freeShipping ? ' (Free — ' + account.tier.name + ')' : ''}</span><span>${shipping.toFixed(2)}</span>
             </div>
-            {/* shipping method chosen below */}
+            {pointsValue > 0 && (
+              <div className="flex justify-between text-emerald-500">
+                <span>Points redeemed</span><span>-${pointsValue.toFixed(2)}</span>
+              </div>
+            )}
             {affiliateDiscount > 0 && (
               <div className="flex justify-between text-emerald-500">
                 <span>Affiliate discount ({affiliate?.discountPct || 10}%)</span><span>-${affiliateDiscount.toFixed(2)}</span>
@@ -198,6 +233,30 @@ export default function Checkout() {
             </div>
           </div>
         </div>
+
+        {/* Rewards */}
+        {account ? (
+          <div className="p-6 rounded-2xl border border-primary/20 bg-primary/[0.04] mb-6">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-primary">Omen Rewards</h2>
+              <span className="text-xs text-muted-foreground">{account.tier?.name} · {account.points} pts</span>
+            </div>
+            <p className="text-sm text-muted-foreground">You'll earn <strong className="text-foreground">{pointsWillEarn} points</strong> on this order.</p>
+            {redeemablePoints >= 100 && (
+              <label className="flex items-center gap-2 mt-4 cursor-pointer select-none">
+                <input type="checkbox" checked={redeem} onChange={(e) => setRedeem(e.target.checked)} className="h-4 w-4 accent-primary" />
+                <span className="text-sm">Redeem {redeemablePoints} points for <strong className="text-emerald-500">${(redeemablePoints * 0.05).toFixed(2)} off</strong></span>
+              </label>
+            )}
+          </div>
+        ) : (
+          <div className="p-5 rounded-2xl border border-border bg-card mb-6 flex items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">
+              <strong className="text-foreground">Earn {Math.floor(subtotal)} points</strong> on this order — create an account to start earning rewards.
+            </p>
+            <Button asChild variant="outline" className="h-9 shrink-0"><Link to="/account">Sign in</Link></Button>
+          </div>
+        )}
 
         {/* Affiliate / referral code */}
         <div className="p-6 rounded-2xl border border-border bg-card mb-6">
