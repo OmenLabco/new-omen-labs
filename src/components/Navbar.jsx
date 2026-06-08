@@ -24,6 +24,7 @@ export default function Navbar({ cartCount = 0, onCartOpen }) {
     { label: 'Protocols', to: '/protocols' },
     { label: 'About', to: '/about' },
     { label: 'FAQ', to: '/faq' },
+    { label: 'Affiliates', to: '/affiliates' },
   ];
 
   return (
@@ -97,7 +98,7 @@ export default function Navbar({ cartCount = 0, onCartOpen }) {
             className="md:hidden frosted border-t border-white/[0.06]"
           >
             <div className="px-6 py-5 space-y-1">
-              {links.map((link) => (
+              {links.filter((l) => l.to !== '/affiliates').map((link) => (
                 <Link
                   key={link.to}
                   to={link.to}
