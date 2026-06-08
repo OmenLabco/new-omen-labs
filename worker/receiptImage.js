@@ -47,9 +47,10 @@ function totalRow(label, value, opts = {}) {
   const vc = opts.valueColor || TEXT;
   const size = opts.size || 18;
   const weight = opts.bold ? 700 : 400;
-  return `<div style="display:flex;width:100%;justify-content:space-between;padding:6px 0">
-    <div style="display:flex;color:${c};font-size:${size}px;font-weight:${weight}">${esc(label)}</div>
-    <div style="display:flex;color:${vc};font-size:${size}px;font-weight:${weight}">${value}</div>
+  // Same column widths as the item rows so all dollar amounts align on the right edge.
+  return `<div style="display:flex;width:100%;padding:6px 0">
+    <div style="display:flex;width:70%;color:${c};font-size:${size}px;font-weight:${weight}">${esc(label)}</div>
+    <div style="display:flex;width:30%;justify-content:flex-end;color:${vc};font-size:${size}px;font-weight:${weight}">${value}</div>
   </div>`;
 }
 
