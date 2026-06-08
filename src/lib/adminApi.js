@@ -60,6 +60,16 @@ export async function fetchCustomers() {
   return data.customers || [];
 }
 
+export async function setCustomerMembership(email, vip) {
+  const resp = await fetch('/api/admin/customers/membership', {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ email, vip }),
+  });
+  if (!resp.ok) throw new Error('Failed to update membership.');
+  return resp.json();
+}
+
 export async function saveOrder({ id, status, tracking_number }) {
   const resp = await fetch('/api/admin/orders/update', {
     method: 'POST',

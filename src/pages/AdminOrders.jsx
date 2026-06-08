@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import OrderEditForm from '@/components/admin/OrderEditForm';
-import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers } from '@/lib/adminApi';
+import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership } from '@/lib/adminApi';
 
 const STATUS_COLORS = {
   processing: 'text-yellow-400 bg-yellow-400/10',
@@ -98,6 +98,7 @@ function CustomersView({ onLogout }) {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState('');
 
   useEffect(() => {
     fetchCustomers()
@@ -110,21 +111,38 @@ function CustomersView({ onLogout }) {
   if (error) return <p className="text-destructive text-sm">{error}</p>;
   if (customers.length === 0) return <div className="text-center py-16 text-muted-foreground text-sm">No customer accounts yet.</div>;
 
+  const toggleVip = async (email, makeVip) => {
+    setBusy(email);
+    try {
+      await setCustomerMembership(email, makeVip);
+      setCustomers((prev) => prev.map((c) => (c.email === email ? { ...c, isVip: makeVip } : c)));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
   return (
     <div className="space-y-2">
       {customers.map((c) => (
-        <div key={c.email} className="flex items-center justify-between p-4 rounded-2xl border border-border">
+        <div key={c.email} className="flex items-center justify-between gap-4 p-4 rounded-2xl border border-border">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="font-semibold text-sm truncate">{c.name}</span>
-              <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">{c.tier}</span>
+              {c.isVip && <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500">VIP</span>}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5 truncate">{c.email}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{c.points} pts · {c.order_count} orders · ${Number(c.lifetime_spend || 0).toFixed(2)}</p>
           </div>
-          <div className="text-right shrink-0">
-            <p className="font-mono text-sm font-semibold">{c.points} pts</p>
-            <p className="text-xs text-muted-foreground">{c.order_count} orders · ${Number(c.lifetime_spend || 0).toFixed(2)}</p>
-          </div>
+          <Button
+            variant={c.isVip ? 'outline' : 'default'}
+            onClick={() => toggleVip(c.email, !c.isVip)}
+            disabled={busy === c.email}
+            className="h-8 px-3 text-xs shrink-0"
+          >
+            {busy === c.email ? '…' : c.isVip ? 'Remove VIP' : 'Make VIP'}
+          </Button>
         </div>
       ))}
     </div>
@@ -258,7 +276,7 @@ export default function AdminOrders() {
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="font-mono text-sm font-semibold">${order.total?.toFixed(2) || '—'}</p>
-                      <p className="text-xs text-muted-foreground">{order.created_date ? new Date(order.created_date).toLocaleDateString() : '—'}</p>
+                      <p className="text-xs text-muted-foreground">{order.created_date ? new Date(order.created_date).toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—'}</p>
                     </div>
                     {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
                   </button>

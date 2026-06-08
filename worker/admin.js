@@ -76,17 +76,30 @@ export async function listCustomers(request, env) {
   if (!env.DB) return json({ customers: [] });
 
   const { results } = await env.DB.prepare(
-    `SELECT c.email, c.name, c.points, c.lifetime_spend, c.created_date,
+    `SELECT c.email, c.name, c.points, c.lifetime_spend, c.membership, c.created_date,
             COUNT(o.id) AS order_count
      FROM customers c
      LEFT JOIN orders o ON LOWER(o.customer_email) = LOWER(c.email)
-     GROUP BY c.email, c.name, c.points, c.lifetime_spend, c.created_date
+     GROUP BY c.email, c.name, c.points, c.lifetime_spend, c.membership, c.created_date
      ORDER BY c.lifetime_spend DESC`
   ).all();
 
-  const tierOf = (s) => (s >= 1000 ? 'Gold' : s >= 250 ? 'Silver' : 'Bronze');
-  const customers = (results || []).map((c) => ({ ...c, tier: tierOf(Number(c.lifetime_spend || 0)) }));
+  const customers = (results || []).map((c) => ({ ...c, isVip: c.membership === 'vip' }));
   return json({ customers });
+}
+
+// POST /api/admin/customers/membership — activate/deactivate VIP for a customer
+export async function setMembership(request, env) {
+  if (!authorized(request, env)) return json({ error: 'Unauthorized' }, 401);
+  if (!env.DB) return json({ error: 'Database not configured.' }, 500);
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
+  const { email, vip } = body;
+  if (!email) return json({ error: 'Missing email.' }, 400);
+  await env.DB.prepare('UPDATE customers SET membership = ?, membership_expires = ? WHERE LOWER(email) = ?')
+    .bind(vip ? 'vip' : null, null, email.toLowerCase())
+    .run();
+  return json({ ok: true });
 }
 
 // POST /api/admin/orders/update — update status / tracking for one order
