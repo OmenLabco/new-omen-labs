@@ -131,6 +131,21 @@ function Landing({ onAuthed }) {
         ))}
       </div>
 
+      {/* Tiers */}
+      <div className="mb-20">
+        <h2 className="text-2xl font-bold tracking-tight text-center mb-3">Commission tiers</h2>
+        <p className="text-sm text-muted-foreground text-center mb-10">The more you sell, the more you earn.</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {TIERS.map((t) => (
+            <div key={t.name} className={`p-6 rounded-2xl border text-center ${t.highlight ? 'border-primary/40 bg-primary/[0.04]' : 'border-border bg-card'}`}>
+              <p className="font-mono text-[11px] uppercase tracking-widest text-primary mb-2">{t.name}</p>
+              <p className="text-4xl font-bold mb-2">{t.rate}</p>
+              <p className="text-xs text-muted-foreground">{t.req}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* How it works */}
       <div className="mb-20">
         <h2 className="text-2xl font-bold tracking-tight text-center mb-10">How it works</h2>
@@ -162,20 +177,6 @@ function Landing({ onAuthed }) {
         </div>
       </div>
 
-      {/* Tiers */}
-      <div className="mb-20">
-        <h2 className="text-2xl font-bold tracking-tight text-center mb-3">Commission tiers</h2>
-        <p className="text-sm text-muted-foreground text-center mb-10">The more you sell, the more you earn.</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {TIERS.map((t) => (
-            <div key={t.name} className={`p-6 rounded-2xl border text-center ${t.highlight ? 'border-primary/40 bg-primary/[0.04]' : 'border-border bg-card'}`}>
-              <p className="font-mono text-[11px] uppercase tracking-widest text-primary mb-2">{t.name}</p>
-              <p className="text-4xl font-bold mb-2">{t.rate}</p>
-              <p className="text-xs text-muted-foreground">{t.req}</p>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* Who it's for */}
       <div className="mb-20 p-8 rounded-2xl border border-border bg-card">
