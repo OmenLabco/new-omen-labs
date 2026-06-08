@@ -10,8 +10,11 @@ import { renderImageEmail, renderOwnerNotification, sendEmail } from './email.js
 import { signOrder } from './token.js';
 
 const SITE = 'https://omenlabs.co';
-const SHIPPING_FLAT = 9.99;        // flat shipping fee
 const CRYPTO_DISCOUNT_RATE = 0.10; // 10% off when paying with crypto
+const SHIPPING_OPTIONS = {
+  ground: { label: '3–5 Day Ground', price: 9.99 },
+  first: { label: '2-Day First Class', price: 14.99 },
+};
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -35,7 +38,7 @@ export async function handleOrder(request, env) {
     return json({ error: 'Invalid request body.' }, 400);
   }
 
-  const { customer = {}, items = [], payment_method = 'manual', billing = null } = body;
+  const { customer = {}, items = [], payment_method = 'manual', billing = null, shipping_method = 'ground' } = body;
 
   if (!customer.name || !customer.email || !customer.address || !customer.city || !customer.zip) {
     return json({ error: 'Missing required shipping fields.' }, 400);
@@ -48,7 +51,9 @@ export async function handleOrder(request, env) {
   const subtotal = items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0);
   const isCrypto = payment_method === 'crypto';
   const discount = isCrypto ? +(subtotal * CRYPTO_DISCOUNT_RATE).toFixed(2) : 0;
-  const shipping_cost = SHIPPING_FLAT;
+  const shipOpt = SHIPPING_OPTIONS[shipping_method] || SHIPPING_OPTIONS.ground;
+  const shipping_cost = shipOpt.price;
+  const shippingLabel = shipOpt.label;
   const total = +(subtotal - discount + shipping_cost).toFixed(2);
   const paymentLabel = isCrypto ? 'Crypto (10% discount applied)' : 'Manual — invoice to follow';
 
@@ -61,8 +66,8 @@ export async function handleOrder(request, env) {
     try {
       await env.DB.prepare(
         `INSERT INTO orders
-         (order_number, customer_name, customer_email, customer_phone, address, address2, city, state, zip, country, notes, items, subtotal, shipping_cost, discount, total, payment_method, billing, status, created_date)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+         (order_number, customer_name, customer_email, customer_phone, address, address2, city, state, zip, country, notes, items, subtotal, shipping_cost, shipping_method, discount, total, payment_method, billing, status, created_date)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
       )
         .bind(
           order_number,
@@ -79,6 +84,7 @@ export async function handleOrder(request, env) {
           JSON.stringify(items),
           subtotal,
           shipping_cost,
+          shippingLabel,
           discount,
           total,
           paymentLabel,
@@ -108,6 +114,7 @@ export async function handleOrder(request, env) {
     items,
     subtotal,
     shipping_cost,
+    shipping_method: shippingLabel,
     discount,
     total,
     payment_method: paymentLabel,

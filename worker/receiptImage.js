@@ -137,7 +137,7 @@ export async function receiptImage(order, { title = 'Order Confirmed', message, 
       ${itemRows}
       <div style="display:flex;flex-direction:column;padding:16px 24px">
         ${totalRow('Subtotal', `$${subtotal.toFixed(2)}`)}
-        ${totalRow('Shipping', `$${shipping.toFixed(2)}`)}
+        ${totalRow(order.shipping_method ? `Shipping (${order.shipping_method})` : 'Shipping', `$${shipping.toFixed(2)}`)}
         ${discount > 0 ? totalRow('Crypto discount (10%)', `-$${discount.toFixed(2)}`, { color: BLUE, valueColor: BLUE }) : ''}
         ${totalRow('Total', `$${total.toFixed(2)}`, { color: WHITE, valueColor: WHITE, bold: true, size: 24 })}
       </div>

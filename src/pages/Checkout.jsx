@@ -4,8 +4,11 @@ import { ArrowLeft, Package, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cart } from '@/lib/cart';
 
-const SHIPPING_FLAT = 9.99;
 const CRYPTO_DISCOUNT_RATE = 0.10;
+const SHIPPING_OPTIONS = [
+  { id: 'ground', title: '3–5 Day Ground', desc: 'Standard shipping', price: 9.99 },
+  { id: 'first', title: '2-Day First Class', desc: 'Faster delivery', price: 14.99 },
+];
 
 const SHIPPING_FIELDS = [
   { name: 'name', label: 'Full Name', required: true, half: true },
@@ -43,13 +46,14 @@ export default function Checkout() {
   const [billing, setBilling] = useState({ country: 'United States' });
   const [billingSame, setBillingSame] = useState(true);
   const [payment, setPayment] = useState('manual');
+  const [shipMethod, setShipMethod] = useState('ground');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
   const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
   const discount = payment === 'crypto' ? subtotal * CRYPTO_DISCOUNT_RATE : 0;
-  const shipping = SHIPPING_FLAT;
+  const shipping = (SHIPPING_OPTIONS.find((o) => o.id === shipMethod) || SHIPPING_OPTIONS[0]).price;
   const total = subtotal - discount + shipping;
 
   if (items.length === 0) {
@@ -79,6 +83,7 @@ export default function Checkout() {
           customer: { ...form, notes },
           items,
           payment_method: payment,
+          shipping_method: shipMethod,
           billing: billingSame ? null : billing,
         }),
       });
@@ -134,6 +139,7 @@ export default function Checkout() {
             <div className="flex justify-between text-muted-foreground">
               <span>Shipping</span><span>${shipping.toFixed(2)}</span>
             </div>
+            {/* shipping method chosen below */}
             {discount > 0 && (
               <div className="flex justify-between text-emerald-500">
                 <span>Crypto discount (10%)</span><span>-${discount.toFixed(2)}</span>
@@ -143,6 +149,29 @@ export default function Checkout() {
               <span className="uppercase tracking-widest text-muted-foreground">Total</span>
               <span className="text-2xl font-bold">${total.toFixed(2)}</span>
             </div>
+          </div>
+        </div>
+
+        {/* Shipping method */}
+        <div className="p-6 rounded-2xl border border-border bg-card mb-6">
+          <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-5">Shipping Method</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {SHIPPING_OPTIONS.map((opt) => (
+              <button
+                type="button"
+                key={opt.id}
+                onClick={() => setShipMethod(opt.id)}
+                className={`text-left p-4 rounded-xl border transition-colors ${
+                  shipMethod === opt.id ? 'border-primary bg-primary/5' : 'border-border hover:bg-accent/40'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{opt.title}</span>
+                  <span className="text-sm font-semibold">${opt.price.toFixed(2)}</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
+              </button>
+            ))}
           </div>
         </div>
 
