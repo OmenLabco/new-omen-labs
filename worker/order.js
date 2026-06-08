@@ -10,6 +10,8 @@ import { renderImageEmail, renderOwnerNotification, sendEmail } from './email.js
 import { signOrder } from './token.js';
 
 const SITE = 'https://omenlabs.co';
+const SHIPPING_FLAT = 9.99;        // flat shipping fee
+const CRYPTO_DISCOUNT_RATE = 0.10; // 10% off when paying with crypto
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -17,8 +19,9 @@ const json = (data, status = 200) =>
     headers: { 'Content-Type': 'application/json' },
   });
 
+// Order number uses only Roman-numeral letters after "OMEN-"
 function orderNumber() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const chars = 'XIVLCDM';
   let code = '';
   for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
   return `OMEN-${code}`;
@@ -32,7 +35,7 @@ export async function handleOrder(request, env) {
     return json({ error: 'Invalid request body.' }, 400);
   }
 
-  const { customer = {}, items = [], total = 0 } = body;
+  const { customer = {}, items = [], payment_method = 'manual', billing = null } = body;
 
   if (!customer.name || !customer.email || !customer.address || !customer.city || !customer.zip) {
     return json({ error: 'Missing required shipping fields.' }, 400);
@@ -41,16 +44,25 @@ export async function handleOrder(request, env) {
     return json({ error: 'Cart is empty.' }, 400);
   }
 
+  // Authoritative server-side pricing
+  const subtotal = items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0);
+  const isCrypto = payment_method === 'crypto';
+  const discount = isCrypto ? +(subtotal * CRYPTO_DISCOUNT_RATE).toFixed(2) : 0;
+  const shipping_cost = SHIPPING_FLAT;
+  const total = +(subtotal - discount + shipping_cost).toFixed(2);
+  const paymentLabel = isCrypto ? 'Crypto (10% discount applied)' : 'Manual — invoice to follow';
+
   const order_number = orderNumber();
   const created_date = new Date().toISOString();
+  const billingJson = billing ? JSON.stringify(billing) : null;
 
-  // 1) Save to D1 if available (source of truth for the admin page)
+  // 1) Save to D1 (source of truth for the admin page)
   if (env.DB) {
     try {
       await env.DB.prepare(
         `INSERT INTO orders
-         (order_number, customer_name, customer_email, customer_phone, address, address2, city, state, zip, country, notes, items, total, status, created_date)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+         (order_number, customer_name, customer_email, customer_phone, address, address2, city, state, zip, country, notes, items, subtotal, shipping_cost, discount, total, payment_method, billing, status, created_date)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
       )
         .bind(
           order_number,
@@ -65,7 +77,12 @@ export async function handleOrder(request, env) {
           customer.country || 'United States',
           customer.notes || '',
           JSON.stringify(items),
-          Number(total),
+          subtotal,
+          shipping_cost,
+          discount,
+          total,
+          paymentLabel,
+          billingJson,
           'processing',
           created_date
         )
@@ -89,7 +106,12 @@ export async function handleOrder(request, env) {
     country: customer.country || 'United States',
     notes: customer.notes || '',
     items,
-    total: Number(total),
+    subtotal,
+    shipping_cost,
+    discount,
+    total,
+    payment_method: paymentLabel,
+    billing,
   };
 
   // 2) Emails via Resend (best effort — order is already saved)
@@ -97,16 +119,14 @@ export async function handleOrder(request, env) {
     const ownerInbox = env.ORDER_TO_EMAIL || 'support@omenlabs.co';
     const token = await signOrder(order_number, env.ADMIN_PASSWORD);
     const imageUrl = `${SITE}/api/receipt-image?o=${encodeURIComponent(order_number)}&t=${token}&type=confirmation`;
-    // Customer confirmation (image receipt — navy in all email clients)
     await sendEmail(env, {
       to: customer.email,
       subject: `Order Confirmed — ${order_number}`,
       html: renderImageEmail({ imageUrl, order }),
     });
-    // Owner notification with full shipping details
     await sendEmail(env, {
       to: ownerInbox,
-      subject: `New Order ${order_number} — ${customer.name} — $${Number(total).toFixed(2)}`,
+      subject: `New Order ${order_number} — ${customer.name} — $${total.toFixed(2)}`,
       html: renderOwnerNotification(order),
       replyTo: customer.email,
     });

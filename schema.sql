@@ -13,7 +13,12 @@ CREATE TABLE IF NOT EXISTS orders (
   country TEXT,
   notes TEXT,
   items TEXT,            -- JSON array of line items
+  subtotal REAL,
+  shipping_cost REAL,
+  discount REAL,
   total REAL,
+  payment_method TEXT,
+  billing TEXT,          -- JSON billing address (or null = same as shipping)
   status TEXT DEFAULT 'processing',
   tracking_number TEXT,
   created_date TEXT

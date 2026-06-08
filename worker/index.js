@@ -38,7 +38,7 @@ export default {
       if (!env.DB) return new Response('Not configured', { status: 500 });
       const dbOrder = await env.DB.prepare('SELECT * FROM orders WHERE order_number = ?').bind(o).first();
       if (!dbOrder) return new Response('Not found', { status: 404 });
-      const order = { ...dbOrder, items: safeParse(dbOrder.items) };
+      const order = { ...dbOrder, items: safeParse(dbOrder.items), billing: dbOrder.billing ? safeParse(dbOrder.billing) : null };
 
       let opts = { title: 'Order Confirmed' };
       if (type === 'status') {

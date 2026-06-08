@@ -129,6 +129,8 @@ export function renderOwnerNotification(order) {
       ${esc(c.city)}, ${esc(c.state || '')} ${esc(c.zip)}<br/>
       ${esc(c.country || 'United States')}`)}
     ${c.notes ? para(`<span style="color:${BLUE}">Notes:</span> ${esc(c.notes)}`) : ''}
+    ${c.billing ? label('Billing Address') + para(`${esc(c.billing.name || '')}<br/>${esc(c.billing.address || '')}${c.billing.address2 ? ', ' + esc(c.billing.address2) : ''}<br/>${esc(c.billing.city || '')}, ${esc(c.billing.state || '')} ${esc(c.billing.zip || '')}<br/>${esc(c.billing.country || 'United States')}`) : para(`<span style="color:${BLUE}">Billing:</span> Same as shipping`)}
+    ${order.payment_method ? para(`<span style="color:${BLUE}">Payment:</span> ${esc(order.payment_method)}`) : ''}
     ${orderNumberBlock(order)}
     ${itemsTable(order)}
   `);

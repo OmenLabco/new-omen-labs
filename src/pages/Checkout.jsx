@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Package, Loader2 } from 'lucide-react';
+import { ArrowLeft, Package, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cart } from '@/lib/cart';
 
-const FIELDS = [
+const SHIPPING_FLAT = 9.99;
+const CRYPTO_DISCOUNT_RATE = 0.10;
+
+const SHIPPING_FIELDS = [
   { name: 'name', label: 'Full Name', required: true, half: true },
   { name: 'email', label: 'Email', required: true, half: true, type: 'email' },
   { name: 'phone', label: 'Phone (optional)', half: true },
-  { name: 'country', label: 'Country', half: true, default: 'United States' },
+  { name: 'country', label: 'Country', half: true },
   { name: 'address', label: 'Address', required: true },
   { name: 'address2', label: 'Apt / Suite (optional)' },
   { name: 'city', label: 'City', required: true, third: true },
@@ -16,16 +19,38 @@ const FIELDS = [
   { name: 'zip', label: 'ZIP', required: true, third: true },
 ];
 
+const BILLING_FIELDS = [
+  { name: 'name', label: 'Full Name', required: true, half: true },
+  { name: 'country', label: 'Country', half: true },
+  { name: 'address', label: 'Address', required: true },
+  { name: 'address2', label: 'Apt / Suite (optional)' },
+  { name: 'city', label: 'City', required: true, third: true },
+  { name: 'state', label: 'State', third: true },
+  { name: 'zip', label: 'ZIP', required: true, third: true },
+];
+
+const colClass = (f) => (f.third ? 'sm:col-span-2' : f.half ? 'sm:col-span-3' : 'sm:col-span-6');
+const inputClass =
+  'w-full h-11 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30';
+const labelClass = 'block font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5';
+
 export default function Checkout() {
   const { cartItems, loadCart } = useOutletContext();
   const navigate = useNavigate();
   const items = cartItems || [];
-  const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
 
   const [form, setForm] = useState({ country: 'United States' });
+  const [billing, setBilling] = useState({ country: 'United States' });
+  const [billingSame, setBillingSame] = useState(true);
+  const [payment, setPayment] = useState('manual');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+
+  const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
+  const discount = payment === 'crypto' ? subtotal * CRYPTO_DISCOUNT_RATE : 0;
+  const shipping = SHIPPING_FLAT;
+  const total = subtotal - discount + shipping;
 
   if (items.length === 0) {
     return (
@@ -40,6 +65,7 @@ export default function Checkout() {
   }
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleBilling = (e) => setBilling({ ...billing, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,7 +75,12 @@ export default function Checkout() {
       const resp = await fetch('/api/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customer: { ...form, notes }, items, total }),
+        body: JSON.stringify({
+          customer: { ...form, notes },
+          items,
+          payment_method: payment,
+          billing: billingSame ? null : billing,
+        }),
       });
       if (!resp.ok) {
         const data = await resp.json().catch(() => ({}));
@@ -92,56 +123,89 @@ export default function Checkout() {
                     {item.quantity} × ${item.price.toFixed(2)}
                   </p>
                 </div>
-                <span className="text-sm font-semibold shrink-0">
-                  ${(item.price * item.quantity).toFixed(2)}
-                </span>
+                <span className="text-sm font-semibold shrink-0">${(item.price * item.quantity).toFixed(2)}</span>
               </div>
             ))}
           </div>
-          <div className="border-t border-border mt-5 pt-5 flex justify-between items-center">
-            <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Total</span>
-            <span className="text-2xl font-bold">${total.toFixed(2)}</span>
+          <div className="border-t border-border mt-5 pt-5 space-y-2 font-mono text-[12px]">
+            <div className="flex justify-between text-muted-foreground">
+              <span>Subtotal</span><span>${subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>Shipping</span><span>${shipping.toFixed(2)}</span>
+            </div>
+            {discount > 0 && (
+              <div className="flex justify-between text-emerald-500">
+                <span>Crypto discount (10%)</span><span>-${discount.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center pt-2 border-t border-border">
+              <span className="uppercase tracking-widest text-muted-foreground">Total</span>
+              <span className="text-2xl font-bold">${total.toFixed(2)}</span>
+            </div>
           </div>
         </div>
 
-        {/* Shipping / order form */}
+        {/* Payment method */}
+        <div className="p-6 rounded-2xl border border-border bg-card mb-6">
+          <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-5">Payment Method</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {[
+              { id: 'manual', title: 'Manual / Invoice', desc: 'Invoice to follow after order' },
+              { id: 'crypto', title: 'Crypto — 10% off', desc: 'Pay with crypto and save 10%' },
+            ].map((opt) => (
+              <button
+                type="button"
+                key={opt.id}
+                onClick={() => setPayment(opt.id)}
+                className={`text-left p-4 rounded-xl border transition-colors ${
+                  payment === opt.id ? 'border-primary bg-primary/5' : 'border-border hover:bg-accent/40'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{opt.title}</span>
+                  {payment === opt.id && <Check className="h-4 w-4 text-primary" />}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Shipping + billing + submit */}
         <form onSubmit={handleSubmit} className="p-6 rounded-2xl border border-border bg-card">
           <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-5">Shipping Details</h2>
           <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
-            {FIELDS.map((f) => (
-              <div
-                key={f.name}
-                className={f.third ? 'sm:col-span-2' : f.half ? 'sm:col-span-3' : 'sm:col-span-6'}
-              >
-                <label className="block font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
-                  {f.label}
-                </label>
-                <input
-                  name={f.name}
-                  type={f.type || 'text'}
-                  required={f.required}
-                  value={form[f.name] || ''}
-                  onChange={handleChange}
-                  className="w-full h-11 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
+            {SHIPPING_FIELDS.map((f) => (
+              <div key={f.name} className={colClass(f)}>
+                <label className={labelClass}>{f.label}</label>
+                <input name={f.name} type={f.type || 'text'} required={f.required} value={form[f.name] || ''} onChange={handleChange} className={inputClass} />
               </div>
             ))}
             <div className="sm:col-span-6">
-              <label className="block font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
-                Order Notes (optional)
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              <label className={labelClass}>Order Notes (optional)</label>
+              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
             </div>
           </div>
 
-          {error && (
-            <p className="mt-4 text-sm text-destructive">{error}</p>
+          {/* Billing */}
+          <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mt-8 mb-4">Billing Address</h2>
+          <label className="flex items-center gap-2 mb-4 cursor-pointer select-none">
+            <input type="checkbox" checked={billingSame} onChange={(e) => setBillingSame(e.target.checked)} className="h-4 w-4 accent-primary" />
+            <span className="text-sm text-muted-foreground">Billing address same as shipping</span>
+          </label>
+          {!billingSame && (
+            <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
+              {BILLING_FIELDS.map((f) => (
+                <div key={f.name} className={colClass(f)}>
+                  <label className={labelClass}>{f.label}</label>
+                  <input name={f.name} type="text" required={f.required} value={billing[f.name] || ''} onChange={handleBilling} className={inputClass} />
+                </div>
+              ))}
+            </div>
           )}
+
+          {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
 
           <Button type="submit" disabled={submitting} className="w-full h-12 mt-6 text-sm font-medium tracking-wide">
             {submitting ? (
