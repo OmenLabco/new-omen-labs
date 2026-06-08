@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import OrderEditForm from '@/components/admin/OrderEditForm';
-import { adminAuth, adminLogin, fetchOrders } from '@/lib/adminApi';
+import { adminAuth, adminLogin, fetchOrders, fetchAffiliates } from '@/lib/adminApi';
 
 const STATUS_COLORS = {
   processing: 'text-yellow-400 bg-yellow-400/10',
@@ -55,8 +55,48 @@ function LoginScreen({ onSuccess }) {
   );
 }
 
+function AffiliatesView({ onLogout }) {
+  const [affiliates, setAffiliates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchAffiliates()
+      .then(setAffiliates)
+      .catch((e) => (e.message === 'unauthorized' ? onLogout() : setError(e.message)))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" /></div>;
+  if (error) return <p className="text-destructive text-sm">{error}</p>;
+  if (affiliates.length === 0) return <div className="text-center py-16 text-muted-foreground text-sm">No affiliates yet.</div>;
+
+  const tierOf = (n) => (n >= 30 ? 'Platinum' : n >= 10 ? 'Gold' : 'Silver');
+
+  return (
+    <div className="space-y-2">
+      {affiliates.map((a) => (
+        <div key={a.code} className="flex items-center justify-between p-4 rounded-2xl border border-border">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-mono font-semibold text-sm">{a.code}</span>
+              <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">{tierOf(a.order_count)}</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">{a.name} · {a.email}</p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="font-mono text-sm font-semibold text-emerald-500">${Number(a.total_commission || 0).toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">{a.order_count} sales · ${Number(a.total_sales || 0).toFixed(2)}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function AdminOrders() {
   const [authed, setAuthed] = useState(!!adminAuth.get());
+  const [tab, setTab] = useState('orders');
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -106,14 +146,31 @@ export default function AdminOrders() {
         <div className="mb-10 flex items-start justify-between">
           <div>
             <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Admin</span>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight">Orders</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{orders.length} total orders</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight">{tab === 'orders' ? 'Orders' : 'Affiliates'}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{tab === 'orders' ? `${orders.length} total orders` : 'Affiliate partners'}</p>
           </div>
           <Button variant="outline" onClick={logout} className="gap-2 h-9">
             <LogOut className="h-4 w-4" /> Sign out
           </Button>
         </div>
 
+        {/* Tabs */}
+        <div className="flex gap-1 mb-6 rounded-xl border border-border p-1 w-fit">
+          {['orders', 'affiliates'].map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-4 h-9 rounded-lg text-sm font-medium capitalize transition-colors ${tab === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'affiliates' ? (
+          <AffiliatesView onLogout={logout} />
+        ) : (
+        <>
         {/* Search */}
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -190,6 +247,8 @@ export default function AdminOrders() {
               );
             })}
           </div>
+        )}
+        </>
         )}
       </div>
     </div>

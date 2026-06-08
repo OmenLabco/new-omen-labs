@@ -38,6 +38,17 @@ export async function fetchOrders() {
   return data.orders || [];
 }
 
+export async function fetchAffiliates() {
+  const resp = await fetch('/api/admin/affiliates', { headers: headers() });
+  if (resp.status === 401) {
+    adminAuth.clear();
+    throw new Error('unauthorized');
+  }
+  if (!resp.ok) throw new Error('Failed to load affiliates.');
+  const data = await resp.json();
+  return data.affiliates || [];
+}
+
 export async function saveOrder({ id, status, tracking_number }) {
   const resp = await fetch('/api/admin/orders/update', {
     method: 'POST',

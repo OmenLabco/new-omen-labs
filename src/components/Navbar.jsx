@@ -112,6 +112,12 @@ export default function Navbar({ cartCount = 0, onCartOpen }) {
               >
                 Track Order
               </Link>
+              <Link
+                to="/affiliates"
+                className="block text-sm font-medium py-3 px-3 mt-2 rounded-lg bg-primary/10 border border-primary/20 text-primary hover:bg-primary/15 transition-all text-center"
+              >
+                Become an Affiliate — Earn up to 17%
+              </Link>
             </div>
           </motion.div>
         )}
