@@ -150,7 +150,7 @@ export async function receiptImage(order, { title = 'Order Confirmed', message, 
       </div>
     </div>
 
-    ${pointsEarned > 0 ? `<div style="display:flex;color:#34d399;font-size:18px;font-weight:700;margin-top:22px">★ You earned ${pointsEarned} points on this order</div>` : ''}
+    ${pointsEarned > 0 ? `<div style="display:flex;color:#34d399;font-size:18px;font-weight:700;margin-top:22px">You earned ${pointsEarned} points on this order</div>` : ''}
     <div style="display:flex;color:${MUTED};font-size:17px;line-height:1.5;margin-top:30px">Questions? Reply to this email or contact us at support@omenlabs.co</div>
     <div style="display:flex;width:100%;height:1px;background:${BORDER};margin:26px 0 0"></div>
     <div style="display:flex;color:#3a3f55;font-size:12px;letter-spacing:1px;margin-top:20px">FOR RESEARCH USE ONLY — NOT FOR HUMAN CONSUMPTION · OMENLABS.CO</div>
