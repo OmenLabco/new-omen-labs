@@ -46,11 +46,12 @@ function QRBlock({ x, y, size = 20 }) {
   const cell = size / 7;
   return (
     <g>
+      <rect x={x-1.5} y={y-1.5} width={size+3} height={size+3} rx="1.5" fill="black" fillOpacity="0.35" />
       {QR_OUTER.map((row, r) => row.map((on, c) => on ? (
-        <rect key={`o${r}${c}`} x={x+c*cell} y={y+r*cell} width={cell-0.3} height={cell-0.3} fill="white" fillOpacity="0.8" />
+        <rect key={`o${r}${c}`} x={x+c*cell} y={y+r*cell} width={cell-0.3} height={cell-0.3} fill="white" fillOpacity="0.92" />
       ) : null))}
       {QR_INNER.map((row, r) => row.map((on, c) => on && !QR_OUTER[r][c] ? (
-        <rect key={`i${r}${c}`} x={x+c*cell+cell*0.15} y={y+r*cell+cell*0.15} width={cell*0.7} height={cell*0.7} fill="white" fillOpacity="0.55" />
+        <rect key={`i${r}${c}`} x={x+c*cell+cell*0.15} y={y+r*cell+cell*0.15} width={cell*0.7} height={cell*0.7} fill="white" fillOpacity="0.8" />
       ) : null))}
     </g>
   );
@@ -74,7 +75,7 @@ export default function ProductVialImage({ name = '', dose = '', purity = 99, cl
   // ── Cylinder arc depth ──
   // For a cylindrical wrap, top/bottom edges are ellipses.
   // ry controls how "deep" the curve looks. ~8px for this vial diameter.
-  const arcRy = 8;
+  const arcRy = 14;
 
   // ── Perspective: label covers ~75% of the visible front face ──
   // The label starts and ends before the very edge of the cylinder
@@ -114,17 +115,17 @@ export default function ProductVialImage({ name = '', dose = '', purity = 99, cl
   const shadowPath = `M ${lL-2} ${lTop-1} A ${arcRx+2} ${arcRy+1} 0 0 1 ${lR+2} ${lTop-1} L ${lR+2} ${lBot+1} A ${arcRx+2} ${arcRy+1} 0 0 0 ${lL-2} ${lBot+1} Z`;
 
   // ── Content layout ──
+  // QR sits in the right "wrapping" zone — define first so text can avoid it
+  const qrSize = 26;
+  const qrX = lR - qrSize - 4;
+  const qrY = lTop + (lH - qrSize) / 2 + 4;
+
   const cl = lL + 10;  // content left
-  const cr = lR - 28;  // content right (QR lives in rightmost ~28px)
+  const cr = qrX - 6;  // content right — stops before the QR so text never runs under it
   const nLen = name.length;
   const nSize = nLen > 14 ? 8 : nLen > 10 ? 10 : nLen > 7 ? 11.5 : 13;
   const doseLen = (dose || '').length;
   const badgeW = Math.max(24, doseLen * 5 + 8);
-
-  // QR sits in the right "wrapping" zone
-  const qrSize = 22;
-  const qrX = lR - qrSize - 2;
-  const qrY = lTop + (lH - qrSize) / 2;
 
   return (
     <svg
@@ -218,22 +219,25 @@ export default function ProductVialImage({ name = '', dose = '', purity = 99, cl
         <line x1={cl} y1={lTop + 66} x2={cr} y2={lTop + 66}
           stroke="rgba(255,255,255,0.11)" strokeWidth="0.5" />
 
-        {/* Purity */}
-        <text x={cl} y={lTop + 76}
+        {/* Purity (two lines so it never runs under the QR) */}
+        <text x={cl} y={lTop + 77}
           fontFamily="'IBM Plex Mono', monospace"
-          fontSize="4.2" fill="rgba(255,255,255,0.5)">PURITY ≥{purity}%  ·  RESEARCH USE ONLY</text>
+          fontSize="4.4" fill="rgba(255,255,255,0.55)">PURITY ≥{purity}%</text>
+        <text x={cl} y={lTop + 85}
+          fontFamily="'IBM Plex Mono', monospace"
+          fontSize="4.4" fill="rgba(255,255,255,0.4)">RESEARCH USE ONLY</text>
 
         {/* Website */}
-        <text x={cl} y={lTop + 86}
+        <text x={cl} y={lTop + 95}
           fontFamily="'IBM Plex Mono', monospace"
           fontSize="3.4" letterSpacing="0.2"
-          fill="rgba(255,255,255,0.2)">OmenLabs.co</text>
+          fill="rgba(255,255,255,0.22)">OmenLabs.co</text>
 
-        {/* QR — in the right wrap zone, dim (as if turning away from viewer) */}
-        <QRBlock x={qrX} y={qrY} size={qrSize} />
-
-        {/* Right side fade — wraps into darkness */}
+        {/* Right side fade — wraps into darkness (drawn BEFORE the QR) */}
         <path d={labelPath} fill="url(#rFade)" />
+
+        {/* QR — crisp, on top of the fade */}
+        <QRBlock x={qrX} y={qrY} size={qrSize} />
 
       </g>
 
