@@ -75,7 +75,7 @@ export default function TrustSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className="group relative p-6 rounded-2xl border border-border bg-card hover:border-white/[0.15] hover:bg-card/80 transition-all duration-300 flex flex-col gap-5"
+              className="group relative p-6 rounded-2xl border border-border bg-card hover:border-black/[0.15] hover:bg-card/80 transition-all duration-300 flex flex-col gap-5"
             >
               {/* Icon */}
               <div className="h-11 w-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">

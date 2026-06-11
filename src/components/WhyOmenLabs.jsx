@@ -80,7 +80,7 @@ export default function WhyOmenLabs() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: i * 0.1 }}
-                  className="rounded-2xl border border-border bg-card p-5 hover:border-white/[0.15] hover:bg-card/80 transition-all duration-300"
+                  className="rounded-2xl border border-border bg-card p-5 hover:border-black/[0.15] hover:bg-card/80 transition-all duration-300"
                 >
                   <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
                     <Icon className="h-4.5 w-4.5 text-primary" style={{ width: 18, height: 18 }} />

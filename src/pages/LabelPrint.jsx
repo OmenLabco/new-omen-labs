@@ -313,20 +313,20 @@ export default function LabelPrint() {
               <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', letterSpacing: '0.2em', color: '#000', fontWeight: 400 }}>OMEN LABS</span>
             </div>
             {/* White version preview */}
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-black">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-black/10 bg-black">
               <OmenLogo size={18} style={{ color: '#fff' }} />
               <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', letterSpacing: '0.2em', color: '#fff', fontWeight: 400 }}>OMEN LABS</span>
             </div>
             <div className="flex gap-2 ml-auto">
               <button
                 onClick={() => downloadBrandSVG('#000000', 'OmenLabs_Logo_Black.svg')}
-                className="h-9 px-4 rounded-lg border border-border text-xs font-mono text-muted-foreground hover:text-foreground hover:border-white/20 transition-colors"
+                className="h-9 px-4 rounded-lg border border-border text-xs font-mono text-muted-foreground hover:text-foreground hover:border-black/20 transition-colors"
               >
                 ↓ Black SVG
               </button>
               <button
                 onClick={() => downloadBrandSVG('#ffffff', 'OmenLabs_Logo_White.svg')}
-                className="h-9 px-4 rounded-lg border border-white/10 bg-black text-xs font-mono text-white hover:border-white/30 transition-colors"
+                className="h-9 px-4 rounded-lg border border-black/10 bg-black text-xs font-mono text-white hover:border-black/30 transition-colors"
               >
                 ↓ White SVG
               </button>
@@ -340,7 +340,7 @@ export default function LabelPrint() {
             <button
               key={val}
               onClick={() => setTab(val)}
-              className={`h-9 px-5 rounded-lg text-xs font-mono font-medium transition-colors border ${tab === val ? 'bg-primary text-white border-primary' : 'border-border text-muted-foreground hover:text-foreground hover:border-white/20'}`}
+              className={`h-9 px-5 rounded-lg text-xs font-mono font-medium transition-colors border ${tab === val ? 'bg-primary text-white border-primary' : 'border-border text-muted-foreground hover:text-foreground hover:border-black/20'}`}
             >
               {label}
             </button>
@@ -352,7 +352,7 @@ export default function LabelPrint() {
           {PRODUCTS.map((p) => {
             const key = `${p.name}-${tab}`;
             return (
-              <div key={p.name} className="flex items-center gap-6 p-4 rounded-xl border border-border bg-card hover:border-white/10 transition-colors">
+              <div key={p.name} className="flex items-center gap-6 p-4 rounded-xl border border-border bg-card hover:border-black/10 transition-colors">
                 <div className="shrink-0">
                   {is40 ? <Label40Dark product={p} /> : <Label30Dark product={p} />}
                 </div>
@@ -365,7 +365,7 @@ export default function LabelPrint() {
                   <button
                     onClick={() => handleDownloadPDF(p)}
                     disabled={pdfLoading === key}
-                    className="flex items-center gap-1.5 h-9 px-4 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:border-white/20 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1.5 h-9 px-4 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:border-black/20 transition-colors disabled:opacity-50"
                   >
                     {pdfLoading === key ? 'Generating…' : 'PDF'}
                   </button>

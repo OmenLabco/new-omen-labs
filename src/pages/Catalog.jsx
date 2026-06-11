@@ -8,9 +8,9 @@ import CategoryFilter from '../components/CategoryFilter';
 import ProductVialImage from '../components/ProductVialImage';
 
 const categoryColors = {
-  Recovery: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
-  Aesthetics: 'text-pink-400 bg-pink-400/10 border-pink-400/20',
-  Performance: 'text-amber-400 bg-amber-400/10 border-amber-400/20',
+  Recovery: 'text-emerald-600 bg-emerald-500/10 border-emerald-500/25',
+  Aesthetics: 'text-pink-600 bg-pink-500/10 border-pink-500/25',
+  Performance: 'text-amber-600 bg-amber-500/10 border-amber-500/25',
   Longevity: 'text-primary bg-primary/10 border-primary/20',
 };
 
@@ -75,10 +75,10 @@ export default function Catalog() {
               >
                 <Link
                   to={`/product/${product.slug}`}
-                  className="group flex h-full flex-col rounded-2xl border border-border bg-card overflow-hidden hover:border-white/[0.15] hover:bg-card/80 transition-all duration-300 active:scale-[0.98]"
+                  className="group flex h-full flex-col rounded-2xl border border-border bg-card overflow-hidden hover:border-black/[0.15] hover:bg-card/80 transition-all duration-300 active:scale-[0.98]"
                 >
                   {/* Image */}
-                  <div className="relative bg-secondary/30 flex items-center justify-center py-3 sm:py-6 group-hover:py-4 transition-all duration-700">
+                  <div className="relative bg-[#0a0e1a] flex items-center justify-center py-3 sm:py-6 group-hover:py-4 transition-all duration-700">
                     <ProductVialImage
                       image={product.image}
                       name={product.name}
@@ -118,7 +118,7 @@ export default function Catalog() {
                         {getCategories(product).map((cat) => (
                           <span
                             key={cat}
-                            className={`font-mono text-[8px] sm:text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full border ${categoryColors[cat] || 'text-muted-foreground bg-white/5 border-white/10'}`}
+                            className={`font-mono text-[8px] sm:text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full border ${categoryColors[cat] || 'text-muted-foreground bg-white/5 border-black/10'}`}
                           >
                             {cat}
                           </span>

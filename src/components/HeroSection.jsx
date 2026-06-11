@@ -80,7 +80,7 @@ export default function HeroSection() {
                 </Link>
                 <Link
                   to="/about"
-                  className="inline-flex items-center justify-center h-12 px-7 rounded-xl border border-white/10 text-sm font-medium tracking-wide text-muted-foreground hover:text-foreground hover:border-white/20 hover:bg-white/[0.04] transition-all duration-200"
+                  className="inline-flex items-center justify-center h-12 px-7 rounded-xl border border-black/10 text-sm font-medium tracking-wide text-muted-foreground hover:text-foreground hover:border-black/20 hover:bg-black/[0.04] transition-all duration-200"
                 >
                   Our Process
                 </Link>
@@ -142,7 +142,7 @@ export default function HeroSection() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: 1.0 }}
-                className="absolute -right-6 top-1/3 bg-card border border-white/[0.08] rounded-xl px-4 py-3 backdrop-blur-xl"
+                className="absolute -right-6 top-1/3 bg-card border border-black/[0.08] rounded-xl px-4 py-3 backdrop-blur-xl"
               >
                 <div className="flex items-center gap-3">
                   <OmenLogo size={20} className="text-primary" />
@@ -158,7 +158,7 @@ export default function HeroSection() {
       </div>
 
       {/* Compound ticker */}
-      <div className="relative z-10 border-t border-white/[0.05] py-4 overflow-hidden">
+      <div className="relative z-10 border-t border-black/[0.05] py-4 overflow-hidden">
         <div className="ticker-track">
           {[...ticker, ...ticker].map((name, i) => (
             <div key={i} className="flex items-center gap-6 px-6">

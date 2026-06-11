@@ -10,7 +10,7 @@ export default function CategoryFilter({ selected, onSelect }) {
           className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
             (cat === 'All' && !selected) || selected === cat
               ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20'
-              : 'bg-card text-muted-foreground border-border hover:text-foreground hover:border-white/20 hover:bg-card/80'
+              : 'bg-card text-muted-foreground border-border hover:text-foreground hover:border-black/20 hover:bg-card/80'
           }`}
         >
           {cat}

@@ -82,7 +82,7 @@ export default function About() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className="rounded-2xl border border-border bg-card p-7 hover:border-white/[0.15] transition-all duration-300 flex gap-5"
+              className="rounded-2xl border border-border bg-card p-7 hover:border-black/[0.15] transition-all duration-300 flex gap-5"
             >
               <div className="h-11 w-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
                 <v.icon className="text-primary" style={{ width: 18, height: 18 }} />
@@ -100,7 +100,7 @@ export default function About() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="rounded-3xl border border-white/[0.08] overflow-hidden relative"
+          className="rounded-3xl border border-black/[0.08] overflow-hidden relative"
           style={{ background: 'linear-gradient(135deg, hsl(222,60%,12%) 0%, hsl(240,20%,8%) 100%)' }}
         >
           <div className="absolute inset-0 hex-grid opacity-20 pointer-events-none" />

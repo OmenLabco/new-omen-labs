@@ -54,7 +54,7 @@ export default function Navbar({ cartCount = 0, onCartOpen }) {
               {location.pathname === link.to && (
                 <motion.div
                   layoutId="nav-indicator"
-                  className="absolute inset-0 bg-white/[0.06] rounded-lg border border-white/[0.08]"
+                  className="absolute inset-0 bg-black/[0.05] rounded-lg border border-black/[0.08]"
                 />
               )}
               <span className="relative z-10">{link.label}</span>
@@ -66,20 +66,20 @@ export default function Navbar({ cartCount = 0, onCartOpen }) {
         <div className="flex items-center gap-3">
           <Link
             to="/order-status"
-            className="hidden md:block font-mono text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 border border-border rounded-lg hover:border-white/20"
+            className="hidden md:block font-mono text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 border border-border rounded-lg hover:border-black/20"
           >
             Track Order
           </Link>
           <Link
             to="/account"
-            className="p-2.5 hover:bg-white/[0.06] rounded-lg transition-colors border border-transparent hover:border-white/[0.08]"
+            className="p-2.5 hover:bg-black/[0.05] rounded-lg transition-colors border border-transparent hover:border-black/[0.08]"
             aria-label="Account"
           >
             <User className="h-[18px] w-[18px] text-foreground" />
           </Link>
           <button
             onClick={onCartOpen}
-            className="relative p-2.5 hover:bg-white/[0.06] rounded-lg transition-colors border border-transparent hover:border-white/[0.08]"
+            className="relative p-2.5 hover:bg-black/[0.05] rounded-lg transition-colors border border-transparent hover:border-black/[0.08]"
           >
             <ShoppingBag className="h-[18px] w-[18px] text-foreground" />
             {cartCount > 0 && (
@@ -90,7 +90,7 @@ export default function Navbar({ cartCount = 0, onCartOpen }) {
           </button>
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2.5 hover:bg-white/[0.06] rounded-lg transition-colors"
+            className="md:hidden p-2.5 hover:bg-black/[0.05] rounded-lg transition-colors"
           >
             {mobileOpen ? <X className="h-[18px] w-[18px]" /> : <Menu className="h-[18px] w-[18px]" />}
           </button>
@@ -103,21 +103,21 @@ export default function Navbar({ cartCount = 0, onCartOpen }) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden frosted border-t border-white/[0.06]"
+            className="md:hidden frosted border-t border-black/[0.06]"
           >
             <div className="px-6 py-5 space-y-1">
               {links.filter((l) => l.to !== '/affiliates').map((link) => (
                 <Link
                   key={link.to}
                   to={link.to}
-                  className="block text-sm py-2.5 px-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-all"
+                  className="block text-sm py-2.5 px-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-black/[0.04] transition-all"
                 >
                   {link.label}
                 </Link>
               ))}
               <Link
                 to="/order-status"
-                className="block text-sm py-2.5 px-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-all"
+                className="block text-sm py-2.5 px-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-black/[0.04] transition-all"
               >
                 Track Order
               </Link>

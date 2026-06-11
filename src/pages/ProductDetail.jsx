@@ -124,7 +124,7 @@ export default function ProductDetail() {
                         className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${
                           i === variantIdx
                             ? 'border-primary bg-primary/10 text-foreground'
-                            : 'border-border text-muted-foreground hover:text-foreground hover:border-white/20'
+                            : 'border-border text-muted-foreground hover:text-foreground hover:border-black/20'
                         }`}
                       >
                         {v.dose} — ${v.price.toFixed(2)}
@@ -314,7 +314,7 @@ export default function ProductDetail() {
       </div>
 
       {/* Mobile sticky buy bar */}
-      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 frosted border-t border-white/[0.08] px-4 py-3"
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 frosted border-t border-black/[0.08] px-4 py-3"
         style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
         <div className="flex items-center gap-3">
           <div className="min-w-0">

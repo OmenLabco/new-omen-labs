@@ -57,7 +57,7 @@ export default function CtaBanner() {
                 </Link>
                 <Link
                   to="/order-status"
-                  className="inline-flex items-center justify-center h-12 px-7 rounded-xl border border-white/15 text-sm font-medium tracking-wide text-white/60 hover:text-white hover:border-white/25 hover:bg-white/[0.05] transition-all duration-200"
+                  className="inline-flex items-center justify-center h-12 px-7 rounded-xl border border-white/15 text-sm font-medium tracking-wide text-white/60 hover:text-foreground hover:border-black/25 hover:bg-white/[0.05] transition-all duration-200"
                 >
                   Track Your Order
                 </Link>

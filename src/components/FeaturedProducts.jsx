@@ -5,12 +5,12 @@ import ProductVialImage from './ProductVialImage';
 import { getFeaturedProducts, getCategories } from '@/data/products';
 
 const categoryStyles = {
-  Recovery:    { chip: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/25', glow: 'from-emerald-500/25', ring: 'hover:border-emerald-400/40' },
-  Aesthetics:  { chip: 'text-pink-400 bg-pink-400/10 border-pink-400/25',          glow: 'from-pink-500/25',    ring: 'hover:border-pink-400/40' },
-  Performance: { chip: 'text-amber-400 bg-amber-400/10 border-amber-400/25',       glow: 'from-amber-500/25',   ring: 'hover:border-amber-400/40' },
+  Recovery:    { chip: 'text-emerald-600 bg-emerald-500/10 border-emerald-500/30', glow: 'from-emerald-500/25', ring: 'hover:border-emerald-400/40' },
+  Aesthetics:  { chip: 'text-pink-600 bg-pink-500/10 border-pink-500/30',          glow: 'from-pink-500/25',    ring: 'hover:border-pink-400/40' },
+  Performance: { chip: 'text-amber-600 bg-amber-500/10 border-amber-500/30',       glow: 'from-amber-500/25',   ring: 'hover:border-amber-400/40' },
   Longevity:   { chip: 'text-primary bg-primary/10 border-primary/25',             glow: 'from-blue-500/25',    ring: 'hover:border-primary/40' },
 };
-const fallbackStyle = { chip: 'text-muted-foreground bg-white/5 border-white/10', glow: 'from-white/10', ring: 'hover:border-white/20' };
+const fallbackStyle = { chip: 'text-muted-foreground bg-white/5 border-black/10', glow: 'from-white/10', ring: 'hover:border-black/20' };
 
 const RANKS = [
   { label: '#1', cls: 'bg-amber-400 text-black shadow-amber-400/40' },
@@ -52,7 +52,7 @@ export default function FeaturedProducts() {
           </div>
           <Link
             to="/catalog"
-            className="group inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors border border-border hover:border-white/20 px-5 py-2.5 rounded-xl hover:bg-white/[0.04]"
+            className="group inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors border border-border hover:border-black/20 px-5 py-2.5 rounded-xl hover:bg-black/[0.04]"
           >
             View All Compounds
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -116,7 +116,7 @@ export default function FeaturedProducts() {
                           {getCategories(product).map((cat) => {
                             const ccs = categoryStyles[cat] || fallbackStyle;
                             return (
-                              <span key={cat} className={`font-mono text-[8px] sm:text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full border backdrop-blur-sm ${ccs.chip}`}>
+                              <span key={cat} className={`font-mono text-[8px] sm:text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full border backdrop-blur-md bg-white/85 ${ccs.chip}`}>
                                 {cat}
                               </span>
                             );
