@@ -2,8 +2,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, ChevronDown } from 'lucide-react';
 import OmenLogo from './OmenLogo';
-
-const HERO_IMAGE = 'https://media.base44.com/images/public/69f985f39cc1fe91aec19c71/10fb6b72a_generated_image.png';
+import HeroVials from './HeroVials';
 
 const ticker = [
   'BPC-157', 'TB-500', 'CJC-1295', 'Ipamorelin', 'Semaglutide', 'GHK-Cu',
@@ -106,43 +105,21 @@ export default function HeroSection() {
               </motion.div>
             </div>
 
-            {/* Right – image panel */}
+            {/* Right – interactive floating vials */}
             <motion.div
               initial={{ opacity: 0, scale: 0.93 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.9, delay: 0.15 }}
-              className="relative hidden lg:flex flex-col"
+              className="relative flex flex-col mt-4 lg:mt-0"
             >
-              {/* Image card */}
-              <div className="relative rounded-2xl overflow-hidden aspect-[4/5] border border-white/[0.08]">
-                <img
-                  src={HERO_IMAGE}
-                  alt="Omen Labs Peptide Vials"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, hsl(220,20%,4%) 0%, transparent 50%)' }} />
-
-                {/* Bottom info */}
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-mono text-[10px] uppercase tracking-widest text-white/40 mb-1">Latest Batch</p>
-                      <p className="text-white font-semibold text-sm">BPC-157 · 5mg</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-mono text-[10px] uppercase tracking-widest text-white/40 mb-1">HPLC Result</p>
-                      <p className="text-primary font-bold font-mono text-sm">99.8%</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <HeroVials />
 
               {/* Floating badge */}
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: 1.0 }}
-                className="absolute -right-6 top-1/3 bg-card border border-black/[0.08] rounded-xl px-4 py-3 backdrop-blur-xl"
+                className="absolute right-0 lg:-right-6 top-[12%] bg-card/90 border border-black/[0.08] rounded-xl px-4 py-3 backdrop-blur-xl shadow-lg shadow-primary/5 pointer-events-none"
               >
                 <div className="flex items-center gap-3">
                   <OmenLogo size={20} className="text-primary" />
