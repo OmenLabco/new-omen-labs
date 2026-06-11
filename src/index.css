@@ -121,3 +121,11 @@
 .ticker-track:hover {
   animation-play-state: paused;
 }
+/* Hide horizontal scrollbars on swipe strips */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

@@ -1,41 +1,54 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowUpRight } from 'lucide-react';
+import { ArrowRight, Flame, TrendingUp } from 'lucide-react';
 import ProductVialImage from './ProductVialImage';
 import { getFeaturedProducts } from '@/data/products';
 
-const categoryColors = {
-  Recovery: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
-  Aesthetics: 'text-pink-400 bg-pink-400/10 border-pink-400/20',
-  Performance: 'text-amber-400 bg-amber-400/10 border-amber-400/20',
-  Longevity: 'text-primary bg-primary/10 border-primary/20',
+const categoryStyles = {
+  Recovery:    { chip: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/25', glow: 'from-emerald-500/25', ring: 'hover:border-emerald-400/40' },
+  Aesthetics:  { chip: 'text-pink-400 bg-pink-400/10 border-pink-400/25',          glow: 'from-pink-500/25',    ring: 'hover:border-pink-400/40' },
+  Performance: { chip: 'text-amber-400 bg-amber-400/10 border-amber-400/25',       glow: 'from-amber-500/25',   ring: 'hover:border-amber-400/40' },
+  Longevity:   { chip: 'text-primary bg-primary/10 border-primary/25',             glow: 'from-blue-500/25',    ring: 'hover:border-primary/40' },
 };
+const fallbackStyle = { chip: 'text-muted-foreground bg-white/5 border-white/10', glow: 'from-white/10', ring: 'hover:border-white/20' };
+
+const RANKS = [
+  { label: '#1', cls: 'bg-amber-400 text-black shadow-amber-400/40' },
+  { label: '#2', cls: 'bg-zinc-300 text-black shadow-white/20' },
+  { label: '#3', cls: 'bg-amber-700 text-white shadow-amber-700/40' },
+];
 
 const products = getFeaturedProducts();
+const top3 = products.slice(0, 3);
+const rest = products.slice(3, 9);
 
 export default function FeaturedProducts() {
   if (products.length === 0) return null;
 
   return (
-    <section className="py-28 md:py-36 relative">
-      <div className="max-w-7xl mx-auto px-6">
+    <section className="py-24 md:py-36 relative overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Section header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="flex flex-col md:flex-row items-start md:items-end justify-between mb-14 gap-6"
+          className="flex flex-col md:flex-row items-start md:items-end justify-between mb-10 md:mb-14 gap-5"
         >
           <div>
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-3">
               <div className="h-px w-8 bg-primary" />
               <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-primary">
-                Featured Compounds
+                Most Researched
               </span>
             </div>
             <h2 className="text-3xl md:text-4xl xl:text-5xl font-bold tracking-[-0.03em] text-foreground">
-              Molecular Catalog
+              Top Compounds
             </h2>
+            <p className="mt-2 text-sm text-muted-foreground flex items-center gap-1.5">
+              <TrendingUp className="h-3.5 w-3.5 text-primary" />
+              Ranked by researcher demand this month
+            </p>
           </div>
           <Link
             to="/catalog"
@@ -46,64 +59,119 @@ export default function FeaturedProducts() {
           </Link>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {products.map((product, i) => (
+        {/* Top 3 — leaderboard cards (swipeable on mobile) */}
+        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 sm:grid sm:grid-cols-3 sm:overflow-visible scrollbar-none">
+          {top3.map((product, i) => {
+            const cs = categoryStyles[product.category] || fallbackStyle;
+            return (
               <motion.div
                 key={product.id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.07 }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                className="min-w-[78%] xs:min-w-[70%] sm:min-w-0 snap-center"
               >
                 <Link
                   to={`/product/${product.slug}`}
-                  className="group flex flex-col rounded-2xl border border-border bg-card overflow-hidden hover:border-white/[0.15] hover:bg-card/80 transition-all duration-300"
+                  className={`group relative block rounded-3xl border border-border bg-card overflow-hidden transition-all duration-300 active:scale-[0.98] ${cs.ring}`}
                 >
-                  {/* Vial image */}
-                  <div className="relative flex items-center justify-center py-6 bg-[#060810] group-hover:py-4 transition-all duration-700">
+                  {/* Full-bleed render */}
+                  <div className="relative aspect-square overflow-hidden">
                     <ProductVialImage
                       image={product.image}
                       name={product.name}
-                      className="h-52 w-auto group-hover:scale-105 transition-transform duration-700"
+                      className="absolute inset-0 h-full w-full"
+                      style={{ objectFit: 'cover' }}
                     />
-                    <div className="absolute top-3 left-3">
-                      <span className={`font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full border ${categoryColors[product.category] || 'text-muted-foreground bg-white/5 border-white/10'}`}>
+                    {/* Category glow */}
+                    <div className={`absolute inset-0 bg-gradient-to-t ${cs.glow} via-transparent to-transparent opacity-40 pointer-events-none`} />
+                    {/* Bottom fade for text */}
+                    <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#05070d] via-[#05070d]/70 to-transparent pointer-events-none" />
+
+                    {/* Rank badge */}
+                    <div className="absolute top-3 left-3 flex items-center gap-2">
+                      <span className={`h-8 min-w-8 px-2 inline-flex items-center justify-center rounded-full font-mono text-xs font-bold shadow-lg ${RANKS[i].cls}`}>
+                        {RANKS[i].label}
+                      </span>
+                      {i === 0 && (
+                        <span className="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded-full border border-amber-400/30 bg-black/50 text-amber-400 backdrop-blur-sm">
+                          <Flame className="h-3 w-3" /> Best Seller
+                        </span>
+                      )}
+                    </div>
+                    {/* Category chip */}
+                    <div className="absolute top-3 right-3">
+                      <span className={`font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded-full border backdrop-blur-sm ${cs.chip}`}>
                         {product.category}
                       </span>
                     </div>
-                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                      <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/30">
-                        <ArrowUpRight className="h-4 w-4 text-white" />
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Info */}
-                  <div className="p-5 flex flex-col gap-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-base font-bold tracking-tight text-foreground group-hover:text-primary transition-colors">
+                    {/* Name + price overlaid on the fade */}
+                    <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+                      <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white group-hover:text-primary transition-colors">
                         {product.name}
                       </h3>
-                      <span className="text-base font-bold text-foreground shrink-0">
-                        {product.has_multiple && <span className="text-xs font-normal text-muted-foreground">from </span>}${product.price?.toFixed(2)}
-                      </span>
-                    </div>
-                    {product.short_description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                        {product.short_description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 pt-1 border-t border-border mt-1">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                        Purity ≥{product.purity}%
-                      </span>
+                      <div className="mt-1 flex items-center justify-between">
+                        <span className="text-base sm:text-lg font-bold text-white">
+                          {product.has_multiple && <span className="text-[11px] font-normal text-white/60">from </span>}
+                          ${product.price?.toFixed(2)}
+                        </span>
+                        <span className="font-mono text-[9px] uppercase tracking-widest text-white/50">
+                          ≥{product.purity}% purity
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </Link>
               </motion.div>
-            ))}
-          </div>
+            );
+          })}
+        </div>
+
+        {/* The rest — compact swipe strip */}
+        {rest.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.15 }}
+            className="mt-8 md:mt-10"
+          >
+            <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground mb-4">
+              Trending in the lab
+            </p>
+            <div className="flex gap-3 overflow-x-auto snap-x pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
+              {rest.map((product) => {
+                const cs = categoryStyles[product.category] || fallbackStyle;
+                return (
+                  <Link
+                    key={product.id}
+                    to={`/product/${product.slug}`}
+                    className={`group shrink-0 w-36 sm:w-40 snap-start rounded-2xl border border-border bg-card overflow-hidden transition-all duration-300 active:scale-[0.97] ${cs.ring}`}
+                  >
+                    <div className="relative aspect-square overflow-hidden">
+                      <ProductVialImage
+                        image={product.image}
+                        name={product.name}
+                        className="absolute inset-0 h-full w-full"
+                        style={{ objectFit: 'cover' }}
+                      />
+                      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#05070d]/90 to-transparent pointer-events-none" />
+                    </div>
+                    <div className="p-3">
+                      <p className="text-[13px] font-semibold leading-tight truncate group-hover:text-primary transition-colors">{product.name}</p>
+                      <p className="mt-0.5 text-[13px] font-bold">
+                        {product.has_multiple && <span className="text-[10px] font-normal text-muted-foreground">from </span>}
+                        ${product.price?.toFixed(2)}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
       </div>
     </section>
   );
