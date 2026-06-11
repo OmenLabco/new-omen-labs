@@ -62,10 +62,8 @@ export default function FeaturedProducts() {
                   {/* Vial image */}
                   <div className="relative flex items-center justify-center py-6 bg-[#060810] group-hover:py-4 transition-all duration-700">
                     <ProductVialImage
+                      image={product.image}
                       name={product.name}
-                      dose={product.dosage?.replace(' lyophilized', '').replace(' vial', '')}
-                      purity={product.purity}
-                      category={product.category}
                       className="h-52 w-auto group-hover:scale-105 transition-transform duration-700"
                     />
                     <div className="absolute top-3 left-3">
@@ -86,7 +84,9 @@ export default function FeaturedProducts() {
                       <h3 className="text-base font-bold tracking-tight text-foreground group-hover:text-primary transition-colors">
                         {product.name}
                       </h3>
-                      <span className="text-base font-bold text-foreground shrink-0">${product.price?.toFixed(2)}</span>
+                      <span className="text-base font-bold text-foreground shrink-0">
+                        {product.has_multiple && <span className="text-xs font-normal text-muted-foreground">from </span>}${product.price?.toFixed(2)}
+                      </span>
                     </div>
                     {product.short_description && (
                       <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">

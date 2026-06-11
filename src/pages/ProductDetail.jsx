@@ -15,6 +15,7 @@ export default function ProductDetail() {
   const { loadCart } = useOutletContext();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const [variantIdx, setVariantIdx] = useState(0);
 
   const product = useMemo(() => getProductBySlug(slug), [slug]);
   const pairedProducts = useMemo(
@@ -22,13 +23,17 @@ export default function ProductDetail() {
     [product]
   );
 
+  const variants = product?.variants || [];
+  const variant = variants[Math.min(variantIdx, variants.length - 1)] || { dose: '', price: product?.price || 0 };
+  const basePrice = variant.price || 0;
+
   const discountPct = getDiscountPct(quantity);
-  const discountedUnitPrice = product ? getDiscountedPrice(product.price, quantity) : 0;
+  const discountedUnitPrice = product ? getDiscountedPrice(basePrice, quantity) : 0;
 
   const handleAddToCart = () => {
     cart.add({
-      product_id: product.id,
-      product_name: product.name,
+      product_id: `${product.id}_${variant.dose}`,
+      product_name: `${product.name} ${variant.dose}`,
       quantity,
       price: discountedUnitPrice,
     });
@@ -66,10 +71,8 @@ export default function ProductDetail() {
               className="aspect-square rounded-2xl overflow-hidden bg-[#060810] relative"
             >
               <ProductVialImage
+                image={product.image}
                 name={product.name}
-                dose={product.dosage?.replace(' lyophilized', '').replace(' vial', '')}
-                purity={product.purity}
-                category={product.category}
                 className="w-full h-full"
               />
               {/* Logo watermark */}
@@ -84,13 +87,41 @@ export default function ProductDetail() {
               {/* Price */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <span className="text-3xl font-bold">${discountedUnitPrice.toFixed(2)}</span>
-                  {discountPct > 0 && (
-                    <span className="text-lg text-muted-foreground line-through">${product.price?.toFixed(2)}</span>
+                  {product.coming_soon ? (
+                    <span className="text-2xl font-bold text-muted-foreground">Coming Soon</span>
+                  ) : (
+                    <>
+                      <span className="text-3xl font-bold">${discountedUnitPrice.toFixed(2)}</span>
+                      {discountPct > 0 && (
+                        <span className="text-lg text-muted-foreground line-through">${basePrice.toFixed(2)}</span>
+                      )}
+                    </>
                   )}
                 </div>
                 <PurityBadge purity={product.purity} />
               </div>
+
+              {/* Dose selector */}
+              {!product.coming_soon && variants.length > 1 && (
+                <div className="mb-5">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground block mb-2">Size</span>
+                  <div className="flex gap-2 flex-wrap">
+                    {variants.map((v, i) => (
+                      <button
+                        key={v.dose}
+                        onClick={() => setVariantIdx(i)}
+                        className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${
+                          i === variantIdx
+                            ? 'border-primary bg-primary/10 text-foreground'
+                            : 'border-border text-muted-foreground hover:text-foreground hover:border-white/20'
+                        }`}
+                      >
+                        {v.dose} — ${v.price.toFixed(2)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Active discount badge */}
               {discountPct > 0 && (
@@ -149,9 +180,11 @@ export default function ProductDetail() {
               <Button
                 onClick={handleAddToCart}
                 className="w-full h-12 text-sm font-medium tracking-wide"
-                disabled={added}
+                disabled={added || product.coming_soon}
               >
-                {added ? (
+                {product.coming_soon ? (
+                  'Coming Soon'
+                ) : added ? (
                   <>
                     <Check className="mr-2 h-4 w-4" />
                     Added to Protocol
@@ -248,10 +281,8 @@ export default function ProductDetail() {
                     >
                       <div className="flex items-center gap-3">
                         <ProductVialImage
+                          image={p.image}
                           name={p.name}
-                          dose={p.dosage?.replace(' lyophilized', '').replace(' vial', '')}
-                          purity={p.purity}
-                          category={p.category}
                           className="h-10 w-10"
                         />
                         <div>
@@ -259,7 +290,7 @@ export default function ProductDetail() {
                           <p className="font-mono text-[10px] text-muted-foreground">{p.category}</p>
                         </div>
                       </div>
-                      <span className="text-sm font-semibold">${p.price?.toFixed(2)}</span>
+                      <span className="text-sm font-semibold">{p.price != null ? `$${p.price.toFixed(2)}` : 'TBA'}</span>
                     </Link>
                   ))}
                 </div>

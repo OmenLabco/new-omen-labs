@@ -80,12 +80,17 @@ export default function Catalog() {
                   {/* Image */}
                   <div className="relative bg-secondary/30 flex items-center justify-center py-6 group-hover:py-4 transition-all duration-700">
                     <ProductVialImage
+                      image={product.image}
                       name={product.name}
-                      dose={product.dosage?.replace(' lyophilized', '').replace(' vial', '')}
-                      purity={product.purity}
-                      category={product.category}
                       className="h-52 w-auto group-hover:scale-105 transition-transform duration-700"
                     />
+                    {product.coming_soon && (
+                      <div className="absolute bottom-3 left-3">
+                        <span className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-500">
+                          Coming Soon
+                        </span>
+                      </div>
+                    )}
                     <div className="absolute top-3 left-3">
                       <span className={`font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full border ${categoryColors[product.category] || 'text-muted-foreground bg-white/5 border-white/10'}`}>
                         {product.category}
@@ -105,7 +110,13 @@ export default function Catalog() {
                       <h3 className="text-base font-bold tracking-tight group-hover:text-primary transition-colors">
                         {product.name}
                       </h3>
-                      <span className="text-base font-bold shrink-0">${product.price?.toFixed(2)}</span>
+                      <span className="text-base font-bold shrink-0">
+                        {product.coming_soon ? (
+                          <span className="text-sm text-muted-foreground font-medium">TBA</span>
+                        ) : (
+                          <>{product.has_multiple && <span className="text-xs font-normal text-muted-foreground">from </span>}${product.price?.toFixed(2)}</>
+                        )}
+                      </span>
                     </div>
                     {product.short_description && (
                       <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
