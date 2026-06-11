@@ -12,6 +12,7 @@ export const PRODUCTS = [
     name: "GLP-3 RT",
     slug: "glp-rt",
     category: "Performance",
+    categories: ["Performance", "Longevity"],
     short_description: "GLP-3 receptor targeting peptide for metabolic research.",
     description:
       "GLP RT (Glucagon-Like Peptide Receptor Targeted) is a research-grade peptide compound designed for in-vitro study of metabolic pathways and receptor binding affinity. This compound has shown significant promise in preclinical research for understanding glucose homeostasis and appetite regulation mechanisms.",
@@ -77,6 +78,7 @@ export const PRODUCTS = [
     name: "GHK-Cu",
     slug: "ghk-cu",
     category: "Longevity",
+    categories: ["Longevity", "Aesthetics"],
     short_description: "Copper peptide complex for anti-aging and wound healing research.",
     description:
       "GHK-Cu (Glycyl-L-Histidyl-L-Lysine Copper Complex) is a naturally occurring copper peptide with extensive research documentation in skin remodeling, wound contraction, and anti-inflammatory pathways. Studies indicate GHK-Cu stimulates collagen and glycosaminoglycan synthesis in dermal fibroblasts.",
@@ -98,6 +100,7 @@ export const PRODUCTS = [
     name: "Semax",
     slug: "semax",
     category: "Longevity",
+    categories: ["Longevity", "Performance"],
     short_description: "Nootropic heptapeptide for cognitive and neuroprotection research.",
     description:
       "Semax is a synthetic heptapeptide derived from ACTH(4-10), studied for its nootropic and neuroprotective properties. Research focuses on BDNF expression, attention and memory pathways, and recovery models in neuroscience research.",
@@ -140,6 +143,7 @@ export const PRODUCTS = [
     name: "KLOW",
     slug: "klow",
     category: "Performance",
+    categories: ["Recovery", "Aesthetics"],
     short_description: "Cognitive enhancement peptide for neuroscience research.",
     description:
       "KLOW is a research peptide compound developed for studying nootropic pathways and cognitive function. It targets BDNF (Brain-Derived Neurotrophic Factor) signaling cascades and has shown potential in neuroscience research focusing on synaptic plasticity and neuroprotection.",
@@ -158,6 +162,7 @@ export const PRODUCTS = [
     name: "GLOW",
     slug: "glow",
     category: "Aesthetics",
+    categories: ["Aesthetics", "Recovery"],
     short_description: "Proprietary peptide blend targeting skin rejuvenation pathways.",
     description:
       "GLOW is Omen Labs' proprietary formulation designed for research into dermal regeneration and collagen synthesis pathways. This compound targets fibroblast growth factor receptors and has demonstrated promising results in in-vitro skin cell proliferation studies.",
@@ -197,6 +202,7 @@ export const PRODUCTS = [
     name: "MOTS-c",
     slug: "mots-c",
     category: "Longevity",
+    categories: ["Longevity", "Performance"],
     short_description: "Mitochondrial-derived peptide for metabolic homeostasis research.",
     description:
       "MOTS-c is a mitochondrial-derived peptide encoded within the 12S rRNA region of mitochondrial DNA. Research focuses on metabolic homeostasis, AMPK signaling, insulin sensitivity, and exercise-mimetic pathways.",
@@ -257,6 +263,7 @@ export const PRODUCTS = [
     name: "Ipamorelin",
     slug: "ipamorelin",
     category: "Performance",
+    categories: ["Performance", "Longevity"],
     short_description: "Selective growth hormone secretagogue for endocrine research.",
     description:
       "Ipamorelin is a pentapeptide growth hormone secretagogue with high selectivity for the ghrelin receptor (GHS-R). Research applications include pulsatile GH release studies, endocrine signaling, and body composition models.",
@@ -314,6 +321,7 @@ export const PRODUCTS = [
     name: "IGF-1 LR3",
     slug: "igf1-lr3",
     category: "Performance",
+    categories: ["Performance", "Recovery"],
     short_description: "Long-arginine IGF-1 analog for growth factor signaling research.",
     description:
       "IGF-1 LR3 is a long-acting analog of insulin-like growth factor 1 with an arginine substitution and 13-residue N-terminal extension, reducing binding-protein affinity. Research applications include cellular growth, proliferation, and anabolic signaling studies.",
@@ -390,6 +398,7 @@ export const PRODUCTS = [
     name: "WOLVERINE",
     slug: "wolverine",
     category: "Recovery",
+    categories: ["Recovery", "Performance"],
     short_description: "Proprietary recovery peptide blend for accelerated tissue repair research.",
     description:
       "WOLVERINE is Omen Labs' high-potency proprietary peptide blend targeting rapid tissue regeneration and recovery pathways. Formulated for research into accelerated healing mechanisms, inflammation reduction, and musculoskeletal repair.",
@@ -428,6 +437,7 @@ export const PRODUCTS = [
     name: "Semax + Selank",
     slug: "semax-selank",
     category: "Longevity",
+    categories: ["Longevity", "Recovery"],
     short_description: "Combined nootropic and anxiolytic peptide stack for CNS research.",
     description:
       "A combined preparation of Semax and Selank for research into synergistic nootropic and anxiolytic pathways — BDNF expression, GABAergic modulation, and stress-cognition interaction models.",
@@ -461,8 +471,12 @@ export function getProductBySlug(slug) {
   return PRODUCTS.find((p) => p.slug === slug) || null;
 }
 
+export function getCategories(product) {
+  return product.categories || (product.category ? [product.category] : []);
+}
+
 export function getProductsByCategory(category) {
-  return category ? PRODUCTS.filter((p) => p.category === category) : PRODUCTS;
+  return category ? PRODUCTS.filter((p) => getCategories(p).includes(category)) : PRODUCTS;
 }
 
 export function sortByPopularity(products) {

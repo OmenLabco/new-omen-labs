@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowUpRight } from 'lucide-react';
-import { PRODUCTS, getProductsByCategory, sortByPopularity } from '@/data/products';
+import { PRODUCTS, getProductsByCategory, sortByPopularity, getCategories } from '@/data/products';
 import OmenLogo from '../components/OmenLogo';
 import CategoryFilter from '../components/CategoryFilter';
 import ProductVialImage from '../components/ProductVialImage';
@@ -91,11 +91,6 @@ export default function Catalog() {
                         </span>
                       </div>
                     )}
-                    <div className="absolute top-2 left-2 sm:top-3 sm:left-3">
-                      <span className={`font-mono text-[8px] sm:text-[10px] uppercase tracking-widest px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border ${categoryColors[product.category] || 'text-muted-foreground bg-white/5 border-white/10'}`}>
-                        {product.category}
-                      </span>
-                    </div>
 
                     <div className="absolute top-3 right-3 hidden sm:block opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                       <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/30">
@@ -106,16 +101,30 @@ export default function Catalog() {
 
                   {/* Info */}
                   <div className="p-3 sm:p-5 flex flex-col gap-1.5 sm:gap-3 flex-1">
-                    <h3 className="text-sm sm:text-base font-bold tracking-tight leading-snug group-hover:text-primary transition-colors">
-                      {product.name}
-                    </h3>
-                    <span className="text-sm sm:text-base font-bold">
-                      {product.coming_soon ? (
-                        <span className="text-xs sm:text-sm text-muted-foreground font-medium">Price TBA</span>
-                      ) : (
-                        <>{product.has_multiple && <span className="text-[10px] sm:text-xs font-normal text-muted-foreground">from </span>}${product.price?.toFixed(2)}</>
-                      )}
-                    </span>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="text-sm sm:text-base font-bold tracking-tight leading-snug group-hover:text-primary transition-colors">
+                          {product.name}
+                        </h3>
+                        <span className="text-sm sm:text-base font-bold">
+                          {product.coming_soon ? (
+                            <span className="text-xs sm:text-sm text-muted-foreground font-medium">Price TBA</span>
+                          ) : (
+                            <>{product.has_multiple && <span className="text-[10px] sm:text-xs font-normal text-muted-foreground">from </span>}${product.price?.toFixed(2)}</>
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0 pt-0.5">
+                        {getCategories(product).map((cat) => (
+                          <span
+                            key={cat}
+                            className={`font-mono text-[8px] sm:text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full border ${categoryColors[cat] || 'text-muted-foreground bg-white/5 border-white/10'}`}
+                          >
+                            {cat}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                     {product.short_description && (
                       <p className="hidden sm:block text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                         {product.short_description}

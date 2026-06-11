@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Flame, TrendingUp } from 'lucide-react';
 import ProductVialImage from './ProductVialImage';
-import { getFeaturedProducts } from '@/data/products';
+import { getFeaturedProducts, getCategories } from '@/data/products';
 
 const categoryStyles = {
   Recovery:    { chip: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/25', glow: 'from-emerald-500/25', ring: 'hover:border-emerald-400/40' },
@@ -100,26 +100,28 @@ export default function FeaturedProducts() {
                         </span>
                       )}
                     </div>
-                    {/* Category chip */}
-                    <div className="absolute top-3 right-3">
-                      <span className={`font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded-full border backdrop-blur-sm ${cs.chip}`}>
-                        {product.category}
-                      </span>
-                    </div>
-
-                    {/* Name + price overlaid on the fade */}
+                    {/* Name + price overlaid on the fade, categories bottom-right */}
                     <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
-                      <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white group-hover:text-primary transition-colors">
-                        {product.name}
-                      </h3>
-                      <div className="mt-1 flex items-center justify-between">
-                        <span className="text-base sm:text-lg font-bold text-white">
-                          {product.has_multiple && <span className="text-[11px] font-normal text-white/60">from </span>}
-                          ${product.price?.toFixed(2)}
-                        </span>
-                        <span className="font-mono text-[9px] uppercase tracking-widest text-white/50">
-                          ≥{product.purity}% purity
-                        </span>
+                      <div className="flex items-end justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white group-hover:text-primary transition-colors">
+                            {product.name}
+                          </h3>
+                          <span className="mt-1 block text-base sm:text-lg font-bold text-white">
+                            {product.has_multiple && <span className="text-[11px] font-normal text-white/60">from </span>}
+                            ${product.price?.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          {getCategories(product).map((cat) => {
+                            const ccs = categoryStyles[cat] || fallbackStyle;
+                            return (
+                              <span key={cat} className={`font-mono text-[8px] sm:text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full border backdrop-blur-sm ${ccs.chip}`}>
+                                {cat}
+                              </span>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -159,12 +161,24 @@ export default function FeaturedProducts() {
                       />
                       <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#05070d]/90 to-transparent pointer-events-none" />
                     </div>
-                    <div className="p-3">
-                      <p className="text-[13px] font-semibold leading-tight truncate group-hover:text-primary transition-colors">{product.name}</p>
-                      <p className="mt-0.5 text-[13px] font-bold">
-                        {product.has_multiple && <span className="text-[10px] font-normal text-muted-foreground">from </span>}
-                        ${product.price?.toFixed(2)}
-                      </p>
+                    <div className="p-3 flex items-end justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-semibold leading-tight truncate group-hover:text-primary transition-colors">{product.name}</p>
+                        <p className="mt-0.5 text-[13px] font-bold">
+                          {product.has_multiple && <span className="text-[10px] font-normal text-muted-foreground">from </span>}
+                          ${product.price?.toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-0.5 shrink-0">
+                        {getCategories(product).map((cat) => {
+                          const ccs = categoryStyles[cat] || fallbackStyle;
+                          return (
+                            <span key={cat} className={`font-mono text-[7px] uppercase tracking-wider px-1.5 py-0.5 rounded-full border ${ccs.chip}`}>
+                              {cat}
+                            </span>
+                          );
+                        })}
+                      </div>
                     </div>
                   </Link>
                 );
