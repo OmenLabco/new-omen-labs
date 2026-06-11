@@ -27,23 +27,23 @@ export default function Catalog() {
       {/* Background */}
       <div className="absolute inset-0 hex-grid opacity-50 pointer-events-none" />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-20 pt-28">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-20 pt-24 sm:pt-28">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-14"
+          className="mb-8 sm:mb-14"
         >
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
             <div className="h-px w-8 bg-primary" />
             <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-primary">
               Research Compounds
             </span>
           </div>
-          <h1 className="text-4xl md:text-5xl xl:text-6xl font-bold tracking-[-0.04em]">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl xl:text-6xl font-bold tracking-[-0.04em]">
             Molecular Catalog
           </h1>
-          <p className="mt-4 text-muted-foreground max-w-lg leading-relaxed">
+          <p className="mt-3 sm:mt-4 text-sm sm:text-base text-muted-foreground max-w-lg leading-relaxed">
             Browse our complete selection of HPLC-verified peptide compounds for research applications.
           </p>
         </motion.div>
@@ -52,8 +52,8 @@ export default function Catalog() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="mb-10"
+          transition={{ delay: 0.15 }}
+          className="mb-6 sm:mb-10"
         >
           <CategoryFilter selected={category} onSelect={setCategory} />
         </motion.div>
@@ -65,39 +65,39 @@ export default function Catalog() {
             <p className="text-muted-foreground">No compounds found in this category.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {products.map((product, i) => (
               <motion.div
                 key={product.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.06 }}
+                transition={{ delay: Math.min(i * 0.05, 0.35) }}
               >
                 <Link
                   to={`/product/${product.slug}`}
-                  className="group flex flex-col rounded-2xl border border-border bg-card overflow-hidden hover:border-white/[0.15] hover:bg-card/80 transition-all duration-300"
+                  className="group flex h-full flex-col rounded-2xl border border-border bg-card overflow-hidden hover:border-white/[0.15] hover:bg-card/80 transition-all duration-300 active:scale-[0.98]"
                 >
                   {/* Image */}
-                  <div className="relative bg-secondary/30 flex items-center justify-center py-6 group-hover:py-4 transition-all duration-700">
+                  <div className="relative bg-secondary/30 flex items-center justify-center py-3 sm:py-6 group-hover:py-4 transition-all duration-700">
                     <ProductVialImage
                       image={product.image}
                       name={product.name}
-                      className="h-52 w-auto group-hover:scale-105 transition-transform duration-700"
+                      className="h-32 sm:h-44 md:h-52 w-auto group-hover:scale-105 transition-transform duration-700"
                     />
                     {product.coming_soon && (
-                      <div className="absolute bottom-3 left-3">
-                        <span className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-500">
+                      <div className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3">
+                        <span className="font-mono text-[8px] sm:text-[10px] uppercase tracking-widest px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-500">
                           Coming Soon
                         </span>
                       </div>
                     )}
-                    <div className="absolute top-3 left-3">
-                      <span className={`font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full border ${categoryColors[product.category] || 'text-muted-foreground bg-white/5 border-white/10'}`}>
+                    <div className="absolute top-2 left-2 sm:top-3 sm:left-3">
+                      <span className={`font-mono text-[8px] sm:text-[10px] uppercase tracking-widest px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border ${categoryColors[product.category] || 'text-muted-foreground bg-white/5 border-white/10'}`}>
                         {product.category}
                       </span>
                     </div>
 
-                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <div className="absolute top-3 right-3 hidden sm:block opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                       <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/30">
                         <ArrowUpRight className="h-4 w-4 text-white" />
                       </div>
@@ -105,25 +105,23 @@ export default function Catalog() {
                   </div>
 
                   {/* Info */}
-                  <div className="p-5 flex flex-col gap-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-base font-bold tracking-tight group-hover:text-primary transition-colors">
-                        {product.name}
-                      </h3>
-                      <span className="text-base font-bold shrink-0">
-                        {product.coming_soon ? (
-                          <span className="text-sm text-muted-foreground font-medium">TBA</span>
-                        ) : (
-                          <>{product.has_multiple && <span className="text-xs font-normal text-muted-foreground">from </span>}${product.price?.toFixed(2)}</>
-                        )}
-                      </span>
-                    </div>
+                  <div className="p-3 sm:p-5 flex flex-col gap-1.5 sm:gap-3 flex-1">
+                    <h3 className="text-sm sm:text-base font-bold tracking-tight leading-snug group-hover:text-primary transition-colors">
+                      {product.name}
+                    </h3>
+                    <span className="text-sm sm:text-base font-bold">
+                      {product.coming_soon ? (
+                        <span className="text-xs sm:text-sm text-muted-foreground font-medium">Price TBA</span>
+                      ) : (
+                        <>{product.has_multiple && <span className="text-[10px] sm:text-xs font-normal text-muted-foreground">from </span>}${product.price?.toFixed(2)}</>
+                      )}
+                    </span>
                     {product.short_description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                      <p className="hidden sm:block text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                         {product.short_description}
                       </p>
                     )}
-                    <div className="flex items-center gap-2 pt-2 border-t border-border">
+                    <div className="hidden sm:flex items-center gap-2 pt-2 mt-auto border-t border-border">
                       <div className="h-1.5 w-1.5 rounded-full bg-primary" />
                       <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                         Purity ≥{product.purity}%

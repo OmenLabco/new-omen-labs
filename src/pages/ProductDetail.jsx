@@ -54,15 +54,26 @@ export default function ProductDetail() {
   }
 
   return (
-    <div className="min-h-screen py-12 md:py-20">
-      <div className="max-w-7xl mx-auto px-6">
+    <div className="min-h-screen pt-24 pb-28 md:py-20 lg:pb-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Back */}
-        <Link to="/catalog" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8">
+        <Link to="/catalog" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-5 lg:mb-8">
           <ArrowLeft className="h-4 w-4" />
           Back to Catalog
         </Link>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
+        {/* Mobile title (shows above the image; desktop title lives in right column) */}
+        <div className="lg:hidden mb-5">
+          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary">
+            {product.category} Protocol
+          </span>
+          <div className="mt-1.5 flex items-start justify-between gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">{product.name}</h1>
+            <PurityBadge purity={product.purity} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-20">
           {/* Left - Sticky Image + Cart */}
           <div className="lg:sticky lg:top-24 lg:self-start">
             <motion.div
@@ -83,7 +94,7 @@ export default function ProductDetail() {
             </motion.div>
 
             {/* Add to cart */}
-            <div className="mt-8 p-6 border border-border rounded-2xl">
+            <div className="mt-5 lg:mt-8 p-4 sm:p-6 border border-border rounded-2xl">
               {/* Price */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -98,7 +109,7 @@ export default function ProductDetail() {
                     </>
                   )}
                 </div>
-                <PurityBadge purity={product.purity} />
+                <span className="hidden lg:block"><PurityBadge purity={product.purity} /></span>
               </div>
 
               {/* Dose selector */}
@@ -209,21 +220,23 @@ export default function ProductDetail() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-primary">
-              {product.category} Protocol
-            </span>
-            <h1 className="mt-4 text-4xl md:text-5xl font-bold tracking-tight">
-              {product.name}
-            </h1>
+            <div className="hidden lg:block">
+              <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-primary">
+                {product.category} Protocol
+              </span>
+              <h1 className="mt-4 text-4xl md:text-5xl font-bold tracking-tight">
+                {product.name}
+              </h1>
+            </div>
 
             {product.sequence && (
-              <p className="mt-4 font-mono text-[11px] text-muted-foreground break-all leading-relaxed opacity-40">
+              <p className="mt-4 hidden lg:block font-mono text-[11px] text-muted-foreground break-all leading-relaxed opacity-40">
                 {product.sequence}
               </p>
             )}
 
             {/* Specs */}
-            <div className="mt-10 space-y-0">
+            <div className="mt-2 lg:mt-10 space-y-0">
               {[
                 { label: 'Molecular Weight', value: product.molecular_weight },
                 { label: 'Purity', value: `≥${product.purity}%` },
@@ -297,6 +310,32 @@ export default function ProductDetail() {
               </div>
             )}
           </motion.div>
+        </div>
+      </div>
+
+      {/* Mobile sticky buy bar */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 frosted border-t border-white/[0.08] px-4 py-3"
+        style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
+        <div className="flex items-center gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">
+              {product.name}{variant.dose ? ` · ${variant.dose}` : ''}{quantity > 1 ? ` × ${quantity}` : ''}
+            </p>
+            <p className="text-lg font-bold leading-tight">
+              {product.coming_soon ? 'TBA' : `$${(discountedUnitPrice * quantity).toFixed(2)}`}
+            </p>
+          </div>
+          <Button
+            onClick={handleAddToCart}
+            disabled={added || product.coming_soon}
+            className="flex-1 h-12 text-sm font-semibold tracking-wide"
+          >
+            {product.coming_soon ? 'Coming Soon' : added ? (
+              <><Check className="mr-2 h-4 w-4" /> Added</>
+            ) : (
+              'Add to Protocol'
+            )}
+          </Button>
         </div>
       </div>
     </div>
