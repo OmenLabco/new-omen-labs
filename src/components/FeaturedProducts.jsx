@@ -203,16 +203,6 @@ export default function FeaturedProducts() {
               })}
             </div>
 
-            {/* Browse catalog CTA */}
-            <div className="mt-6 flex justify-center">
-              <Link
-                to="/catalog"
-                className="group inline-flex items-center gap-2 px-7 h-12 rounded-xl bg-primary text-white text-sm font-semibold tracking-wide shadow-lg shadow-primary/25 hover:bg-primary/90 transition-all active:scale-[0.98]"
-              >
-                Browse Full Catalog
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-              </Link>
-            </div>
           </motion.div>
         )}
       </div>
