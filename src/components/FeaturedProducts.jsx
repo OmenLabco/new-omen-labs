@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Flame, TrendingUp } from 'lucide-react';
+import { ArrowRight, Flame, TrendingUp, FlaskConical } from 'lucide-react';
 import ProductVialImage from './ProductVialImage';
 import { getFeaturedProducts, getCategories } from '@/data/products';
 
@@ -129,6 +129,24 @@ export default function FeaturedProducts() {
               </motion.div>
             );
           })}
+
+          {/* Swipe-end card → catalog (mobile carousel only) */}
+          <div className="sm:hidden min-w-[78%] snap-center">
+            <Link
+              to="/catalog"
+              className="group relative flex flex-col items-center justify-center aspect-square rounded-3xl border border-primary/25 bg-gradient-to-b from-primary/[0.07] to-transparent overflow-hidden active:scale-[0.98] transition-transform"
+            >
+              <div className="absolute inset-0 hex-grid opacity-30 pointer-events-none" />
+              <div className="h-14 w-14 rounded-2xl bg-primary/10 border border-primary/25 flex items-center justify-center mb-5">
+                <FlaskConical className="h-6 w-6 text-primary" />
+              </div>
+              <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary mb-2">22+ Compounds</p>
+              <p className="text-xl font-bold tracking-tight text-center px-8">Explore the full catalog</p>
+              <div className="mt-5 inline-flex items-center gap-2 px-5 h-11 rounded-xl bg-primary text-white text-sm font-semibold shadow-lg shadow-primary/25">
+                Browse All <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </div>
+            </Link>
+          </div>
         </div>
 
         {/* The rest — compact swipe strip */}

@@ -238,7 +238,7 @@ export const PRODUCTS = [
     image: "/products/tb-500.jpg",
     paired_products: ["BPC-157", "GHK-Cu"],
     in_stock: true,
-    featured: false,
+    featured: true,
   },
   {
     id: "69f9871d9cc1fe91aec19c90",
@@ -462,9 +462,11 @@ for (const p of PRODUCTS) {
   p.has_multiple = p.variants.length > 1;
 }
 
+// Demand-weighted order (GLP-1s lead the market, BPC/TB recovery classics next,
+// blends + aesthetics mid, niche compounds lower) — intentionally not a strict ranking.
 const POPULARITY_ORDER = [
-  "glp-rt", "tirzepatide", "bpc-157", "ghk-cu", "semax", "nad", "mt2", "klow", "glow",
-  "tb-500", "mots-c", "selank", "ipamorelin", "cjc-ipamorelin", "kpv", "igf1-lr3",
+  "glp-rt", "tirzepatide", "bpc-157", "tb-500", "klow", "ghk-cu", "glow", "nad",
+  "ipamorelin", "semax", "cjc-ipamorelin", "mots-c", "mt2", "selank", "kpv", "igf1-lr3",
 ];
 
 export function getProductBySlug(slug) {
