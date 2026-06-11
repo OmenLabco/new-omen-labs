@@ -129,3 +129,17 @@
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* ── Lively-light additions ── */
+.band-blue {
+  background: linear-gradient(180deg, rgba(90,130,255,0.045) 0%, rgba(90,130,255,0.10) 50%, rgba(90,130,255,0.03) 100%);
+}
+.card-lift { transition: transform .35s cubic-bezier(.21,.6,.35,1), box-shadow .35s, border-color .3s; }
+.card-lift:hover { transform: translateY(-6px); box-shadow: 0 24px 48px -20px rgba(60,100,255,0.35); }
+.glass-card {
+  background: rgba(255,255,255,0.78);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+@keyframes dashflow { to { stroke-dashoffset: -24; } }
+.flow-line { stroke-dasharray: 6 6; animation: dashflow 1.2s linear infinite; }

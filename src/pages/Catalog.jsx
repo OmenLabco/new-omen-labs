@@ -75,7 +75,7 @@ export default function Catalog() {
               >
                 <Link
                   to={`/product/${product.slug}`}
-                  className="group flex h-full flex-col rounded-2xl border border-border bg-card overflow-hidden hover:border-black/[0.15] hover:bg-card/80 transition-all duration-300 active:scale-[0.98]"
+                  className="card-lift group flex h-full flex-col rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/25 active:scale-[0.98]"
                 >
                   {/* Image */}
                   <div className="relative bg-[#0a0e1a] flex items-center justify-center py-3 sm:py-6 group-hover:py-4 transition-all duration-700">

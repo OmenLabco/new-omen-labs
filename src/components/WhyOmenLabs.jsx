@@ -26,7 +26,7 @@ const pillars = [
 
 export default function WhyOmenLabs() {
   return (
-    <section className="py-28 md:py-36 relative">
+    <section className="py-28 md:py-36 relative band-blue overflow-hidden">
       {/* Accent gradient */}
       <div
         className="absolute inset-0 pointer-events-none"
@@ -80,7 +80,7 @@ export default function WhyOmenLabs() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: i * 0.1 }}
-                  className="rounded-2xl border border-border bg-card p-5 hover:border-black/[0.15] hover:bg-card/80 transition-all duration-300"
+                  className="card-lift glass-card rounded-2xl border border-primary/10 p-5"
                 >
                   <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
                     <Icon className="h-4.5 w-4.5 text-primary" style={{ width: 18, height: 18 }} />

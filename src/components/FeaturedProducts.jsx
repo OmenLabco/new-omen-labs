@@ -74,7 +74,7 @@ export default function FeaturedProducts() {
               >
                 <Link
                   to={`/product/${product.slug}`}
-                  className={`group relative block rounded-3xl border border-border bg-card overflow-hidden transition-all duration-300 active:scale-[0.98] ${cs.ring}`}
+                  className={`card-lift group relative block rounded-3xl border border-border bg-card overflow-hidden active:scale-[0.98] ${cs.ring}`}
                 >
                   {/* Full-bleed render */}
                   <div className="relative aspect-square overflow-hidden">
@@ -168,7 +168,7 @@ export default function FeaturedProducts() {
                   <Link
                     key={product.id}
                     to={`/product/${product.slug}`}
-                    className={`group shrink-0 w-36 sm:w-40 snap-start rounded-2xl border border-border bg-card overflow-hidden transition-all duration-300 active:scale-[0.97] ${cs.ring}`}
+                    className={`card-lift group shrink-0 w-36 sm:w-40 snap-start rounded-2xl border border-border bg-card overflow-hidden active:scale-[0.97] ${cs.ring}`}
                   >
                     <div className="relative aspect-square overflow-hidden">
                       <ProductVialImage
