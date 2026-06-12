@@ -113,22 +113,6 @@ export default function HeroSection() {
               className="relative flex flex-col mt-4 lg:mt-0"
             >
               <HeroVials />
-
-              {/* Floating badge */}
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 1.0 }}
-                className="absolute right-0 lg:-right-6 top-[12%] bg-card/90 border border-black/[0.08] rounded-xl px-4 py-3 backdrop-blur-xl shadow-lg shadow-primary/5 pointer-events-none"
-              >
-                <div className="flex items-center gap-3">
-                  <OmenLogo size={20} className="text-primary" />
-                  <div>
-                    <p className="text-[11px] font-semibold text-foreground">COA Verified</p>
-                    <p className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider">Independent Lab</p>
-                  </div>
-                </div>
-              </motion.div>
             </motion.div>
           </div>
         </div>
