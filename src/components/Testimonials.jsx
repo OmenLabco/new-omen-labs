@@ -22,7 +22,7 @@ const REVIEWS = [
 
 export default function Testimonials() {
   return (
-    <section className="py-24 md:py-32 band-blue relative overflow-hidden">
+    <section className="ink-sec py-24 md:py-32 relative overflow-hidden">
       <div className="absolute inset-0 hex-grid opacity-40 pointer-events-none" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
         <motion.div

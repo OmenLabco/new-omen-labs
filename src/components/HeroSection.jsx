@@ -45,13 +45,11 @@ export default function HeroSection() {
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
-                className="text-6xl md:text-7xl xl:text-[5.5rem] font-bold tracking-[-0.04em] leading-[0.92] text-foreground"
+                className="text-7xl md:text-8xl xl:text-[8rem] font-black tracking-[-0.05em] leading-[0.84] uppercase"
               >
                 OMEN
                 <br />
-                <span className="text-transparent bg-clip-text" style={{ backgroundImage: 'linear-gradient(135deg, hsl(222,100%,70%) 0%, hsl(200,100%,65%) 100%)' }}>
-                  LABS
-                </span>
+                <span className="stroke-text">LABS</span>
               </motion.h1>
 
               <motion.p

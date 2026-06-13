@@ -79,7 +79,7 @@ export default function ProductDetail() {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="aspect-square rounded-2xl overflow-hidden bg-[#060810] relative"
+              className="aspect-square rounded-2xl overflow-hidden relative" style={{background:'radial-gradient(circle at 50% 42%, #ffffff, #e9ecf2)'}}
             >
               <ProductVialImage
                 image={product.image}
@@ -88,8 +88,8 @@ export default function ProductDetail() {
               />
               {/* Logo watermark */}
               <div className="absolute bottom-4 right-4 opacity-25 flex items-center gap-2">
-                <OmenLogo size={22} className="text-white" />
-                <span className="font-semibold text-white text-[11px] tracking-[0.18em] uppercase">OMEN LABS</span>
+                <OmenLogo size={22} className="text-foreground" />
+                <span className="font-semibold text-foreground text-[11px] tracking-[0.18em] uppercase">OMEN LABS</span>
               </div>
             </motion.div>
 

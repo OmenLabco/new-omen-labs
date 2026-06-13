@@ -10,7 +10,7 @@ const STEPS = [
 
 export default function ProcessStrip() {
   return (
-    <section className="py-24 md:py-32 relative overflow-hidden">
+    <section className="ink-sec py-24 md:py-32 relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

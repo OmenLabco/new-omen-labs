@@ -11,7 +11,7 @@ export default function ProductVialImage({ image = null, name = '', className = 
       <img
         src={image}
         alt={name ? `${name} — Omen Labs vial` : 'Omen Labs vial'}
-        className={className}
+        className={`render ${className}`}
         style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', ...style }}
         loading="lazy"
       />
