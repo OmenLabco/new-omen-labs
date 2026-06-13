@@ -20,8 +20,32 @@ export function membershipStatus(customer) {
   };
 }
 
+import { getAffiliateByEmail, commissionTier, normalizeCode } from './affiliate.js';
+
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
+
+// Affiliate enrollment + stats for a given email (links customer ↔ affiliate)
+async function affiliateInfoForEmail(env, email) {
+  const aff = await getAffiliateByEmail(env, email);
+  if (!aff) return { enrolled: false };
+  const { results } = await env.DB.prepare(
+    'SELECT order_number, total, commission, status, created_date FROM orders WHERE affiliate_code = ? ORDER BY id DESC'
+  ).bind(aff.code).all();
+  const orders = results || [];
+  const totalSales = orders.reduce((s, o) => s + Number(o.total || 0), 0);
+  const totalCommission = orders.reduce((s, o) => s + Number(o.commission || 0), 0);
+  const tier = commissionTier(orders.length);
+  const next = tier.name === 'Silver' ? { name: 'Gold', at: 10 } : tier.name === 'Gold' ? { name: 'Platinum', at: 30 } : null;
+  return {
+    enrolled: true,
+    code: aff.code,
+    stats: { orders: orders.length, totalSales, totalCommission },
+    tier: { name: tier.name, rate: Math.round(tier.rate * 100) },
+    nextTier: next ? { name: next.name, salesNeeded: Math.max(0, next.at - orders.length) } : null,
+    recent: orders.slice(0, 50),
+  };
+}
 
 async function hashPw(pw, email, env) {
   const data = new TextEncoder().encode(`${pw}:${email.toLowerCase()}:${env.ADMIN_PASSWORD || 'omen'}`);
@@ -109,5 +133,29 @@ export async function customerMe(request, env) {
     'SELECT order_number, total, points_earned, points_redeemed, status, created_date FROM orders WHERE LOWER(customer_email) = ? ORDER BY id DESC'
   ).bind(cust.email.toLowerCase()).all();
 
-  return json({ ...publicStats(cust), recent: (results || []).slice(0, 50) });
+  const affiliate = await affiliateInfoForEmail(env, cust.email);
+  return json({ ...publicStats(cust), recent: (results || []).slice(0, 50), affiliate });
+}
+
+// POST /api/customer/affiliate-enroll — enroll the logged-in customer as an affiliate
+// using their existing credentials (same email + password hash), so one login does both.
+export async function enrollAffiliate(request, env) {
+  if (!env.DB) return json({ error: 'Service unavailable.' }, 500);
+  const cust = await authedCustomer(request, env);
+  if (!cust) return json({ error: 'Unauthorized' }, 401);
+  let b; try { b = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
+  const code = normalizeCode(b.code || '');
+  if (code.length < 3) return json({ error: 'Code must be at least 3 characters (letters/numbers).' }, 400);
+
+  const existingForEmail = await getAffiliateByEmail(env, cust.email);
+  if (existingForEmail) return json({ error: 'You already have an affiliate account.', code: existingForEmail.code }, 409);
+  const taken = await env.DB.prepare('SELECT 1 FROM affiliates WHERE code = ?').bind(code).first();
+  if (taken) return json({ error: 'That code is already taken — pick another.' }, 409);
+
+  // copy the customer's password_hash so /affiliates login works with the same password
+  await env.DB.prepare(
+    'INSERT INTO affiliates (code, name, email, password_hash, created_date) VALUES (?,?,?,?,?)'
+  ).bind(code, cust.name, cust.email.toLowerCase(), cust.password_hash, new Date().toISOString()).run();
+
+  return json({ ok: true, code });
 }

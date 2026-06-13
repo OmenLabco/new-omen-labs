@@ -2,9 +2,10 @@
 const KEY = 'omenlabs_affiliate_auth';
 
 export const affiliateAuth = {
-  get: () => sessionStorage.getItem(KEY) || '',
+  get: () => sessionStorage.getItem(KEY) || localStorage.getItem(KEY) || '',
   set: (email, password) => sessionStorage.setItem(KEY, btoa(`${email}:${password}`)),
-  clear: () => sessionStorage.removeItem(KEY),
+  setRaw: (token) => sessionStorage.setItem(KEY, token), // mirror a customer token (same email:password format)
+  clear: () => { sessionStorage.removeItem(KEY); localStorage.removeItem(KEY); },
 };
 
 export async function affiliateSignup({ name, email, code, password }) {

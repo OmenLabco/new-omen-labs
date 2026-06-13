@@ -6,6 +6,39 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { affiliateAuth, affiliateSignup, affiliateLogin, affiliateStats } from '@/lib/affiliateApi';
+import { customerAuth, customerMe, customerEnrollAffiliate } from '@/lib/customerApi';
+
+// Enroll panel for a logged-in customer (one-click, no new password)
+function EnrollPanel({ onEnrolled }) {
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const submit = async (e) => {
+    e.preventDefault(); setError(''); setBusy(true);
+    try { await customerEnrollAffiliate(code); onEnrolled(); }
+    catch (err) { setError(err.message); } finally { setBusy(false); }
+  };
+  return (
+    <div className="max-w-md mx-auto">
+      <div className="flex items-center gap-2 mb-2 justify-center">
+        <div className="h-px w-6 bg-primary" /><span className="font-mono text-[11px] uppercase tracking-[0.25em] text-primary">Affiliate Program</span><div className="h-px w-6 bg-primary" />
+      </div>
+      <h1 className="text-3xl font-bold tracking-tight text-center mb-3">Activate your affiliate code</h1>
+      <p className="text-sm text-muted-foreground text-center mb-8 leading-relaxed">
+        You're signed in — just pick your code to start earning. New customers you refer get 20% off, you earn up to 17%.
+      </p>
+      <form onSubmit={submit} className="space-y-4 p-6 rounded-2xl border border-border bg-card">
+        <div>
+          <label className="block font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Choose Your Code</label>
+          <input value={code} onChange={(e) => setCode(e.target.value)} required placeholder="e.g. JACOB10"
+            className="w-full h-11 px-3 rounded-lg border border-border bg-background text-sm uppercase focus:outline-none focus:ring-2 focus:ring-primary/30" />
+        </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <Button type="submit" disabled={busy} className="w-full h-11">{busy ? 'Activating…' : 'Activate Affiliate Code'}</Button>
+      </form>
+    </div>
+  );
+}
 
 function Field({ label, ...props }) {
   return (
@@ -306,14 +339,41 @@ function Dashboard({ onLogout }) {
 
 export default function Affiliates() {
   const [authed, setAuthed] = useState(!!affiliateAuth.get());
+  // customer-linked state: null=loading, false=not a customer, object=customer me
+  const [cust, setCust] = useState(customerAuth.isLoggedIn() ? null : false);
+
+  useEffect(() => {
+    if (!customerAuth.isLoggedIn()) { setCust(false); return; }
+    customerMe()
+      .then((me) => {
+        // mirror the customer session into affiliate auth so the dashboard works
+        if (!affiliateAuth.get()) affiliateAuth.setRaw(customerAuth.token());
+        setCust(me);
+      })
+      .catch(() => setCust(false));
+  }, []);
+
+  const content = () => {
+    // Logged-in customer flow (unified login)
+    if (cust && typeof cust === 'object') {
+      if (cust.affiliate?.enrolled) {
+        return <Dashboard onLogout={() => { customerAuth.clear(); setCust(false); setAuthed(false); }} />;
+      }
+      return <EnrollPanel onEnrolled={() => customerMe().then(setCust)} />;
+    }
+    if (cust === null) {
+      return <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" /></div>;
+    }
+    // Not a logged-in customer → legacy affiliate login/signup
+    return authed
+      ? <Dashboard onLogout={() => { affiliateAuth.clear(); setAuthed(false); }} />
+      : <Landing onAuthed={() => setAuthed(true)} />;
+  };
+
   return (
     <div className="min-h-screen py-20 px-6">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-        {authed ? (
-          <Dashboard onLogout={() => { affiliateAuth.clear(); setAuthed(false); }} />
-        ) : (
-          <Landing onAuthed={() => setAuthed(true)} />
-        )}
+        {content()}
       </motion.div>
     </div>
   );

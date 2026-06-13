@@ -1,5 +1,6 @@
 // Customer account API helpers. Credentials kept in localStorage so the login
 // persists across visits (so points/account stay available).
+import { affiliateAuth } from './affiliateApi';
 const KEY = 'omenlabs_customer_auth';
 
 export const customerAuth = {
@@ -8,8 +9,10 @@ export const customerAuth = {
     const v = btoa(`${email}:${password}`);
     (remember ? localStorage : sessionStorage).setItem(KEY, v);
     (remember ? sessionStorage : localStorage).removeItem(KEY);
+    // mirror creds so the affiliate dashboard works with the same login
+    affiliateAuth.set(email, password);
   },
-  clear: () => { localStorage.removeItem(KEY); sessionStorage.removeItem(KEY); },
+  clear: () => { localStorage.removeItem(KEY); sessionStorage.removeItem(KEY); affiliateAuth.clear(); },
   isLoggedIn: () => !!(localStorage.getItem(KEY) || sessionStorage.getItem(KEY)),
 };
 
@@ -46,4 +49,15 @@ export async function customerMe() {
   }
   if (!resp.ok) throw new Error('Failed to load account.');
   return resp.json();
+}
+
+export async function customerEnrollAffiliate(code) {
+  const resp = await fetch('/api/customer/affiliate-enroll', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${customerAuth.token()}` },
+    body: JSON.stringify({ code }),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.error || 'Enrollment failed.');
+  return data;
 }

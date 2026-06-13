@@ -42,6 +42,13 @@ export async function getAffiliateByCode(env, code) {
   return env.DB.prepare('SELECT * FROM affiliates WHERE code = ?').bind(normCode(code)).first();
 }
 
+export async function getAffiliateByEmail(env, email) {
+  if (!env.DB || !email) return null;
+  return env.DB.prepare('SELECT * FROM affiliates WHERE LOWER(email) = ?').bind(email.toLowerCase()).first();
+}
+
+export const normalizeCode = normCode;
+
 // POST /api/affiliate/signup
 export async function signupAffiliate(request, env) {
   if (!env.DB) return json({ error: 'Service unavailable.' }, 500);

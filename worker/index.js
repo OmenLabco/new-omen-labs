@@ -3,7 +3,7 @@ import { listOrders, updateOrder, adminLogin, listAffiliates, listCustomers, set
 import { receiptImage } from './receiptImage.js';
 import { verifyOrder } from './token.js';
 import { signupAffiliate, loginAffiliate, affiliateStats, validateCode } from './affiliate.js';
-import { signupCustomer, loginCustomer, customerMe } from './customer.js';
+import { signupCustomer, loginCustomer, customerMe, enrollAffiliate } from './customer.js';
 
 const STATUS_MESSAGE = {
   processing: "Your order has been received and is being processed. You'll receive a shipping notification once your compounds are dispatched.",
@@ -65,6 +65,10 @@ export default {
     if (pathname === '/api/customer/me') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
       return customerMe(request, env);
+    }
+    if (pathname === '/api/customer/affiliate-enroll') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return enrollAffiliate(request, env);
     }
 
     // Affiliate program

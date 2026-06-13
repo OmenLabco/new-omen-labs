@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingBag, User } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import OmenLogo from './OmenLogo';
+import { customerAuth, customerMe } from '@/lib/customerApi';
 
 const LINKS = [
   { label: 'Catalog', to: '/catalog' },
@@ -14,7 +15,9 @@ const LINKS = [
 export default function Navbar({ cartCount = 0, onCartOpen }) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [me, setMe] = useState(null); // { name, affiliate:{enrolled,code} } or null
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -22,6 +25,16 @@ export default function Navbar({ cartCount = 0, onCartOpen }) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
   useEffect(() => setOpen(false), [location.pathname]);
+
+  // load account state (so the menu can show Dashboard / Sign Out)
+  useEffect(() => {
+    if (!customerAuth.isLoggedIn()) { setMe(null); return; }
+    customerMe().then(setMe).catch(() => setMe(null));
+  }, [location.pathname]);
+
+  const loggedIn = !!me;
+  const isAffiliate = me?.affiliate?.enrolled;
+  const signOut = () => { customerAuth.clear(); setMe(null); setOpen(false); navigate('/'); };
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-[120] transition-all duration-300 ${scrolled ? 'bg-white/85 backdrop-blur-xl border-b border-border shadow-[0_6px_30px_-18px_rgba(20,30,80,.35)]' : 'bg-transparent'}`}>
@@ -83,16 +96,32 @@ export default function Navbar({ cartCount = 0, onCartOpen }) {
                 </Link>
               ))}
               <div className="h-px bg-[#2a2b2f] my-2 mx-2" />
-              <p className="font-mono text-[9px] tracking-[0.22em] uppercase text-white/40 px-3 pt-1 pb-1">Your Orders</p>
-              <Link to="/order-status" className="flex items-center justify-between mt-1 px-3.5 py-3 rounded-xl text-[14.5px] font-semibold text-white border border-primary/40 bg-primary/[0.14] hover:bg-primary transition-colors">
-                Track Order <span className="font-mono text-[12px] text-primary">◷</span>
+              <p className="font-mono text-[9px] tracking-[0.22em] uppercase text-white/40 px-3 pt-1 pb-1">
+                {loggedIn ? `Hi, ${me.name?.split(' ')[0] || 'there'}` : 'Account'}
+              </p>
+
+              <Link to="/account" className="flex items-center justify-between px-3.5 py-3 rounded-xl text-[14.5px] font-semibold text-white/75 hover:text-white hover:bg-white/[0.07] transition-colors">
+                {loggedIn ? 'My Account & Rewards' : 'Sign In / Create Account'} <span className="font-mono text-[11px] text-white/35">→</span>
               </Link>
-              <Link to="/affiliates" className="flex items-center justify-between mt-2 px-3.5 py-3 rounded-xl text-[14px] font-semibold text-white border border-primary/40 bg-primary/[0.14] hover:bg-primary transition-colors">
-                Affiliate Program — Earn 17% <span className="font-mono text-[12px] text-primary">✦</span>
+
+              <Link to="/order-status" className="flex items-center justify-between px-3.5 py-3 rounded-xl text-[14.5px] font-semibold text-white/75 hover:text-white hover:bg-white/[0.07] transition-colors">
+                Track Order <span className="font-mono text-[11px] text-white/35">◷</span>
               </Link>
-              <Link to="/catalog" className="flex items-center justify-center mt-2.5 px-3.5 py-3 rounded-xl text-[14px] font-extrabold bg-white text-[#0a0a0b] hover:bg-primary hover:text-white transition-colors">
-                Shop Now →
+
+              <Link to="/affiliates" className="flex items-center justify-between mt-1 px-3.5 py-3 rounded-xl text-[14px] font-semibold text-white border border-primary/40 bg-primary/[0.14] hover:bg-primary transition-colors">
+                {isAffiliate ? 'Affiliate Dashboard' : 'Become an Affiliate — Earn 17%'}
+                <span className="font-mono text-[12px] text-primary">✦</span>
               </Link>
+
+              {loggedIn ? (
+                <button onClick={signOut} className="w-full flex items-center justify-between mt-2 px-3.5 py-3 rounded-xl text-[14px] font-semibold text-white/60 hover:text-white hover:bg-white/[0.07] transition-colors">
+                  Sign Out <span className="font-mono text-[11px]">⏻</span>
+                </button>
+              ) : (
+                <Link to="/catalog" className="flex items-center justify-center mt-2.5 px-3.5 py-3 rounded-xl text-[14px] font-extrabold bg-white text-[#0a0a0b] hover:bg-primary hover:text-white transition-colors">
+                  Shop Now →
+                </Link>
+              )}
             </motion.div>
           </>
         )}
