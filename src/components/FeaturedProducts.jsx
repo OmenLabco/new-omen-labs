@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Flame, TrendingUp, FlaskConical } from 'lucide-react';
+import { ArrowRight, Flame, TrendingUp, FlaskConical, Crown } from 'lucide-react';
 import ProductVialImage from './ProductVialImage';
 import { getFeaturedProducts, getCategories } from '@/data/products';
 
@@ -12,11 +12,11 @@ const categoryStyles = {
 };
 const fallbackStyle = { chip: 'text-muted-foreground bg-white/5 border-black/10', glow: 'from-white/10', ring: 'hover:border-black/20' };
 
-const RANKS = [
-  { label: '#1', cls: 'bg-amber-400 text-black shadow-amber-400/40' },
-  { label: '#2', cls: 'bg-zinc-300 text-black shadow-white/20' },
-  { label: '#3', cls: 'bg-amber-700 text-white shadow-amber-700/40' },
-];
+const MEDAL = {
+  1: { badge: 'bg-amber-400 text-black shadow-amber-400/50', base: 'bg-amber-400/15 text-amber-500 border-amber-400/30', baseH: 'h-16', ring: 'border-amber-400/50 shadow-[0_30px_60px_-26px_rgba(245,180,40,.55)]' },
+  2: { badge: 'bg-zinc-300 text-black shadow-white/20', base: 'bg-zinc-400/15 text-zinc-500 border-zinc-400/35', baseH: 'h-11', ring: 'border-border' },
+  3: { badge: 'bg-amber-700 text-white shadow-amber-700/40', base: 'bg-amber-700/12 text-amber-700 border-amber-700/30', baseH: 'h-8', ring: 'border-border' },
+};
 
 const products = getFeaturedProducts();
 const top3 = products.slice(0, 3);
@@ -59,94 +59,75 @@ export default function FeaturedProducts() {
           </Link>
         </motion.div>
 
-        {/* Top 3 — leaderboard cards (swipeable on mobile) */}
-        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 sm:grid sm:grid-cols-3 sm:overflow-visible scrollbar-none">
-          {top3.map((product, i) => {
-            const cs = categoryStyles[product.category] || fallbackStyle;
+        {/* ===== Top 3 — PODIUM (desktop) ===== */}
+        <div className="hidden md:grid grid-cols-3 gap-5 items-end">
+          {[{ p: top3[1], r: 2 }, { p: top3[0], r: 1 }, { p: top3[2], r: 3 }].filter((x) => x.p).map(({ p, r }) => {
+            const m = MEDAL[r];
             return (
               <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                key={p.id}
+                initial={{ opacity: 0, y: 34 }}
+                whileInView={{ opacity: 1, y: r === 1 ? -24 : 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="min-w-[78%] xs:min-w-[70%] sm:min-w-0 snap-center"
+                transition={{ duration: 0.55, delay: r * 0.08 }}
               >
-                <Link
-                  to={`/product/${product.slug}`}
-                  className={`card-lift group relative block rounded-3xl border border-border bg-card overflow-hidden active:scale-[0.98] ${cs.ring}`}
-                >
-                  {/* Full-bleed render */}
+                <Link to={`/product/${p.slug}`} className={`card-lift group relative block rounded-3xl border bg-card overflow-hidden ${m.ring}`}>
                   <div className="relative aspect-square overflow-hidden">
-                    <ProductVialImage
-                      image={product.image}
-                      name={product.name}
-                      className="absolute inset-0 h-full w-full"
-                      style={{ objectFit: 'cover' }}
-                    />
-                    {/* Category glow */}
-                    <div className={`absolute inset-0 bg-gradient-to-t ${cs.glow} via-transparent to-transparent opacity-40 pointer-events-none`} />
-                    {/* Bottom fade for text */}
+                    <ProductVialImage image={p.image} name={p.name} className="absolute inset-0 h-full w-full" style={{ objectFit: 'cover' }} />
                     <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#05070d] via-[#05070d]/70 to-transparent pointer-events-none" />
-
-                    {/* Rank badge */}
+                    {/* Medal */}
                     <div className="absolute top-3 left-3 flex items-center gap-2">
-                      <span className={`h-8 min-w-8 px-2 inline-flex items-center justify-center rounded-full font-mono text-xs font-bold shadow-lg ${RANKS[i].cls}`}>
-                        {RANKS[i].label}
-                      </span>
-                      {i === 0 && (
-                        <span className="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded-full border border-amber-400/30 bg-black/50 text-amber-400 backdrop-blur-sm">
-                          <Flame className="h-3 w-3" /> Best Seller
+                      <span className={`h-9 w-9 inline-flex items-center justify-center rounded-full font-black text-sm shadow-lg ${m.badge}`}>{r}</span>
+                      {r === 1 && (
+                        <span className="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded-full border border-amber-400/40 bg-black/55 text-amber-400 backdrop-blur-sm">
+                          <Crown className="h-3 w-3" /> #1 Best Seller
                         </span>
                       )}
                     </div>
-                    {/* Name + price overlaid on the fade, categories bottom-right */}
-                    <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
-                      <div className="flex items-end justify-between gap-3">
-                        <div className="min-w-0">
-                          <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white group-hover:text-primary transition-colors">
-                            {product.name}
-                          </h3>
-                          <span className="mt-1 block text-base sm:text-lg font-bold text-white">
-                            {product.has_multiple && <span className="text-[11px] font-normal text-white/60">from </span>}
-                            ${product.price?.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          {getCategories(product).map((cat) => {
-                            const ccs = categoryStyles[cat] || fallbackStyle;
-                            return (
-                              <span key={cat} className={`font-mono text-[8px] sm:text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full border backdrop-blur-md bg-white/85 ${ccs.chip}`}>
-                                {cat}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </div>
+                    <div className="absolute inset-x-0 bottom-0 p-5">
+                      <h3 className={`font-bold tracking-tight text-white group-hover:text-primary transition-colors ${r === 1 ? 'text-2xl' : 'text-xl'}`}>{p.name}</h3>
+                      <span className="mt-1 block text-lg font-bold text-white">
+                        {p.has_multiple && <span className="text-[11px] font-normal text-white/60">from </span>}${p.price?.toFixed(2)}
+                      </span>
                     </div>
                   </div>
+                </Link>
+                {/* Podium base */}
+                <div className={`mt-3 rounded-xl border flex items-center justify-center font-black ${m.base} ${m.baseH}`}>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.25em] opacity-70 mr-2">Rank</span>
+                  <span className="text-2xl leading-none">{r}</span>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        {/* ===== Top 3 — ranked list (mobile) ===== */}
+        <div className="md:hidden flex flex-col gap-2.5">
+          {top3.map((p, i) => {
+            const r = i + 1;
+            const m = MEDAL[r];
+            return (
+              <motion.div key={p.id} initial={{ opacity: 0, x: -16 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
+                <Link to={`/product/${p.slug}`} className={`card-lift group flex items-center gap-3 rounded-2xl border bg-card p-2.5 active:scale-[0.99] ${r === 1 ? m.ring : 'border-border'}`}>
+                  <span className={`shrink-0 h-9 w-9 inline-flex items-center justify-center rounded-full font-black text-sm shadow ${m.badge}`}>{r}</span>
+                  <div className="relative h-16 w-16 shrink-0 rounded-xl overflow-hidden bg-secondary">
+                    <ProductVialImage image={p.image} name={p.name} className="absolute inset-0 h-full w-full" style={{ objectFit: 'cover' }} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-[15px] truncate group-hover:text-primary transition-colors">{p.name}</p>
+                      {r === 1 && <Crown className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
+                    </div>
+                    <p className="text-[13px] font-bold mt-0.5">
+                      {p.has_multiple && <span className="text-[10px] font-normal text-muted-foreground">from </span>}${p.price?.toFixed(2)}
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 mr-1 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                 </Link>
               </motion.div>
             );
           })}
-
-          {/* Swipe-end card → catalog (mobile carousel only) */}
-          <div className="sm:hidden min-w-[78%] snap-center">
-            <Link
-              to="/catalog"
-              className="group relative flex flex-col items-center justify-center aspect-square rounded-3xl border border-primary/25 bg-gradient-to-b from-primary/[0.07] to-transparent overflow-hidden active:scale-[0.98] transition-transform"
-            >
-              <div className="absolute inset-0 hex-grid opacity-30 pointer-events-none" />
-              <div className="h-14 w-14 rounded-2xl bg-primary/10 border border-primary/25 flex items-center justify-center mb-5">
-                <FlaskConical className="h-6 w-6 text-primary" />
-              </div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary mb-2">22+ Compounds</p>
-              <p className="text-xl font-bold tracking-tight text-center px-8">Explore the full catalog</p>
-              <div className="mt-5 inline-flex items-center gap-2 px-5 h-11 rounded-xl bg-primary text-white text-sm font-semibold shadow-lg shadow-primary/25">
-                Browse All <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-              </div>
-            </Link>
-          </div>
         </div>
 
         {/* The rest — compact swipe strip */}
