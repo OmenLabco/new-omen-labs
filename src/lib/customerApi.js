@@ -3,13 +3,17 @@
 const KEY = 'omenlabs_customer_auth';
 
 export const customerAuth = {
-  token: () => localStorage.getItem(KEY) || '',
-  set: (email, password) => localStorage.setItem(KEY, btoa(`${email}:${password}`)),
-  clear: () => localStorage.removeItem(KEY),
-  isLoggedIn: () => !!localStorage.getItem(KEY),
+  token: () => localStorage.getItem(KEY) || sessionStorage.getItem(KEY) || '',
+  set: (email, password, remember = true) => {
+    const v = btoa(`${email}:${password}`);
+    (remember ? localStorage : sessionStorage).setItem(KEY, v);
+    (remember ? sessionStorage : localStorage).removeItem(KEY);
+  },
+  clear: () => { localStorage.removeItem(KEY); sessionStorage.removeItem(KEY); },
+  isLoggedIn: () => !!(localStorage.getItem(KEY) || sessionStorage.getItem(KEY)),
 };
 
-export async function customerSignup({ name, email, password }) {
+export async function customerSignup({ name, email, password, remember = true }) {
   const resp = await fetch('/api/customer/signup', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -17,18 +21,18 @@ export async function customerSignup({ name, email, password }) {
   });
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) throw new Error(data.error || 'Signup failed.');
-  customerAuth.set(email, password);
+  customerAuth.set(email, password, remember);
   return data;
 }
 
-export async function customerLogin({ email, password }) {
+export async function customerLogin({ email, password, remember = true }) {
   const resp = await fetch('/api/customer/login', {
     method: 'POST',
     headers: { Authorization: `Bearer ${btoa(`${email}:${password}`)}` },
   });
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) throw new Error(data.error || 'Login failed.');
-  customerAuth.set(email, password);
+  customerAuth.set(email, password, remember);
   return data;
 }
 

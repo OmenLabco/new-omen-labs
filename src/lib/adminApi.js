@@ -3,9 +3,17 @@
 const PW_KEY = 'omenlabs_admin_pw';
 
 export const adminAuth = {
-  get: () => sessionStorage.getItem(PW_KEY) || '',
-  set: (pw) => sessionStorage.setItem(PW_KEY, pw),
-  clear: () => sessionStorage.removeItem(PW_KEY),
+  get: () => localStorage.getItem(PW_KEY) || sessionStorage.getItem(PW_KEY) || '',
+  set: (pw, remember) => {
+    const store = remember ? localStorage : sessionStorage;
+    const other = remember ? sessionStorage : localStorage;
+    store.setItem(PW_KEY, pw);
+    other.removeItem(PW_KEY);
+  },
+  clear: () => {
+    localStorage.removeItem(PW_KEY);
+    sessionStorage.removeItem(PW_KEY);
+  },
 };
 
 function headers() {
@@ -15,13 +23,13 @@ function headers() {
   };
 }
 
-export async function adminLogin(password) {
+export async function adminLogin(password, remember = true) {
   const resp = await fetch('/api/admin/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${password}` },
   });
   if (resp.ok) {
-    adminAuth.set(password);
+    adminAuth.set(password, remember);
     return true;
   }
   return false;

@@ -17,12 +17,13 @@ function LoginScreen({ onSuccess }) {
   const [pw, setPw] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [remember, setRemember] = useState(true);
 
   const submit = async (e) => {
     e.preventDefault();
     setError('');
     setBusy(true);
-    const ok = await adminLogin(pw);
+    const ok = await adminLogin(pw, remember);
     setBusy(false);
     if (ok) onSuccess();
     else setError('Incorrect password.');
@@ -47,6 +48,10 @@ function LoginScreen({ onSuccess }) {
           className="w-full h-11 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
         {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+        <label className="flex items-center gap-2 mt-4 cursor-pointer select-none">
+          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="h-4 w-4 accent-primary" />
+          <span className="text-sm text-muted-foreground">Remember me on this device</span>
+        </label>
         <Button type="submit" disabled={busy} className="w-full h-11 mt-5">
           {busy ? 'Checking…' : 'Sign In'}
         </Button>

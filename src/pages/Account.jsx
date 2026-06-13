@@ -17,6 +17,7 @@ function Field({ label, ...props }) {
 function AuthForms({ onAuthed }) {
   const [mode, setMode] = useState('signup');
   const [form, setForm] = useState({});
+  const [remember, setRemember] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
@@ -25,7 +26,8 @@ function AuthForms({ onAuthed }) {
     e.preventDefault();
     setError(''); setBusy(true);
     try {
-      mode === 'signup' ? await customerSignup(form) : await customerLogin(form);
+      const payload = { ...form, remember };
+      mode === 'signup' ? await customerSignup(payload) : await customerLogin(payload);
       onAuthed();
     } catch (err) { setError(err.message); } finally { setBusy(false); }
   };
@@ -56,6 +58,10 @@ function AuthForms({ onAuthed }) {
         {mode === 'signup' && <Field label="Full Name" required value={form.name || ''} onChange={set('name')} />}
         <Field label="Email" type="email" required value={form.email || ''} onChange={set('email')} />
         <Field label="Password" type="password" required value={form.password || ''} onChange={set('password')} />
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="h-4 w-4 accent-primary" />
+          <span className="text-sm text-muted-foreground">Remember me</span>
+        </label>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={busy} className="w-full h-11">
           {busy ? 'Please wait…' : mode === 'signup' ? 'Create Account' : 'Log In'}
