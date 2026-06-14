@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut } from 'lucide-react';
+import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import OrderEditForm from '@/components/admin/OrderEditForm';
 import SalesDashboard from '@/components/admin/SalesDashboard';
-import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership } from '@/lib/adminApi';
+import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer } from '@/lib/adminApi';
 
 const STATUS_COLORS = {
   processing: 'text-yellow-400 bg-yellow-400/10',
@@ -129,6 +129,19 @@ function CustomersView({ onLogout }) {
     }
   };
 
+  const removeCustomer = async (email, name) => {
+    if (!window.confirm(`Permanently delete ${name || email}? This cannot be undone.`)) return;
+    setBusy(email);
+    try {
+      await deleteCustomer(email);
+      setCustomers((prev) => prev.filter((c) => c.email !== email));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
   return (
     <div className="space-y-2">
       {customers.map((c) => (
@@ -141,14 +154,24 @@ function CustomersView({ onLogout }) {
             <p className="text-xs text-muted-foreground mt-0.5 truncate">{c.email}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{c.points} pts · {c.order_count} orders · ${Number(c.lifetime_spend || 0).toFixed(2)}</p>
           </div>
-          <Button
-            variant={c.isVip ? 'outline' : 'default'}
-            onClick={() => toggleVip(c.email, !c.isVip)}
-            disabled={busy === c.email}
-            className="h-8 px-3 text-xs shrink-0"
-          >
-            {busy === c.email ? '…' : c.isVip ? 'Remove VIP' : 'Make VIP'}
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant={c.isVip ? 'outline' : 'default'}
+              onClick={() => toggleVip(c.email, !c.isVip)}
+              disabled={busy === c.email}
+              className="h-8 px-3 text-xs"
+            >
+              {busy === c.email ? '…' : c.isVip ? 'Remove VIP' : 'Make VIP'}
+            </Button>
+            <button
+              onClick={() => removeCustomer(c.email, c.name)}
+              disabled={busy === c.email}
+              aria-label="Delete customer"
+              className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       ))}
     </div>

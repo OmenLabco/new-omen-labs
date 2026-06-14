@@ -102,6 +102,20 @@ export async function setMembership(request, env) {
   return json({ ok: true });
 }
 
+// POST /api/admin/customers/delete — permanently remove a customer account
+export async function deleteCustomer(request, env) {
+  if (!authorized(request, env)) return json({ error: 'Unauthorized' }, 401);
+  if (!env.DB) return json({ error: 'Database not configured.' }, 500);
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
+  const { email } = body;
+  if (!email) return json({ error: 'Missing email.' }, 400);
+  await env.DB.prepare('DELETE FROM customers WHERE LOWER(email) = ?')
+    .bind(email.toLowerCase())
+    .run();
+  return json({ ok: true });
+}
+
 // POST /api/admin/orders/update — update status / tracking for one order
 export async function updateOrder(request, env) {
   if (!authorized(request, env)) return json({ error: 'Unauthorized' }, 401);
