@@ -42,28 +42,54 @@ const COST_BY_KEY = {
 // Build the cost sheet rows + a lookup keyed by the order item's product_id
 // (which the cart writes as `${product.id}_${dose}`) and by product_name.
 const byProductId = {};
-const byName = {};
+const byName = {};       // "BPC-157 5mg" -> cost  (case-insensitive keys)
+const byBaseName = {};   // "bpc-157" -> [{ dose, sellPrice, cost }]  for fallback matching
 const SHEET = [];
 
 for (const p of PRODUCTS) {
+  const base = p.name.toLowerCase();
+  byBaseName[base] = byBaseName[base] || [];
   for (const v of p.variants || []) {
     const key = `${p.name}|${v.dose}`;
     const cost = key in COST_BY_KEY ? COST_BY_KEY[key] : null;
     const productId = `${p.id}_${v.dose}`;
     const productName = `${p.name} ${v.dose}`;
     byProductId[productId] = cost;
-    byName[productName] = cost;
+    byName[productName.toLowerCase()] = cost;
+    byBaseName[base].push({ dose: v.dose, sellPrice: v.price ?? null, cost });
     SHEET.push({ name: p.name, dose: v.dose, sellPrice: v.price ?? null, cost, productId, productName });
   }
 }
 
 export const COST_SHEET = SHEET;
 
-// Resolve my cost for a single order line item. Tries product_id, then name.
+// Resolve my cost for a single order line item.
+// 1) exact product_id  2) exact "Name Dose"  3) base-name match (legacy items
+//    with no dose) → pick the variant whose sell price is closest to the line price.
 export function costForItem(item) {
   if (!item) return null;
   if (item.product_id != null && item.product_id in byProductId) return byProductId[item.product_id];
-  const nm = item.product_name || item.name;
-  if (nm != null && nm in byName) return byName[nm];
+
+  const nm = (item.product_name || item.name || '').trim();
+  if (!nm) return null;
+  const lower = nm.toLowerCase();
+  if (lower in byName) return byName[lower];
+
+  // Fallback: legacy line stored as just the base product name (e.g. "BPC-157").
+  const variants = byBaseName[lower];
+  if (variants && variants.length) {
+    if (variants.length === 1) return variants[0].cost;
+    const price = Number(item.price);
+    if (Number.isFinite(price)) {
+      let best = variants[0], bestDiff = Infinity;
+      for (const v of variants) {
+        if (v.sellPrice == null) continue;
+        const diff = Math.abs(v.sellPrice - price);
+        if (diff < bestDiff) { bestDiff = diff; best = v; }
+      }
+      return best.cost;
+    }
+    return variants[0].cost; // no price to disambiguate → first variant
+  }
   return null;
 }
