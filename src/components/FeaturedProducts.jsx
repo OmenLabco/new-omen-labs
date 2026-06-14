@@ -13,9 +13,21 @@ const categoryStyles = {
 const fallbackStyle = { chip: 'text-muted-foreground bg-white/5 border-black/10', glow: 'from-white/10', ring: 'hover:border-black/20' };
 
 const MEDAL = {
-  1: { badge: 'bg-amber-400 text-black shadow-amber-400/50', base: 'bg-amber-400/15 text-amber-500 border-amber-400/30', baseH: 'h-16', ring: 'border-amber-400/50 shadow-[0_30px_60px_-26px_rgba(245,180,40,.55)]' },
-  2: { badge: 'bg-zinc-300 text-black shadow-white/20', base: 'bg-zinc-400/15 text-zinc-500 border-zinc-400/35', baseH: 'h-11', ring: 'border-border' },
-  3: { badge: 'bg-amber-700 text-white shadow-amber-700/40', base: 'bg-amber-700/12 text-amber-700 border-amber-700/30', baseH: 'h-8', ring: 'border-border' },
+  1: {
+    badgeStyle: { background: 'linear-gradient(135deg,#fff0b0 0%,#f5b400 45%,#b8860b 100%)', color: '#3a2a00', boxShadow: '0 4px 14px rgba(245,180,0,.5)' },
+    base: 'bg-amber-400/15 text-amber-600 border-amber-400/35', baseH: 'h-16',
+    ring: 'border-amber-400/50 shadow-[0_30px_60px_-24px_rgba(245,180,40,.6)]',
+  },
+  2: {
+    badgeStyle: { background: 'linear-gradient(135deg,#ffffff 0%,#d7dbe2 45%,#9aa1ac 100%)', color: '#2a2d33', boxShadow: '0 4px 14px rgba(160,170,190,.55)' },
+    base: 'bg-zinc-400/15 text-zinc-500 border-zinc-400/40', baseH: 'h-11',
+    ring: 'border-zinc-300/55 shadow-[0_26px_54px_-28px_rgba(165,176,195,.7)]',
+  },
+  3: {
+    badgeStyle: { background: 'linear-gradient(135deg,#f4c89a 0%,#c8803c 48%,#7c4a22 100%)', color: '#fff', boxShadow: '0 4px 14px rgba(165,105,55,.5)' },
+    base: 'bg-amber-700/12 text-amber-700 border-amber-700/35', baseH: 'h-8',
+    ring: 'border-amber-700/45 shadow-[0_26px_54px_-28px_rgba(170,110,60,.6)]',
+  },
 };
 
 const products = getFeaturedProducts();
@@ -77,7 +89,7 @@ export default function FeaturedProducts() {
                     <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#05070d] via-[#05070d]/70 to-transparent pointer-events-none" />
                     {/* Medal */}
                     <div className="absolute top-3 left-3 flex items-center gap-2">
-                      <span className={`h-9 w-9 inline-flex items-center justify-center rounded-full font-black text-sm shadow-lg ${m.badge}`}>{r}</span>
+                      <span style={m.badgeStyle} className="h-9 w-9 inline-flex items-center justify-center rounded-full font-black text-sm">{r}</span>
                       {r === 1 && (
                         <span className="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded-full border border-amber-400/40 bg-black/55 text-amber-400 backdrop-blur-sm">
                           <Crown className="h-3 w-3" /> #1 Best Seller
@@ -109,8 +121,8 @@ export default function FeaturedProducts() {
             const m = MEDAL[r];
             return (
               <motion.div key={p.id} initial={{ opacity: 0, x: -16 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
-                <Link to={`/product/${p.slug}`} className={`card-lift group flex items-center gap-3 rounded-2xl border bg-card p-2.5 active:scale-[0.99] ${r === 1 ? m.ring : 'border-border'}`}>
-                  <span className={`shrink-0 h-9 w-9 inline-flex items-center justify-center rounded-full font-black text-sm shadow ${m.badge}`}>{r}</span>
+                <Link to={`/product/${p.slug}`} className={`card-lift group flex items-center gap-3 rounded-2xl border bg-card p-2.5 active:scale-[0.99] ${m.ring}`}>
+                  <span style={m.badgeStyle} className="shrink-0 h-9 w-9 inline-flex items-center justify-center rounded-full font-black text-sm">{r}</span>
                   <div className="relative h-16 w-16 shrink-0 rounded-xl overflow-hidden bg-secondary">
                     <ProductVialImage image={p.image} name={p.name} className="absolute inset-0 h-full w-full" style={{ objectFit: 'cover' }} />
                   </div>
@@ -142,7 +154,7 @@ export default function FeaturedProducts() {
             <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground mb-4">
               Trending in the lab
             </p>
-            <div className="flex gap-3 overflow-x-auto snap-x pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
+            <div className="flex gap-3 overflow-x-auto snap-x pt-3 pb-4 -mx-4 px-4 sm:mx-0 sm:px-2 sm:-mx-2 scrollbar-none">
               {rest.map((product) => {
                 const cs = categoryStyles[product.category] || fallbackStyle;
                 return (

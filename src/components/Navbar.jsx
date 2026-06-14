@@ -100,27 +100,23 @@ export default function Navbar({ cartCount = 0, onCartOpen }) {
                 {loggedIn ? `Hi, ${me.name?.split(' ')[0] || 'there'}` : 'Account'}
               </p>
 
-              <Link to="/account" className="flex items-center justify-between px-3.5 py-3 rounded-xl text-[14.5px] font-semibold text-white/75 hover:text-white hover:bg-white/[0.07] transition-colors">
-                {loggedIn ? 'My Account & Rewards' : 'Sign In / Create Account'} <span className="font-mono text-[11px] text-white/35">→</span>
+              <Link to="/account" className="flex items-center justify-between px-3.5 py-3 rounded-xl text-[14px] font-semibold text-white border border-primary/40 bg-primary/[0.14] hover:bg-primary transition-colors">
+                {loggedIn ? 'My Account & Rewards' : 'Sign In / Create Account'} <span className="font-mono text-[12px] text-primary">→</span>
               </Link>
 
-              <Link to="/order-status" className="flex items-center justify-between px-3.5 py-3 rounded-xl text-[14.5px] font-semibold text-white/75 hover:text-white hover:bg-white/[0.07] transition-colors">
-                Track Order <span className="font-mono text-[11px] text-white/35">◷</span>
+              <Link to="/order-status" className="flex items-center justify-between mt-1 px-3.5 py-3 rounded-xl text-[14px] font-semibold text-white border border-primary/40 bg-primary/[0.14] hover:bg-primary transition-colors">
+                Track Order <span className="font-mono text-[12px] text-primary">◷</span>
               </Link>
 
-              <Link to="/affiliates" className="flex items-center justify-between mt-1 px-3.5 py-3 rounded-xl text-[14px] font-semibold text-white border border-primary/40 bg-primary/[0.14] hover:bg-primary transition-colors">
+              <Link to="/affiliates" className="flex items-center justify-between mt-1 px-3.5 py-3 rounded-xl text-[14px] font-extrabold bg-white text-[#0a0a0b] hover:bg-white/90 transition-colors">
                 {isAffiliate ? 'Affiliate Dashboard' : 'Become an Affiliate — Earn 17%'}
-                <span className="font-mono text-[12px] text-primary">✦</span>
+                <span className="font-mono text-[12px] text-[#0a0a0b]">✦</span>
               </Link>
 
-              {loggedIn ? (
+              {loggedIn && (
                 <button onClick={signOut} className="w-full flex items-center justify-between mt-2 px-3.5 py-3 rounded-xl text-[14px] font-semibold text-white/60 hover:text-white hover:bg-white/[0.07] transition-colors">
                   Sign Out <span className="font-mono text-[11px]">⏻</span>
                 </button>
-              ) : (
-                <Link to="/catalog" className="flex items-center justify-center mt-2.5 px-3.5 py-3 rounded-xl text-[14px] font-extrabold bg-white text-[#0a0a0b] hover:bg-primary hover:text-white transition-colors">
-                  Shop Now →
-                </Link>
               )}
             </motion.div>
           </>
