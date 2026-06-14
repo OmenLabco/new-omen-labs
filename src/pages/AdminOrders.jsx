@@ -4,6 +4,7 @@ import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut, Trash2 } from 'l
 import { Button } from '@/components/ui/button';
 import OrderEditForm from '@/components/admin/OrderEditForm';
 import SalesDashboard from '@/components/admin/SalesDashboard';
+import ProfitView from '@/components/admin/ProfitView';
 import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer } from '@/lib/adminApi';
 
 const STATUS_COLORS = {
@@ -230,8 +231,8 @@ export default function AdminOrders() {
         <div className="mb-10 flex items-start justify-between">
           <div>
             <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Admin</span>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight">{tab === 'orders' ? 'Orders' : tab === 'affiliates' ? 'Affiliates' : 'Customers'}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{tab === 'orders' ? `${orders.length} total orders` : tab === 'affiliates' ? 'Affiliate partners' : 'Reward members'}</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight">{tab === 'orders' ? 'Orders' : tab === 'profit' ? 'Profit' : tab === 'affiliates' ? 'Affiliates' : 'Customers'}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{tab === 'orders' ? `${orders.length} total orders` : tab === 'profit' ? 'Peptide revenue, cost & profit' : tab === 'affiliates' ? 'Affiliate partners' : 'Reward members'}</p>
           </div>
           <Button variant="outline" onClick={logout} className="gap-2 h-9">
             <LogOut className="h-4 w-4" /> Sign out
@@ -240,7 +241,7 @@ export default function AdminOrders() {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 rounded-xl border border-border p-1 w-fit">
-          {['orders', 'affiliates', 'customers'].map((t) => (
+          {['orders', 'profit', 'affiliates', 'customers'].map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -251,7 +252,13 @@ export default function AdminOrders() {
           ))}
         </div>
 
-        {tab === 'affiliates' ? (
+        {tab === 'profit' ? (
+          loading ? (
+            <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" /></div>
+          ) : (
+            <ProfitView orders={orders} />
+          )
+        ) : tab === 'affiliates' ? (
           <AffiliatesView onLogout={logout} />
         ) : tab === 'customers' ? (
           <CustomersView onLogout={logout} />
