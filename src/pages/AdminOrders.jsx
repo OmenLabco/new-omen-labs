@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import OrderEditForm from '@/components/admin/OrderEditForm';
+import SalesDashboard from '@/components/admin/SalesDashboard';
 import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership } from '@/lib/adminApi';
 
 const STATUS_COLORS = {
@@ -201,7 +202,7 @@ export default function AdminOrders() {
 
   return (
     <div className="min-h-screen py-20 px-6">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-10 flex items-start justify-between">
           <div>
@@ -233,6 +234,9 @@ export default function AdminOrders() {
           <CustomersView onLogout={logout} />
         ) : (
         <>
+        {/* Sales dashboard */}
+        {!loading && orders.length > 0 && <SalesDashboard orders={orders} />}
+
         {/* Search */}
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
