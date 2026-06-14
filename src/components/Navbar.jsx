@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ShoppingBag, User } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import OmenLogo from './OmenLogo';
@@ -17,7 +17,6 @@ export default function Navbar({ cartCount = 0, onCartOpen }) {
   const [scrolled, setScrolled] = useState(false);
   const [me, setMe] = useState(null); // { name, affiliate:{enrolled,code} } or null
   const location = useLocation();
-  const navigate = useNavigate();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -34,7 +33,6 @@ export default function Navbar({ cartCount = 0, onCartOpen }) {
 
   const loggedIn = !!me;
   const isAffiliate = me?.affiliate?.enrolled;
-  const signOut = () => { customerAuth.clear(); setMe(null); setOpen(false); navigate('/'); };
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-[120] transition-all duration-300 ${scrolled ? 'bg-white/85 backdrop-blur-xl border-b border-border shadow-[0_6px_30px_-18px_rgba(20,30,80,.35)]' : 'bg-transparent'}`}>
@@ -113,11 +111,6 @@ export default function Navbar({ cartCount = 0, onCartOpen }) {
                 <span className="font-mono text-[12px] text-[#0a0a0b]">✦</span>
               </Link>
 
-              {loggedIn && (
-                <button onClick={signOut} className="w-full flex items-center justify-between mt-2 px-3.5 py-3 rounded-xl text-[14px] font-semibold text-white/60 hover:text-white hover:bg-white/[0.07] transition-colors">
-                  Sign Out <span className="font-mono text-[11px]">⏻</span>
-                </button>
-              )}
             </motion.div>
           </>
         )}
