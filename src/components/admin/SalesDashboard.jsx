@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
-import { DollarSign, ShoppingCart, Boxes, TrendingUp, Trophy } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { DollarSign, ShoppingCart, Boxes, TrendingUp, Trophy, ChevronDown } from 'lucide-react';
 
 const RANGES = [
   { key: '24h', label: '24 hours', days: 1 },
@@ -17,6 +17,7 @@ const isSale = (o) => o.status !== 'cancelled' && o.status !== 'refunded';
 
 export default function SalesDashboard({ orders }) {
   const [range, setRange] = useState('7d');
+  const [unitsOpen, setUnitsOpen] = useState(false);
 
   const stats = useMemo(() => {
     const now = Date.now();
@@ -47,10 +48,10 @@ export default function SalesDashboard({ orders }) {
     const orderCount = inRange.length;
     const aov = orderCount ? revenue / orderCount : 0;
 
-    const topProducts = [...productMap.entries()]
+    const allProducts = [...productMap.entries()]
       .map(([name, v]) => ({ name, ...v }))
-      .sort((a, b) => b.units - a.units)
-      .slice(0, 6);
+      .sort((a, b) => b.units - a.units);
+    const topProducts = allProducts.slice(0, 6);
 
     // Build a per-bucket time series for the chart
     const buckets = [];
@@ -81,7 +82,7 @@ export default function SalesDashboard({ orders }) {
     const lifetimeRevenue = allSales.reduce((s, o) => s + Number(o.total || 0), 0);
     const lifetimeUnits = allSales.reduce((s, o) => s + (Array.isArray(o.items) ? o.items.reduce((a, i) => a + Number(i.quantity || 0), 0) : 0), 0);
 
-    return { revenue, orderCount, units, aov, topProducts, buckets, maxBar, lifetimeRevenue, lifetimeUnits, lifetimeOrders: allSales.length };
+    return { revenue, orderCount, units, aov, topProducts, allProducts, buckets, maxBar, lifetimeRevenue, lifetimeUnits, lifetimeOrders: allSales.length };
   }, [orders, range]);
 
   const cfg = RANGES.find((r) => r.key === range);
@@ -89,7 +90,7 @@ export default function SalesDashboard({ orders }) {
   const KPIS = [
     { icon: DollarSign, label: `Revenue · ${cfg.label}`, value: money(stats.revenue), tint: 'text-emerald-500 bg-emerald-500/10' },
     { icon: ShoppingCart, label: `Orders · ${cfg.label}`, value: stats.orderCount.toLocaleString(), tint: 'text-primary bg-primary/10' },
-    { icon: Boxes, label: `Units sold · ${cfg.label}`, value: stats.units.toLocaleString(), tint: 'text-violet-500 bg-violet-500/10' },
+    { icon: Boxes, label: `Units sold · ${cfg.label}`, value: stats.units.toLocaleString(), tint: 'text-violet-500 bg-violet-500/10', clickable: true },
     { icon: TrendingUp, label: 'Avg order value', value: money(stats.aov), tint: 'text-amber-500 bg-amber-500/10' },
   ];
 
@@ -113,22 +114,75 @@ export default function SalesDashboard({ orders }) {
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        {KPIS.map((k, i) => (
-          <motion.div
-            key={k.label}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className="rounded-2xl border border-border bg-card p-4"
-          >
-            <div className={`h-9 w-9 rounded-lg flex items-center justify-center mb-3 ${k.tint}`}>
-              <k.icon className="h-4 w-4" />
-            </div>
-            <p className="text-2xl font-bold tracking-tight tabular-nums">{k.value}</p>
-            <p className="text-[11px] text-muted-foreground mt-1">{k.label}</p>
-          </motion.div>
-        ))}
+        {KPIS.map((k, i) => {
+          const interactive = k.clickable;
+          const active = interactive && unitsOpen;
+          return (
+            <motion.button
+              key={k.label}
+              type="button"
+              onClick={interactive ? () => setUnitsOpen((o) => !o) : undefined}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className={`text-left rounded-2xl border bg-card p-4 transition-colors ${interactive ? 'cursor-pointer hover:border-violet-400/50' : 'cursor-default'} ${active ? 'border-violet-400/60 ring-1 ring-violet-400/30' : 'border-border'}`}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${k.tint}`}>
+                  <k.icon className="h-4 w-4" />
+                </div>
+                {interactive && <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${active ? 'rotate-180' : ''}`} />}
+              </div>
+              <p className="text-2xl font-bold tracking-tight tabular-nums">{k.value}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">{k.label}{interactive && <span className="text-violet-500"> · view breakdown</span>}</p>
+            </motion.button>
+          );
+        })}
       </div>
+
+      {/* Units-per-peptide breakdown */}
+      <AnimatePresence initial={false}>
+        {unitsOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="overflow-hidden"
+          >
+            <div className="rounded-2xl border border-violet-400/40 bg-card p-5 mb-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Boxes className="h-4 w-4 text-violet-500" />
+                  <p className="text-sm font-semibold">Units per peptide · {cfg.label}</p>
+                </div>
+                <p className="text-xs text-muted-foreground tabular-nums">{stats.units.toLocaleString()} units total</p>
+              </div>
+              {stats.allProducts.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-6 text-center">No units sold in this period.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {stats.allProducts.map((p, i) => {
+                    const pct = stats.units ? (p.units / stats.units) * 100 : 0;
+                    return (
+                      <div key={p.name} className="flex items-center gap-3 py-1.5 border-b border-border/50 last:border-0">
+                        <span className="font-mono text-[11px] text-muted-foreground w-5 shrink-0">{i + 1}</span>
+                        <span className="text-sm font-medium flex-1 min-w-0 truncate">{p.name}</span>
+                        <div className="hidden sm:block w-28 h-1.5 rounded-full bg-secondary overflow-hidden shrink-0">
+                          <div className="h-full rounded-full bg-violet-500/70" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs text-muted-foreground w-12 text-right shrink-0 tabular-nums">{pct.toFixed(0)}%</span>
+                        <span className="text-sm font-bold w-20 text-right shrink-0 tabular-nums">{p.units.toLocaleString()} <span className="text-[10px] font-normal text-muted-foreground">units</span></span>
+                        <span className="hidden md:inline text-xs text-muted-foreground w-24 text-right shrink-0 tabular-nums">{compact(p.revenue)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="grid lg:grid-cols-5 gap-3">
         {/* Sales chart */}
