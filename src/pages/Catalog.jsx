@@ -10,12 +10,12 @@ import ProductVialImage from '../components/ProductVialImage';
 // Soft pastel image backdrops, picked by the product's primary category —
 // mirrors the per-product tinted cards on the reference store.
 const CARD_BG = {
-  Recovery: 'linear-gradient(160deg,#e8f3ec 0%,#d7ebe0 100%)',
-  Aesthetics: 'linear-gradient(160deg,#f6e9f0 0%,#efd9e6 100%)',
-  Performance: 'linear-gradient(160deg,#f3eee2 0%,#ece2cf 100%)',
-  Longevity: 'linear-gradient(160deg,#e9ecfa 0%,#dde2f6 100%)',
+  Recovery: 'linear-gradient(160deg,#f3f8f5 0%,#eaf2ee 100%)',
+  Aesthetics: 'linear-gradient(160deg,#faf2f6 0%,#f4e9f0 100%)',
+  Performance: 'linear-gradient(160deg,#f8f5ee 0%,#f1ebdf 100%)',
+  Longevity: 'linear-gradient(160deg,#f4f6fa 0%,#edf0f6 100%)',
 };
-const FALLBACK_BG = 'linear-gradient(160deg,#eef0f5 0%,#e2e6ef 100%)';
+const FALLBACK_BG = 'linear-gradient(160deg,#f6f7fa 0%,#eef0f4 100%)';
 
 const SORTS = [
   { key: 'popular', label: 'Most Popular' },
