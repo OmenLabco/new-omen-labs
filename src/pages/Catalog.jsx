@@ -114,11 +114,12 @@ export default function Catalog() {
                     className="card-lift group flex h-full flex-col rounded-3xl bg-secondary/40 overflow-hidden active:scale-[0.98]"
                   >
                     {/* Tinted image */}
-                    <div className="relative aspect-[4/5] flex items-end justify-center overflow-hidden rounded-3xl" style={{ background: bg }}>
+                    <div className="relative aspect-square flex items-center justify-center overflow-hidden rounded-3xl" style={{ background: bg }}>
                       <ProductVialImage
                         image={product.image}
                         name={product.name}
-                        className="h-[88%] w-auto object-contain group-hover:scale-[1.04] transition-transform duration-700"
+                        className="group-hover:scale-[1.05] transition-transform duration-700"
+                        style={{ objectFit: 'cover' }}
                       />
                       {product.coming_soon && (
                         <div className="absolute top-3 left-3">
