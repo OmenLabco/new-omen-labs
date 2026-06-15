@@ -22,7 +22,7 @@ export default function ProductVialImage({ image = null, name = '', className = 
   return (
     <div
       className={className}
-      style={{ position: 'relative', overflow: 'hidden', containerType: 'inline-size', ...style }}
+      style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', containerType: 'inline-size', ...style }}
     >
       <img
         src={PLACEHOLDER_RENDER}
