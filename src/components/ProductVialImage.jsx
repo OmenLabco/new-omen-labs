@@ -3,7 +3,7 @@
  * Products without a render yet show a blurred donor vial render with an
  * "Image coming soon" overlay (donor: BPC-157 render).
  */
-const PLACEHOLDER_RENDER = '/products/bpc-157.jpg';
+const PLACEHOLDER_RENDER = '/products/glp-rt.jpeg';
 
 export default function ProductVialImage({ image = null, name = '', className = '', style = {} }) {
   if (image) {
