@@ -4,6 +4,18 @@ import { receiptImage } from './receiptImage.js';
 import { verifyOrder } from './token.js';
 import { signupAffiliate, loginAffiliate, affiliateStats, validateCode } from './affiliate.js';
 import { signupCustomer, loginCustomer, customerMe, enrollAffiliate } from './customer.js';
+import { withSecurity, rateLimit, tooMany, clientIp } from './security.js';
+
+// Per-endpoint rate limits (max attempts / window). Keyed by client IP.
+const LIMITS = {
+  '/api/admin/login': { max: 8, windowMs: 10 * 60 * 1000 },
+  '/api/customer/login': { max: 10, windowMs: 10 * 60 * 1000 },
+  '/api/affiliate/login': { max: 10, windowMs: 10 * 60 * 1000 },
+  '/api/customer/signup': { max: 10, windowMs: 60 * 60 * 1000 },
+  '/api/affiliate/signup': { max: 10, windowMs: 60 * 60 * 1000 },
+  '/api/order': { max: 40, windowMs: 10 * 60 * 1000 },
+};
+const MAX_BODY_BYTES = 100 * 1024; // 100 KB cap on any request body
 
 const STATUS_MESSAGE = {
   processing: "Your order has been received and is being processed. You'll receive a shipping notification once your compounds are dispatched.",
@@ -23,6 +35,26 @@ export default {
     const { pathname } = url;
     const method = request.method;
 
+    // Reject oversized request bodies before doing any work.
+    if ((method === 'POST' || method === 'PUT' || method === 'PATCH') && pathname.startsWith('/api/')) {
+      const len = Number(request.headers.get('Content-Length') || 0);
+      if (len > MAX_BODY_BYTES) {
+        return withSecurity(new Response(JSON.stringify({ error: 'Request too large.' }), { status: 413, headers: { 'Content-Type': 'application/json' } }));
+      }
+    }
+
+    // Rate-limit sensitive endpoints by client IP.
+    const limit = LIMITS[pathname];
+    if (limit && method === 'POST') {
+      const { allowed, retryAfter } = await rateLimit(env, `${pathname}:${clientIp(request)}`, limit.max, limit.windowMs);
+      if (!allowed) return withSecurity(tooMany(retryAfter));
+    }
+
+    return withSecurity(await route(request, env, url, pathname, method));
+  },
+};
+
+async function route(request, env, url, pathname, method) {
     if (pathname === '/api/order') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return handleOrder(request, env);
@@ -119,5 +151,4 @@ export default {
     }
 
     return env.ASSETS.fetch(request);
-  },
-};
+}

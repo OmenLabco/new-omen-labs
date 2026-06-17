@@ -4,6 +4,8 @@
 //   DB             - D1 database binding
 //   ADMIN_PASSWORD - also used as a pepper for affiliate password hashing
 
+import { safeEqual } from './security.js';
+
 export const NEW_CUSTOMER_DISCOUNT = 0.20;       // 20% off for first-time customers
 export const RETURNING_CUSTOMER_DISCOUNT = 0.10; // 10% off for returning customers
 
@@ -90,7 +92,7 @@ async function authedAffiliate(request, env) {
   const aff = await env.DB.prepare('SELECT * FROM affiliates WHERE email = ?').bind(email).first();
   if (!aff) return null;
   const hash = await hashPw(password, email, env);
-  return hash === aff.password_hash ? aff : null;
+  return (await safeEqual(hash, aff.password_hash || '')) ? aff : null;
 }
 
 // POST /api/affiliate/login

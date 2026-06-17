@@ -6,6 +6,7 @@
 
 import { renderImageEmail, sendEmail } from './email.js';
 import { signOrder } from './token.js';
+import { safeEqual } from './security.js';
 
 const SITE = 'https://omenlabs.co';
 
@@ -27,17 +28,18 @@ async function sendStatusEmail(env, order, status) {
   });
 }
 
-// Constant-time-ish password check via Authorization: Bearer <password>
-function authorized(request, env) {
+// Constant-time password check via Authorization: Bearer <password>
+async function authorized(request, env) {
   if (!env.ADMIN_PASSWORD) return false;
   const header = request.headers.get('Authorization') || '';
   const token = header.replace(/^Bearer\s+/i, '');
-  return token.length > 0 && token === env.ADMIN_PASSWORD;
+  if (token.length === 0) return false;
+  return safeEqual(token, env.ADMIN_PASSWORD);
 }
 
 // GET /api/admin/orders — list all orders (newest first)
 export async function listOrders(request, env) {
-  if (!authorized(request, env)) return json({ error: 'Unauthorized' }, 401);
+  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
   if (!env.DB) return json({ orders: [] });
 
   const { results } = await env.DB.prepare(
@@ -53,7 +55,7 @@ export async function listOrders(request, env) {
 
 // GET /api/admin/affiliates — list affiliates with their sales + commission totals
 export async function listAffiliates(request, env) {
-  if (!authorized(request, env)) return json({ error: 'Unauthorized' }, 401);
+  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
   if (!env.DB) return json({ affiliates: [] });
 
   const { results } = await env.DB.prepare(
@@ -72,7 +74,7 @@ export async function listAffiliates(request, env) {
 
 // GET /api/admin/customers — list customers with points, spend, tier, order count
 export async function listCustomers(request, env) {
-  if (!authorized(request, env)) return json({ error: 'Unauthorized' }, 401);
+  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
   if (!env.DB) return json({ customers: [] });
 
   const { results } = await env.DB.prepare(
@@ -90,7 +92,7 @@ export async function listCustomers(request, env) {
 
 // POST /api/admin/customers/membership — activate/deactivate VIP for a customer
 export async function setMembership(request, env) {
-  if (!authorized(request, env)) return json({ error: 'Unauthorized' }, 401);
+  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
   if (!env.DB) return json({ error: 'Database not configured.' }, 500);
   let body;
   try { body = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
@@ -104,7 +106,7 @@ export async function setMembership(request, env) {
 
 // POST /api/admin/customers/delete — permanently remove a customer account
 export async function deleteCustomer(request, env) {
-  if (!authorized(request, env)) return json({ error: 'Unauthorized' }, 401);
+  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
   if (!env.DB) return json({ error: 'Database not configured.' }, 500);
   let body;
   try { body = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
@@ -118,7 +120,7 @@ export async function deleteCustomer(request, env) {
 
 // POST /api/admin/orders/update — update status / tracking for one order
 export async function updateOrder(request, env) {
-  if (!authorized(request, env)) return json({ error: 'Unauthorized' }, 401);
+  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
   if (!env.DB) return json({ error: 'Database not configured.' }, 500);
 
   let body;
@@ -153,7 +155,7 @@ export async function updateOrder(request, env) {
 
 // POST /api/admin/login — verify password only (for the login screen)
 export async function adminLogin(request, env) {
-  return authorized(request, env) ? json({ ok: true }) : json({ error: 'Unauthorized' }, 401);
+  return (await authorized(request, env)) ? json({ ok: true }) : json({ error: 'Unauthorized' }, 401);
 }
 
 function safeParse(s) {

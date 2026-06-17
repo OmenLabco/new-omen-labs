@@ -2,6 +2,8 @@
 //
 // Environment: DB (D1), ADMIN_PASSWORD (pepper for hashing)
 
+import { safeEqual } from './security.js';
+
 export const POINTS_PER_DOLLAR = 1;
 export const POINTS_REDEEM_VALUE = 0.05; // $ per point → 100 pts = $5
 export const REDEEM_STEP = 100;          // redeem in increments of 100 pts
@@ -70,7 +72,7 @@ export async function customerFromToken(env, token) {
   const cust = await getCustomerByEmail(env, email);
   if (!cust) return null;
   const hash = await hashPw(password, email, env);
-  return hash === cust.password_hash ? cust : null;
+  return (await safeEqual(hash, cust.password_hash || '')) ? cust : null;
 }
 
 async function authedCustomer(request, env) {

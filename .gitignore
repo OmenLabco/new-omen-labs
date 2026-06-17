@@ -29,3 +29,8 @@ dist-ssr
 
 .env
 .vite
+
+# Cloudflare Workers local secrets (NEVER commit)
+.dev.vars
+.dev.vars.*
+.wrangler/

@@ -18,5 +18,9 @@ export async function signOrder(orderNumber, secret) {
 export async function verifyOrder(orderNumber, token, secret) {
   if (!token) return false;
   const expected = await hmac(orderNumber, secret);
-  return token === expected;
+  // constant-time compare to prevent token-guessing via timing
+  if (token.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= token.charCodeAt(i) ^ expected.charCodeAt(i);
+  return diff === 0;
 }
