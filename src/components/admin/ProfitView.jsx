@@ -181,7 +181,7 @@ export default function ProfitView({ orders, privacy = false }) {
                   <tr key={row.productId} className="border-b border-border/50 last:border-0">
                     <td className="py-2 font-medium pr-3">{row.name}</td>
                     <td className="py-2 text-muted-foreground">{row.dose}</td>
-                    <td className="py-2 text-right tabular-nums"><Mask on={privacy}>{row.sellPrice != null ? money(row.sellPrice) : '—'}</Mask></td>
+                    <td className="py-2 text-right tabular-nums">{row.sellPrice != null ? money(row.sellPrice) : '—'}</td>
                     <td className="py-2 text-right tabular-nums text-rose-500"><Mask on={privacy}>{row.cost != null ? money(row.cost) : <span className="text-muted-foreground/60">not set</span>}</Mask></td>
                     <td className="py-2 text-right tabular-nums font-semibold text-emerald-600"><Mask on={privacy}>{perVial != null ? money(perVial) : '—'}</Mask></td>
                   </tr>
