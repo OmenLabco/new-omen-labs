@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut, Trash2 } from 'lucide-react';
+import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut, Trash2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import OrderEditForm from '@/components/admin/OrderEditForm';
 import SalesDashboard from '@/components/admin/SalesDashboard';
@@ -62,7 +62,11 @@ function LoginScreen({ onSuccess }) {
   );
 }
 
-function AffiliatesView({ onLogout }) {
+const Mask = ({ on, children }) => (
+  <span className={on ? 'blur-[6px] select-none pointer-events-none' : ''}>{children}</span>
+);
+
+function AffiliatesView({ onLogout, privacy }) {
   const [affiliates, setAffiliates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -89,7 +93,7 @@ function AffiliatesView({ onLogout }) {
               <span className="font-mono font-semibold text-sm">{a.code}</span>
               <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">{tierOf(a.order_count)}</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">{a.name} · {a.email}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">{a.name} · <Mask on={privacy}>{a.email}</Mask></p>
           </div>
           <div className="text-right shrink-0">
             <p className="font-mono text-sm font-semibold text-emerald-500">${Number(a.total_commission || 0).toFixed(2)}</p>
@@ -187,6 +191,7 @@ export default function AdminOrders() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  const [privacy, setPrivacy] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -234,9 +239,20 @@ export default function AdminOrders() {
             <h1 className="mt-2 text-3xl font-bold tracking-tight">{tab === 'orders' ? 'Orders' : tab === 'profit' ? 'Profit' : tab === 'affiliates' ? 'Affiliates' : 'Customers'}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{tab === 'orders' ? `${orders.length} total orders` : tab === 'profit' ? 'Peptide revenue, cost & profit' : tab === 'affiliates' ? 'Affiliate partners' : 'Reward members'}</p>
           </div>
-          <Button variant="outline" onClick={logout} className="gap-2 h-9">
-            <LogOut className="h-4 w-4" /> Sign out
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={privacy ? 'default' : 'outline'}
+              onClick={() => setPrivacy((p) => !p)}
+              className="gap-2 h-9"
+              title="Blur profits, prices & emails for screen-sharing"
+            >
+              {privacy ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {privacy ? 'Privacy on' : 'Privacy'}
+            </Button>
+            <Button variant="outline" onClick={logout} className="gap-2 h-9">
+              <LogOut className="h-4 w-4" /> Sign out
+            </Button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -256,10 +272,10 @@ export default function AdminOrders() {
           loading ? (
             <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" /></div>
           ) : (
-            <ProfitView orders={orders} />
+            <ProfitView orders={orders} privacy={privacy} />
           )
         ) : tab === 'affiliates' ? (
-          <AffiliatesView onLogout={logout} />
+          <AffiliatesView onLogout={logout} privacy={privacy} />
         ) : tab === 'customers' ? (
           <CustomersView onLogout={logout} />
         ) : (

@@ -13,7 +13,12 @@ const RANGES = [
 const money = (n) => `$${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const isSale = (o) => o.status !== 'cancelled' && o.status !== 'refunded';
 
-export default function ProfitView({ orders }) {
+// Wraps sensitive values so they can be blurred when "Privacy" is on.
+const Mask = ({ on, children }) => (
+  <span className={on ? 'blur-[6px] select-none pointer-events-none' : ''}>{children}</span>
+);
+
+export default function ProfitView({ orders, privacy = false }) {
   const [range, setRange] = useState('7d');
 
   const data = useMemo(() => {
@@ -68,9 +73,9 @@ export default function ProfitView({ orders }) {
 
   const KPIS = [
     { icon: DollarSign, label: `Peptide revenue · ${cfg.label}`, value: money(data.revenue), tint: 'text-emerald-500 bg-emerald-500/10', note: 'excludes shipping' },
-    { icon: Wallet, label: `My cost · ${cfg.label}`, value: money(data.cost), tint: 'text-rose-500 bg-rose-500/10', note: 'cost per vial sold' },
-    { icon: TrendingUp, label: `Profit · ${cfg.label}`, value: money(data.profit), tint: 'text-primary bg-primary/10', note: 'revenue − cost' },
-    { icon: Percent, label: 'Margin', value: `${data.margin.toFixed(1)}%`, tint: 'text-amber-500 bg-amber-500/10', note: 'profit / revenue' },
+    { icon: Wallet, label: `My cost · ${cfg.label}`, value: money(data.cost), tint: 'text-rose-500 bg-rose-500/10', note: 'cost per vial sold', sensitive: true },
+    { icon: TrendingUp, label: `Profit · ${cfg.label}`, value: money(data.profit), tint: 'text-primary bg-primary/10', note: 'revenue − cost', sensitive: true },
+    { icon: Percent, label: 'Margin', value: `${data.margin.toFixed(1)}%`, tint: 'text-amber-500 bg-amber-500/10', note: 'profit / revenue', sensitive: true },
   ];
 
   return (
@@ -96,7 +101,7 @@ export default function ProfitView({ orders }) {
             <div className={`h-9 w-9 rounded-lg flex items-center justify-center mb-3 ${k.tint}`}>
               <k.icon className="h-4 w-4" />
             </div>
-            <p className="text-2xl font-bold tracking-tight tabular-nums">{k.value}</p>
+            <p className="text-2xl font-bold tracking-tight tabular-nums"><Mask on={privacy && k.sensitive}>{k.value}</Mask></p>
             <p className="text-[11px] text-muted-foreground mt-1">{k.label}</p>
             <p className="text-[10px] text-muted-foreground/70">{k.note}</p>
           </motion.div>
@@ -132,8 +137,8 @@ export default function ProfitView({ orders }) {
                     <td className="py-2.5 font-medium pr-3">{r.name}{!r.hasCost && <span className="ml-2 text-[10px] text-amber-600">no cost set</span>}</td>
                     <td className="py-2.5 text-right tabular-nums">{r.units.toLocaleString()}</td>
                     <td className="py-2.5 text-right tabular-nums">{money(r.revenue)}</td>
-                    <td className="py-2.5 text-right tabular-nums text-rose-500">{r.hasCost ? money(r.cost) : '—'}</td>
-                    <td className="py-2.5 text-right tabular-nums font-semibold text-emerald-600">{r.hasCost ? money(r.profit) : '—'}</td>
+                    <td className="py-2.5 text-right tabular-nums text-rose-500"><Mask on={privacy}>{r.hasCost ? money(r.cost) : '—'}</Mask></td>
+                    <td className="py-2.5 text-right tabular-nums font-semibold text-emerald-600"><Mask on={privacy}>{r.hasCost ? money(r.profit) : '—'}</Mask></td>
                   </tr>
                 ))}
               </tbody>
@@ -142,8 +147,8 @@ export default function ProfitView({ orders }) {
                   <td className="pt-3">Total</td>
                   <td className="pt-3 text-right tabular-nums">{data.rows.reduce((s, r) => s + r.units, 0).toLocaleString()}</td>
                   <td className="pt-3 text-right tabular-nums">{money(data.revenue)}</td>
-                  <td className="pt-3 text-right tabular-nums text-rose-500">{money(data.cost)}</td>
-                  <td className="pt-3 text-right tabular-nums text-emerald-600">{money(data.profit)}</td>
+                  <td className="pt-3 text-right tabular-nums text-rose-500"><Mask on={privacy}>{money(data.cost)}</Mask></td>
+                  <td className="pt-3 text-right tabular-nums text-emerald-600"><Mask on={privacy}>{money(data.profit)}</Mask></td>
                 </tr>
               </tfoot>
             </table>
@@ -176,9 +181,9 @@ export default function ProfitView({ orders }) {
                   <tr key={row.productId} className="border-b border-border/50 last:border-0">
                     <td className="py-2 font-medium pr-3">{row.name}</td>
                     <td className="py-2 text-muted-foreground">{row.dose}</td>
-                    <td className="py-2 text-right tabular-nums">{row.sellPrice != null ? money(row.sellPrice) : '—'}</td>
-                    <td className="py-2 text-right tabular-nums text-rose-500">{row.cost != null ? money(row.cost) : <span className="text-muted-foreground/60">not set</span>}</td>
-                    <td className="py-2 text-right tabular-nums font-semibold text-emerald-600">{perVial != null ? money(perVial) : '—'}</td>
+                    <td className="py-2 text-right tabular-nums"><Mask on={privacy}>{row.sellPrice != null ? money(row.sellPrice) : '—'}</Mask></td>
+                    <td className="py-2 text-right tabular-nums text-rose-500"><Mask on={privacy}>{row.cost != null ? money(row.cost) : <span className="text-muted-foreground/60">not set</span>}</Mask></td>
+                    <td className="py-2 text-right tabular-nums font-semibold text-emerald-600"><Mask on={privacy}>{perVial != null ? money(perVial) : '—'}</Mask></td>
                   </tr>
                 );
               })}
