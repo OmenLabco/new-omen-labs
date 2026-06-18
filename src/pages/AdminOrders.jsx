@@ -105,7 +105,7 @@ function AffiliatesView({ onLogout, privacy }) {
   );
 }
 
-function CustomersView({ onLogout }) {
+function CustomersView({ onLogout, privacy }) {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -156,7 +156,7 @@ function CustomersView({ onLogout }) {
               <span className="font-semibold text-sm truncate">{c.name}</span>
               {c.isVip && <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500">VIP</span>}
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">{c.email}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 truncate"><Mask on={privacy}>{c.email}</Mask></p>
             <p className="text-xs text-muted-foreground mt-0.5">{c.points} pts · {c.order_count} orders · ${Number(c.lifetime_spend || 0).toFixed(2)}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -277,7 +277,7 @@ export default function AdminOrders() {
         ) : tab === 'affiliates' ? (
           <AffiliatesView onLogout={logout} privacy={privacy} />
         ) : tab === 'customers' ? (
-          <CustomersView onLogout={logout} />
+          <CustomersView onLogout={logout} privacy={privacy} />
         ) : (
         <>
         {/* Sales dashboard */}
