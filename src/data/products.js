@@ -49,7 +49,7 @@ export const PRODUCTS = [
     storage: GENERIC_STORAGE,
     image: "/products/tirzepatide.png",
     paired_products: ["GLP-3 RT", "Bacteriostatic Water"],
-    in_stock: true,
+    in_stock: false,
     featured: true,
   },
   {
@@ -70,7 +70,7 @@ export const PRODUCTS = [
     storage: GENERIC_STORAGE,
     image: "/products/bpc-157.jpg",
     paired_products: ["GLP-3 RT", "GHK-Cu"],
-    in_stock: true,
+    in_stock: false,
     featured: true,
   },
   {
@@ -92,7 +92,7 @@ export const PRODUCTS = [
     storage: "Store at -20°C. Protect from moisture. Reconstituted: 2-8°C.",
     image: "/products/ghk-cu.jpg",
     paired_products: ["MT2", "GLOW"],
-    in_stock: true,
+    in_stock: false,
     featured: true,
   },
   {
@@ -114,7 +114,7 @@ export const PRODUCTS = [
     storage: GENERIC_STORAGE,
     image: "/products/semax.jpg",
     paired_products: ["Selank", "NAD+"],
-    in_stock: true,
+    in_stock: false,
     featured: true,
   },
   {
@@ -135,7 +135,7 @@ export const PRODUCTS = [
     storage: GENERIC_STORAGE,
     image: null,
     paired_products: ["Semax", "NAD+"],
-    in_stock: true,
+    in_stock: false,
     featured: false,
   },
   {
@@ -173,7 +173,7 @@ export const PRODUCTS = [
     storage: "Store at -20°C. Reconstituted: 2-8°C, use within 21 days.",
     image: null,
     paired_products: ["GHK-Cu", "MT2"],
-    in_stock: true,
+    in_stock: false,
     featured: true,
   },
   {
@@ -194,7 +194,7 @@ export const PRODUCTS = [
     storage: "Store at -20°C. Protect from light and moisture.",
     image: "/products/nad.jpg",
     paired_products: ["MOTS-c", "Semax"],
-    in_stock: true,
+    in_stock: false,
     featured: true,
   },
   {
@@ -216,7 +216,7 @@ export const PRODUCTS = [
     storage: GENERIC_STORAGE,
     image: "/products/mots-c.png",
     paired_products: ["NAD+", "GLP-3 RT"],
-    in_stock: true,
+    in_stock: false,
     featured: false,
   },
   {
@@ -237,7 +237,7 @@ export const PRODUCTS = [
     storage: GENERIC_STORAGE,
     image: "/products/tb-500.jpg",
     paired_products: ["BPC-157", "GHK-Cu"],
-    in_stock: true,
+    in_stock: false,
     featured: true,
   },
   {
@@ -255,7 +255,7 @@ export const PRODUCTS = [
     storage: "Store at -20°C. Protect from light. Reconstituted: 2-8°C.",
     image: "/products/mt2.png",
     paired_products: ["GHK-Cu", "GLOW"],
-    in_stock: true,
+    in_stock: false,
     featured: true,
   },
   {
@@ -274,7 +274,7 @@ export const PRODUCTS = [
     storage: GENERIC_STORAGE,
     image: null,
     paired_products: ["CJC + Ipamorelin", "Bacteriostatic Water"],
-    in_stock: true,
+    in_stock: false,
     featured: false,
   },
   {
@@ -295,7 +295,7 @@ export const PRODUCTS = [
     storage: GENERIC_STORAGE,
     image: null,
     paired_products: ["Ipamorelin", "Bacteriostatic Water"],
-    in_stock: true,
+    in_stock: false,
     featured: false,
   },
   {
@@ -313,7 +313,7 @@ export const PRODUCTS = [
     storage: GENERIC_STORAGE,
     image: "/products/kpv.png",
     paired_products: ["BPC-157", "TB-500"],
-    in_stock: true,
+    in_stock: false,
     featured: false,
   },
   {
@@ -350,7 +350,7 @@ export const PRODUCTS = [
     storage: "Store at room temperature. Once opened, use within 28 days.",
     image: null,
     paired_products: ["BPC-157", "MT2", "GLP-3 RT"],
-    in_stock: true,
+    in_stock: false,
     featured: false,
   },
 

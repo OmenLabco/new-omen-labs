@@ -29,6 +29,7 @@ export default function ProductDetail() {
 
   const discountPct = getDiscountPct(quantity);
   const discountedUnitPrice = product ? getDiscountedPrice(basePrice, quantity) : 0;
+  const soldOut = !!product && product.in_stock === false && !product.coming_soon;
 
   const handleAddToCart = () => {
     cart.add({
@@ -191,10 +192,12 @@ export default function ProductDetail() {
               <Button
                 onClick={handleAddToCart}
                 className="w-full h-12 text-sm font-medium tracking-wide"
-                disabled={added || product.coming_soon}
+                disabled={added || product.coming_soon || soldOut}
               >
                 {product.coming_soon ? (
                   'Coming Soon'
+                ) : soldOut ? (
+                  'Sold Out'
                 ) : added ? (
                   <>
                     <Check className="mr-2 h-4 w-4" />
@@ -327,10 +330,10 @@ export default function ProductDetail() {
           </div>
           <Button
             onClick={handleAddToCart}
-            disabled={added || product.coming_soon}
+            disabled={added || product.coming_soon || soldOut}
             className="flex-1 h-12 text-sm font-semibold tracking-wide"
           >
-            {product.coming_soon ? 'Coming Soon' : added ? (
+            {product.coming_soon ? 'Coming Soon' : soldOut ? 'Sold Out' : added ? (
               <><Check className="mr-2 h-4 w-4" /> Added</>
             ) : (
               'Add to Protocol'

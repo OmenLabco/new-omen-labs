@@ -102,6 +102,7 @@ export default function Catalog() {
             {products.map((product, i) => {
               const primaryCat = getCategories(product)[0];
               const bg = CARD_BG[primaryCat] || FALLBACK_BG;
+              const soldOut = product.in_stock === false && !product.coming_soon;
               return (
                 <motion.div
                   key={product.id}
@@ -127,6 +128,16 @@ export default function Catalog() {
                             Coming Soon
                           </span>
                         </div>
+                      )}
+                      {soldOut && (
+                        <>
+                          <div className="absolute inset-0 bg-white/45" />
+                          <div className="absolute top-3 left-3">
+                            <span className="font-mono text-[8px] sm:text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full bg-foreground text-background">
+                              Sold Out
+                            </span>
+                          </div>
+                        </>
                       )}
                     </div>
 
@@ -154,8 +165,8 @@ export default function Catalog() {
                       )}
                       {/* View button */}
                       <div className="mt-3 sm:mt-4">
-                        <span className="block w-full text-center rounded-full bg-foreground text-background font-bold text-[13px] sm:text-sm py-2.5 sm:py-3 group-hover:bg-primary transition-colors">
-                          View
+                        <span className={`block w-full text-center rounded-full font-bold text-[13px] sm:text-sm py-2.5 sm:py-3 transition-colors ${soldOut ? 'bg-secondary text-muted-foreground' : 'bg-foreground text-background group-hover:bg-primary'}`}>
+                          {soldOut ? 'Sold Out' : 'View'}
                         </span>
                       </div>
                     </div>
