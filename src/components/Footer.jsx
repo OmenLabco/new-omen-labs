@@ -77,10 +77,13 @@ export default function Footer() {
           <p className="font-mono text-[11px] text-muted-foreground">
             © {new Date().getFullYear()} Omen Labs. All rights reserved.
           </p>
-          <div className="flex gap-6">
-            <span className="font-mono text-[11px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+            <Link to="/privacy" className="font-mono text-[11px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
               Privacy Policy
-            </span>
+            </Link>
+            <Link to="/refund" className="font-mono text-[11px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+              Refund Policy
+            </Link>
             <Link to="/terms" className="font-mono text-[11px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
               Terms of Service
             </Link>

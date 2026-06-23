@@ -4,6 +4,8 @@ import PageNotFound from './lib/PageNotFound';
 import Layout from './components/Layout';
 import AgeGate from './components/AgeGate';
 import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+import Refund from './pages/Refund';
 import AccessRestricted from './pages/AccessRestricted';
 import Affiliates from './pages/Affiliates';
 import Account from './pages/Account';
@@ -29,6 +31,8 @@ function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/refund" element={<Refund />} />
           <Route path="/affiliates" element={<Affiliates />} />
           <Route path="/account" element={<Account />} />
           <Route path="/membership" element={<Membership />} />

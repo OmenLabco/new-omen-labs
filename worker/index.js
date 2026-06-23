@@ -5,6 +5,7 @@ import { verifyOrder } from './token.js';
 import { signupAffiliate, loginAffiliate, affiliateStats, validateCode } from './affiliate.js';
 import { signupCustomer, loginCustomer, customerMe, enrollAffiliate } from './customer.js';
 import { withSecurity, rateLimit, tooMany, clientIp } from './security.js';
+import { createPaymentSession, paymentCallback, paymentStatus } from './payment.js';
 
 // Per-endpoint rate limits (max attempts / window). Keyed by client IP.
 const LIMITS = {
@@ -14,6 +15,7 @@ const LIMITS = {
   '/api/customer/signup': { max: 10, windowMs: 60 * 60 * 1000 },
   '/api/affiliate/signup': { max: 10, windowMs: 60 * 60 * 1000 },
   '/api/order': { max: 40, windowMs: 10 * 60 * 1000 },
+  '/api/pay/session': { max: 40, windowMs: 10 * 60 * 1000 },
 };
 const MAX_BODY_BYTES = 100 * 1024; // 100 KB cap on any request body
 
@@ -58,6 +60,20 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/order') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return handleOrder(request, env);
+    }
+
+    // Card payments (hosted/tokenized) — inert until configured
+    if (pathname === '/api/pay/status') {
+      if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+      return paymentStatus(request, env);
+    }
+    if (pathname === '/api/pay/session') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return createPaymentSession(request, env);
+    }
+    if (pathname === '/api/pay/callback') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return paymentCallback(request, env);
     }
 
     // Receipt image (referenced from emails; public but token-gated)
