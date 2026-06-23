@@ -5,10 +5,10 @@ import ProductVialImage from './ProductVialImage';
 import { getFeaturedProducts, getCategories } from '@/data/products';
 
 const categoryStyles = {
-  Recovery:    { chip: 'text-emerald-600 bg-emerald-500/10 border-emerald-500/30', glow: 'from-emerald-500/25', ring: 'hover:border-emerald-400/40' },
-  Aesthetics:  { chip: 'text-pink-600 bg-pink-500/10 border-pink-500/30',          glow: 'from-pink-500/25',    ring: 'hover:border-pink-400/40' },
-  Performance: { chip: 'text-amber-600 bg-amber-500/10 border-amber-500/30',       glow: 'from-amber-500/25',   ring: 'hover:border-amber-400/40' },
-  Longevity:   { chip: 'text-primary bg-primary/10 border-primary/25',             glow: 'from-blue-500/25',    ring: 'hover:border-primary/40' },
+  'Peptide Research':    { chip: 'text-emerald-600 bg-emerald-500/10 border-emerald-500/30', glow: 'from-emerald-500/25', ring: 'hover:border-emerald-400/40' },
+  'Dermal Research':  { chip: 'text-pink-600 bg-pink-500/10 border-pink-500/30',          glow: 'from-pink-500/25',    ring: 'hover:border-pink-400/40' },
+  'Metabolic Research': { chip: 'text-amber-600 bg-amber-500/10 border-amber-500/30',       glow: 'from-amber-500/25',   ring: 'hover:border-amber-400/40' },
+  'Cellular Research':   { chip: 'text-primary bg-primary/10 border-primary/25',             glow: 'from-blue-500/25',    ring: 'hover:border-primary/40' },
 };
 const fallbackStyle = { chip: 'text-muted-foreground bg-white/5 border-black/10', glow: 'from-white/10', ring: 'hover:border-black/20' };
 

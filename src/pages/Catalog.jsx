@@ -10,10 +10,10 @@ import ProductVialImage from '../components/ProductVialImage';
 // Soft pastel image backdrops, picked by the product's primary category —
 // mirrors the per-product tinted cards on the reference store.
 const CARD_BG = {
-  Recovery: 'linear-gradient(160deg,#f3f8f5 0%,#eaf2ee 100%)',
-  Aesthetics: 'linear-gradient(160deg,#faf2f6 0%,#f4e9f0 100%)',
-  Performance: 'linear-gradient(160deg,#f8f5ee 0%,#f1ebdf 100%)',
-  Longevity: 'linear-gradient(160deg,#f4f6fa 0%,#edf0f6 100%)',
+  'Peptide Research': 'linear-gradient(160deg,#f3f8f5 0%,#eaf2ee 100%)',
+  'Dermal Research': 'linear-gradient(160deg,#faf2f6 0%,#f4e9f0 100%)',
+  'Metabolic Research': 'linear-gradient(160deg,#f8f5ee 0%,#f1ebdf 100%)',
+  'Cellular Research': 'linear-gradient(160deg,#f4f6fa 0%,#edf0f6 100%)',
 };
 const FALLBACK_BG = 'linear-gradient(160deg,#f6f7fa 0%,#eef0f4 100%)';
 
@@ -178,9 +178,14 @@ export default function Catalog() {
         )}
 
         {/* Research notice */}
-        <div className="mt-16 p-4 border border-destructive/20 rounded-xl bg-destructive/[0.04] text-center">
+        <div className="mt-16 p-5 border border-destructive/20 rounded-xl bg-destructive/[0.04] text-center space-y-2 max-w-3xl mx-auto">
           <p className="font-mono text-[11px] text-destructive uppercase tracking-wider">
-            All products are sold strictly for research use only — not for human consumption
+            All products currently listed on this site are for research purposes ONLY.
+          </p>
+          <p className="text-[12px] text-muted-foreground leading-relaxed">
+            All products sold on this website are intended for research and identification purposes only.
+            These products are not intended for human dosing, injections, or ingestion. Peptides are strictly
+            for laboratory, academic, or institutional research and not for human or animal consumption.
           </p>
         </div>
       </div>

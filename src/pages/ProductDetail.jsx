@@ -66,7 +66,7 @@ export default function ProductDetail() {
         {/* Mobile title (shows above the image; desktop title lives in right column) */}
         <div className="lg:hidden mb-5">
           <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary">
-            {product.category} Protocol
+            {product.category}
           </span>
           <div className="mt-1.5 flex items-start justify-between gap-3">
             <h1 className="text-3xl font-bold tracking-tight">{product.name}</h1>
@@ -204,15 +204,19 @@ export default function ProductDetail() {
                     Added to Protocol
                   </>
                 ) : (
-                  'Add to Protocol'
+                  'Add to Cart'
                 )}
               </Button>
 
               <p className="mt-4 font-mono text-[10px] text-destructive text-center uppercase tracking-wider">
                 For Research Use Only
               </p>
+              <p className="mt-2 text-[11px] text-muted-foreground text-center leading-relaxed">
+                Intended for research and identification purposes only. Not for human dosing, injections,
+                or ingestion. For laboratory, academic, or institutional research — not for human or animal consumption.
+              </p>
               <p className="mt-1.5 font-mono text-[10px] text-muted-foreground text-center uppercase tracking-wider">
-                All sales are final — no returns or exchanges
+                All sales are final — see Refund Policy for exceptions
               </p>
             </div>
           </div>
@@ -286,7 +290,7 @@ export default function ProductDetail() {
             {pairedProducts.length > 0 && (
               <div className="mt-12">
                 <h3 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-6">
-                  Frequently Paired Protocols
+                  Frequently Paired Compounds
                 </h3>
                 <div className="space-y-3">
                   {pairedProducts.map((p) => (
@@ -336,7 +340,7 @@ export default function ProductDetail() {
             {product.coming_soon ? 'Coming Soon' : soldOut ? 'Sold Out' : added ? (
               <><Check className="mr-2 h-4 w-4" /> Added</>
             ) : (
-              'Add to Protocol'
+              'Add to Cart'
             )}
           </Button>
         </div>

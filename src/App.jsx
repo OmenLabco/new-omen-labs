@@ -40,6 +40,7 @@ function App() {
           <Route path="/product/:slug" element={<ProductDetail />} />
           <Route path="/about" element={<About />} />
           <Route path="/faq" element={<FAQ />} />
+          <Route path="/handling" element={<PeptideProtocols />} />
           <Route path="/protocols" element={<PeptideProtocols />} />
           <Route path="/order-status" element={<OrderStatus />} />
           <Route path="/labels" element={<LabelPrint />} />

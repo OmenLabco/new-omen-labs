@@ -32,7 +32,7 @@ export default function CartDock({ isOpen, onClose, items = [], onUpdateQuantity
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <div className="flex items-center gap-3">
                 <OmenLogo size={20} className="text-primary" />
-                <span className="font-semibold text-sm">Your Protocol</span>
+                <span className="font-semibold text-sm">Your Cart</span>
                 <span className="font-mono text-[11px] text-muted-foreground px-2 py-0.5 rounded-full bg-secondary">
                   {items.length} {items.length === 1 ? 'compound' : 'compounds'}
                 </span>
@@ -51,7 +51,7 @@ export default function CartDock({ isOpen, onClose, items = [], onUpdateQuantity
                 <div className="text-center py-16 flex flex-col items-center gap-4">
                   <ShoppingBag className="h-10 w-10 text-muted-foreground/20" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Your protocol is empty</p>
+                    <p className="text-sm text-muted-foreground">Your cart is empty</p>
                     <p className="font-mono text-[11px] text-muted-foreground/60 mt-1">Add compounds to begin</p>
                   </div>
                 </div>

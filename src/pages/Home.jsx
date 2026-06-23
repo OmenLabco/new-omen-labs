@@ -4,7 +4,6 @@ import FeaturedProducts from '../components/FeaturedProducts';
 import ProcessStrip from '../components/ProcessStrip';
 import TrustSection from '../components/TrustSection';
 import WhyOmenLabs from '../components/WhyOmenLabs';
-import Testimonials from '../components/Testimonials';
 import CtaBanner from '../components/CtaBanner';
 
 export default function Home() {
@@ -16,7 +15,6 @@ export default function Home() {
       <ProcessStrip />
       <TrustSection />
       <WhyOmenLabs />
-      <Testimonials />
       <CtaBanner />
     </div>
   );

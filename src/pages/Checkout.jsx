@@ -138,6 +138,29 @@ export default function Checkout() {
     );
   }
 
+  // Account required to purchase (research-customer verification gate)
+  if (!customerAuth.isLoggedIn()) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-5 px-6 text-center">
+        <Package className="h-12 w-12 text-primary/30" />
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight mb-2">Account required</h1>
+          <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
+            To purchase, you must create a research account and confirm your research field.
+            Sign in or create your account to continue to checkout.
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Button asChild><Link to="/account">Sign In / Create Account</Link></Button>
+          <Button asChild variant="outline"><Link to="/catalog">Back to Catalog</Link></Button>
+        </div>
+        <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider mt-2 max-w-md">
+          For laboratory, academic, or institutional research only — not for human or animal consumption.
+        </p>
+      </div>
+    );
+  }
+
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
   const handleBilling = (e) => setBilling({ ...billing, [e.target.name]: e.target.value });
 

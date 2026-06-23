@@ -56,6 +56,22 @@ function AuthForms({ onAuthed }) {
 
       <form onSubmit={submit} className="space-y-4 p-6 rounded-2xl border border-border bg-card">
         {mode === 'signup' && <Field label="Full Name" required value={form.name || ''} onChange={set('name')} />}
+        {mode === 'signup' && (
+          <label className="block">
+            <span className="text-sm font-medium text-foreground">Research Field <span className="text-destructive">*</span></span>
+            <select
+              required
+              value={form.research_field || ''}
+              onChange={set('research_field')}
+              className="mt-1 w-full h-11 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="" disabled>Select your research field…</option>
+              {['Pharmacology', 'Molecular Biology', 'Medicinal Chemistry', 'Biochemistry', 'Cell Biology', 'Biotechnology', 'Endocrinology', 'Academic / University Research', 'Institutional / Laboratory Research', 'Other Research Use'].map((f) => (
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <Field label="Email" type="email" required value={form.email || ''} onChange={set('email')} />
         <Field label="Password" type="password" required value={form.password || ''} onChange={set('password')} />
         <label className="flex items-center gap-2 cursor-pointer select-none">

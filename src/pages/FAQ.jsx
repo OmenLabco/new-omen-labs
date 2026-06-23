@@ -30,7 +30,7 @@ const faqs = [
   },
   {
     q: 'What is your return policy?',
-    a: 'Due to the sensitive nature of our products, we cannot accept returns on opened or temperature-compromised items. Unopened products in original packaging may be returned within 14 days.',
+    a: 'Because our products are research materials requiring cold-chain integrity, all sales are final. The exception: if your order arrives damaged, defective, incorrect, or is lost in transit, contact us within 7 days for a replacement or refund. See our Refund Policy for details.',
   },
   {
     q: 'How should peptides be stored?',
@@ -59,7 +59,7 @@ export default function FAQ() {
             <br />Asked Questions
           </h1>
           <p className="mt-6 text-muted-foreground leading-relaxed max-w-lg">
-            Find answers to common questions about our compounds, shipping, and research protocols.
+            Find answers to common questions about our compounds, shipping, and laboratory handling.
           </p>
         </motion.div>
 

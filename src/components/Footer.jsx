@@ -39,7 +39,7 @@ export default function Footer() {
             <div className="space-y-3">
               {[
                 { label: 'Catalog', to: '/catalog' },
-                { label: 'Protocols', to: '/protocols' },
+                { label: 'Handling & Storage', to: '/handling' },
                 { label: 'About', to: '/about' },
                 { label: 'FAQ', to: '/faq' },
                 { label: 'Track Order', to: '/order-status' },

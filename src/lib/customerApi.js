@@ -16,11 +16,11 @@ export const customerAuth = {
   isLoggedIn: () => !!(localStorage.getItem(KEY) || sessionStorage.getItem(KEY)),
 };
 
-export async function customerSignup({ name, email, password, remember = true }) {
+export async function customerSignup({ name, email, password, research_field, remember = true }) {
   const resp = await fetch('/api/customer/signup', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email, password }),
+    body: JSON.stringify({ name, email, password, research_field }),
   });
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) throw new Error(data.error || 'Signup failed.');

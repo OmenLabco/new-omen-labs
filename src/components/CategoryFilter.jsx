@@ -1,4 +1,4 @@
-const categories = ['All', 'Recovery', 'Aesthetics', 'Performance', 'Longevity'];
+const categories = ['All', 'Peptide Research', 'Dermal Research', 'Metabolic Research', 'Cellular Research'];
 
 export default function CategoryFilter({ selected, onSelect }) {
   return (

@@ -40,7 +40,7 @@ export default function CtaBanner() {
               <h2 className="text-3xl md:text-5xl font-bold tracking-[-0.03em] leading-[1.1] text-white">
                 Precision compounds
                 <br />
-                for advanced protocols
+                for advanced research
               </h2>
 
               <p className="mt-6 text-base text-white/40 leading-relaxed max-w-lg">

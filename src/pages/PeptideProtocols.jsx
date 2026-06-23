@@ -1,176 +1,72 @@
-import { motion } from 'framer-motion';
-import { Thermometer, Droplets, ShieldAlert, FlaskConical, PackageCheck, AlertTriangle } from 'lucide-react';
+// Handling & Storage — compliant laboratory reference. No dosing, cycles,
+// stacks, or human-use guidance. General lab handling/storage of lyophilized
+// research peptides only.
 
-const sections = [
+const SECTIONS = [
   {
-    icon: Thermometer,
-    colorClass: 'text-blue-400',
-    bg: 'bg-blue-400/10',
-    border: 'border-blue-400/20',
-    title: 'Storage Temperatures',
-    steps: [
-      'Store lyophilized (powder) peptides at −20°C for long-term preservation (up to 12 months).',
-      'Short-term storage (up to 4 weeks) is acceptable at 4°C in a dedicated laboratory refrigerator.',
-      'Keep away from frost-free freezers — repeated freeze-thaw cycles degrade compound integrity.',
-      'Never store peptides at room temperature for extended periods.',
-    ],
+    title: 'Receiving & Inspection',
+    body: 'On arrival, inspect the vial and packaging for damage. Lyophilized (freeze-dried) research peptides are shipped as a solid powder and are stable at ambient temperature for short transit periods. Verify the label, compound, and lot information against your order before storing.',
   },
   {
-    icon: Droplets,
-    colorClass: 'text-emerald-400',
-    bg: 'bg-emerald-400/10',
-    border: 'border-emerald-400/20',
-    title: 'Reconstitution Protocol',
-    steps: [
-      'Use only Bacteriostatic Water (BW) or sterile water for injection for reconstitution.',
-      'Allow the vial to come to room temperature before adding solvent to minimize thermal shock.',
-      'Inject solvent slowly down the side of the vial — do not inject directly onto the lyophilized cake.',
-      'Gently swirl; never vortex or shake vigorously. Vigorous agitation causes peptide degradation.',
-      'Once reconstituted, store at 4°C and use within 28 days.',
-    ],
+    title: 'Storing Lyophilized Powder',
+    body: 'Store sealed, unopened lyophilized vials away from light, heat, and humidity. For short-term laboratory storage (weeks), a refrigerator at 2–8°C is typical. For long-term storage (months or longer), -20°C or colder in a frost-free freezer is generally preferred. Avoid repeated temperature cycling.',
   },
   {
-    icon: FlaskConical,
-    colorClass: 'text-violet-400',
-    bg: 'bg-violet-400/10',
-    border: 'border-violet-400/20',
-    title: 'Handling Best Practices',
-    steps: [
-      'Always work in a clean, sterile environment using appropriate PPE (gloves, eye protection).',
-      'Use sterile syringes and needles for every reconstitution and transfer.',
-      'Label each reconstituted vial with the compound name, concentration, date, and initials.',
-      'Avoid repeated re-entry into vials — minimize exposure to contaminants.',
-      'Discard any vial showing visible particulates, cloudiness, or discoloration.',
-    ],
+    title: 'Reconstitution for Research',
+    body: 'For in-vitro laboratory work, lyophilized peptides are typically reconstituted with a suitable solvent such as bacteriostatic or sterile water, added slowly down the side of the vial and swirled gently rather than shaken. Reconstitution volumes and solvents are determined by the researcher according to their experimental design and the compound’s solubility.',
   },
   {
-    icon: PackageCheck,
-    colorClass: 'text-amber-400',
-    bg: 'bg-amber-400/10',
-    border: 'border-amber-400/20',
-    title: 'Upon Receipt',
-    steps: [
-      'Inspect packaging integrity immediately upon delivery.',
-      'Verify cold pack condition — if warm on arrival, contact support before use.',
-      'Cross-reference vial labeling with your Certificate of Analysis (CoA).',
-      'Transfer peptides to appropriate storage immediately after inspection.',
-    ],
+    title: 'Storing Reconstituted Solutions',
+    body: 'Once in solution, research peptides are generally less stable than the lyophilized powder. Reconstituted solutions are typically refrigerated at 2–8°C and protected from light. Aliquoting before freezing can help minimize freeze-thaw cycles, which may degrade peptides over time.',
   },
   {
-    icon: ShieldAlert,
-    colorClass: 'text-rose-400',
-    bg: 'bg-rose-400/10',
-    border: 'border-rose-400/20',
-    title: 'Freeze-Thaw Cycles',
-    steps: [
-      'Limit freeze-thaw cycles to a maximum of 3 for any single vial.',
-      'Aliquot large quantities into single-use volumes before freezing to avoid repeated thawing.',
-      'Track the number of freeze-thaw cycles per vial using labels or a laboratory logbook.',
-      'If peptide activity appears diminished, consider the cycle history before troubleshooting.',
-    ],
+    title: 'Handling & Safety',
+    body: 'Handle all research materials using good laboratory practice: wear appropriate PPE (gloves, eye protection), work in a clean designated area, and avoid generating dust or aerosols. Keep materials clearly labeled and segregated from food, beverages, and consumer products.',
   },
   {
-    icon: AlertTriangle,
-    colorClass: 'text-orange-400',
-    bg: 'bg-orange-400/10',
-    border: 'border-orange-400/20',
-    title: 'Safety & Compliance',
-    steps: [
-      'All Omen Labs compounds are strictly for in-vitro and laboratory research use only.',
-      'Not intended for human or veterinary use. Not a drug or pharmaceutical product.',
-      'Comply with all local, state, and federal regulations governing research compound usage.',
-      'Maintain a detailed research log documenting usage, storage conditions, and observations.',
-      "Dispose of peptides and sharps according to your institution's biohazard waste protocols.",
-    ],
+    title: 'Stability Factors',
+    body: 'Peptide stability depends on sequence, temperature, pH, light exposure, and the number of freeze-thaw cycles. Minimizing exposure to heat, light, and repeated thawing helps preserve integrity for the duration of a study.',
+  },
+  {
+    title: 'Disposal',
+    body: 'Dispose of all research materials, solutions, and labware in accordance with your institution’s policies and applicable local, state, and federal regulations for laboratory waste.',
   },
 ];
 
 export default function PeptideProtocols() {
   return (
-    <div className="min-h-screen relative">
-      <div className="absolute inset-0 hex-grid opacity-40 pointer-events-none" />
+    <div className="min-h-screen py-20 px-6">
+      <div className="max-w-2xl mx-auto">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="h-px w-6 bg-primary" />
+          <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-primary">Laboratory Reference</span>
+        </div>
+        <h1 className="text-4xl font-bold tracking-tight mb-3">Handling &amp; Storage</h1>
+        <p className="text-sm text-muted-foreground mb-10 leading-relaxed">
+          General laboratory guidance for receiving, storing, and handling lyophilized research
+          peptides. This page is reference information for laboratory use and does not constitute
+          dosing, administration, or human-use instructions of any kind.
+        </p>
 
-      {/* Header */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-20 pt-28 pb-14">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="max-w-2xl"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <div className="h-px w-8 bg-primary" />
-            <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-primary">
-              Research Guidelines
-            </span>
-          </div>
-          <h1 className="text-4xl md:text-5xl xl:text-6xl font-bold tracking-[-0.04em]">
-            Peptide Protocols
-          </h1>
-          <p className="mt-6 text-muted-foreground max-w-xl leading-relaxed">
-            Proper storage and handling are critical to maintaining peptide integrity and ensuring reliable research outcomes.
-          </p>
-        </motion.div>
-      </div>
-
-      {/* Disclaimer */}
-      <div className="relative z-10 border-y border-amber-400/20 bg-amber-400/[0.05] py-3 px-6">
-        <div className="max-w-7xl mx-auto flex items-center gap-3">
-          <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
-          <p className="font-mono text-[11px] uppercase tracking-widest text-amber-400/80">
-            For Research Use Only — Not intended for human or veterinary use
+        <div className="rounded-xl border border-destructive/20 bg-destructive/[0.04] p-4 mb-10">
+          <p className="font-mono text-[11px] text-destructive uppercase tracking-wider leading-relaxed">
+            All products are for laboratory, academic, or institutional research and identification
+            purposes only — not for human or animal consumption, dosing, injection, or ingestion.
           </p>
         </div>
-      </div>
 
-      {/* Sections */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-16 md:py-24">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {sections.map((section, i) => {
-            const Icon = section.icon;
-            return (
-              <motion.div
-                key={section.title}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.08 }}
-                className={`rounded-2xl border ${section.border} bg-card p-7 hover:bg-card/80 transition-all duration-300`}
-              >
-                <div className="flex items-center gap-4 mb-6">
-                  <div className={`h-11 w-11 rounded-xl ${section.bg} flex items-center justify-center shrink-0`}>
-                    <Icon className={`h-5 w-5 ${section.colorClass}`} />
-                  </div>
-                  <h2 className="text-base font-bold tracking-tight">{section.title}</h2>
-                </div>
-                <ul className="space-y-3.5">
-                  {section.steps.map((step, j) => (
-                    <li key={j} className="flex items-start gap-3">
-                      <span className={`font-mono text-[10px] mt-0.5 shrink-0 ${section.colorClass}`}>
-                        {String(j + 1).padStart(2, '0')}
-                      </span>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{step}</p>
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            );
-          })}
+        <div className="space-y-8">
+          {SECTIONS.map((s) => (
+            <section key={s.title}>
+              <h2 className="text-lg font-semibold mb-2">{s.title}</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">{s.body}</p>
+            </section>
+          ))}
         </div>
 
-        {/* Bottom note */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="mt-6 rounded-2xl border border-border bg-card p-8 text-center"
-        >
-          <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-2">Questions?</p>
-          <p className="text-sm text-muted-foreground leading-relaxed max-w-xl mx-auto">
-            If you have questions about storage, reconstitution, or handling specific to a compound, review the product's Certificate of Analysis or contact our research support team at{' '}
-            <span className="text-primary">support@omenlabs.com</span>.
-          </p>
-        </motion.div>
+        <p className="mt-14 font-mono text-[10px] text-muted-foreground uppercase tracking-wider text-center">
+          For Research Use Only — Not for Human Consumption
+        </p>
       </div>
     </div>
   );

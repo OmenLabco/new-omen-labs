@@ -98,11 +98,16 @@ export async function signupCustomer(request, env) {
   const name = (b.name || '').trim();
   const email = (b.email || '').trim().toLowerCase();
   const password = b.password || '';
+  const research_field = (b.research_field || '').trim();
   if (!name || !email || !password) return json({ error: 'All fields are required.' }, 400);
+  if (!research_field) return json({ error: 'Please select your research field.' }, 400);
   if (password.length < 6) return json({ error: 'Password must be at least 6 characters.' }, 400);
 
   const exists = await getCustomerByEmail(env, email);
   if (exists) return json({ error: 'An account with that email already exists.' }, 409);
+
+  // Ensure the research_field column exists (lazy migration for existing DBs)
+  try { await env.DB.prepare('ALTER TABLE customers ADD COLUMN research_field TEXT').run(); } catch {}
 
   const password_hash = await hashPw(password, email, env);
   // Credit lifetime spend + points from any prior guest orders with this email
@@ -112,8 +117,8 @@ export async function signupCustomer(request, env) {
   const startPoints = Math.floor(priorSpend * POINTS_PER_DOLLAR);
 
   await env.DB.prepare(
-    'INSERT INTO customers (email, name, password_hash, points, lifetime_spend, created_date) VALUES (?,?,?,?,?,?)'
-  ).bind(email, name, password_hash, startPoints, priorSpend, new Date().toISOString()).run();
+    'INSERT INTO customers (email, name, password_hash, points, lifetime_spend, created_date, research_field) VALUES (?,?,?,?,?,?,?)'
+  ).bind(email, name, password_hash, startPoints, priorSpend, new Date().toISOString(), research_field).run();
 
   const cust = await getCustomerByEmail(env, email);
   return json({ ok: true, ...publicStats(cust) });
