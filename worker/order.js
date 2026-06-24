@@ -111,16 +111,19 @@ export async function handleOrder(request, env) {
   // 1) Save to D1 (source of truth for the admin page)
   if (env.DB) {
     try {
+      // Ensure the company column exists (lazy migration for existing DBs)
+      try { await env.DB.prepare('ALTER TABLE orders ADD COLUMN company TEXT').run(); } catch {}
       await env.DB.prepare(
         `INSERT INTO orders
-         (order_number, customer_name, customer_email, customer_phone, address, address2, city, state, zip, country, notes, items, subtotal, shipping_cost, shipping_method, discount, crypto_discount, affiliate_discount, affiliate_code, commission, points_earned, points_redeemed, points_value, total, payment_method, billing, status, created_date)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+         (order_number, customer_name, customer_email, customer_phone, company, address, address2, city, state, zip, country, notes, items, subtotal, shipping_cost, shipping_method, discount, crypto_discount, affiliate_discount, affiliate_code, commission, points_earned, points_redeemed, points_value, total, payment_method, billing, status, created_date)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
       )
         .bind(
           order_number,
           customer.name,
           customer.email,
           customer.phone || '',
+          customer.company || '',
           customer.address,
           customer.address2 || '',
           customer.city,

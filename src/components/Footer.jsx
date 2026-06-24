@@ -59,6 +59,7 @@ export default function Footer() {
             </h4>
             <div className="space-y-3">
               <p className="text-sm text-foreground">support@omenlabs.co</p>
+              <a href="tel:+15098427930" className="block text-sm text-foreground hover:text-primary transition-colors">(509) 842-7930</a>
               <p className="text-sm text-muted-foreground">Mon–Fri, 9AM–5PM EST</p>
               <div className="pt-2">
                 <div className="inline-flex items-center gap-2">
@@ -83,6 +84,9 @@ export default function Footer() {
             </Link>
             <Link to="/refund" className="font-mono text-[11px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
               Refund Policy
+            </Link>
+            <Link to="/shipping" className="font-mono text-[11px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+              Shipping Policy
             </Link>
             <Link to="/terms" className="font-mono text-[11px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
               Terms of Service

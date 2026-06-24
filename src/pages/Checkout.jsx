@@ -15,6 +15,7 @@ const SHIPPING_OPTIONS = [
 const SHIPPING_FIELDS = [
   { name: 'name', label: 'Full Name', required: true, half: true },
   { name: 'email', label: 'Email', required: true, half: true, type: 'email' },
+  { name: 'company', label: 'Company / Research Institution', required: true },
   { name: 'phone', label: 'Phone (optional)', half: true },
   { name: 'country', label: 'Country', half: true },
   { name: 'address', label: 'Address', required: true },
