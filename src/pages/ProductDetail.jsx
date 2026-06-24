@@ -233,7 +233,7 @@ export default function ProductDetail() {
           >
             <div className="hidden lg:block">
               <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-primary">
-                {product.category} Protocol
+                {product.category}
               </span>
               <h1 className="mt-4 text-4xl md:text-5xl font-bold tracking-tight">
                 {product.name}
@@ -282,9 +282,9 @@ export default function ProductDetail() {
                   <FileCheck className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Certificate of Analysis</p>
+                  <p className="text-sm font-medium">Certificate of Analysis (COA)</p>
                   <p className="text-[12px] text-muted-foreground">
-                    HPLC test results available upon request
+                    Coming soon — a full HPLC COA will be provided for every product.
                   </p>
                 </div>
               </div>
