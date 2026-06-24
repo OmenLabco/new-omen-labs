@@ -301,20 +301,16 @@ export default function ProductDetail() {
                     <Link
                       key={p.id}
                       to={`/product/${p.slug}`}
-                      className="flex items-center justify-between p-4 rounded-xl border border-border hover:border-primary/20 hover:bg-primary/[0.02] transition-all"
+                      className="flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/20 hover:bg-primary/[0.02] transition-all"
                     >
-                      <div className="flex items-center gap-3">
-                        <ProductVialImage
-                          image={p.image}
-                          name={p.name}
-                          className="h-10 w-10"
-                        />
-                        <div>
-                          <p className="text-sm font-medium">{p.name}</p>
-                          <p className="font-mono text-[10px] text-muted-foreground">{p.category}</p>
-                        </div>
+                      <div className="h-12 w-12 shrink-0 rounded-lg overflow-hidden bg-secondary">
+                        <ProductVialImage image={p.image} name={p.name} style={{ objectFit: 'cover' }} />
                       </div>
-                      <span className="text-sm font-semibold">{p.price != null ? `$${p.price.toFixed(2)}` : 'TBA'}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{p.name}</p>
+                        <p className="font-mono text-[10px] text-muted-foreground truncate">{p.category}</p>
+                      </div>
+                      <span className="text-sm font-semibold shrink-0">{p.price != null ? `$${p.price.toFixed(2)}` : 'TBA'}</span>
                     </Link>
                   ))}
                 </div>

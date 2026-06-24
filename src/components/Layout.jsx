@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { cart } from '@/lib/cart';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -7,6 +7,12 @@ import ScrollProgress from './ScrollProgress';
 import CartDock from './CartDock';
 
 export default function Layout() {
+  const location = useLocation();
+  // Scroll to top whenever the route (path) changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   const [cartOpen, setCartOpen] = useState(false);
   const [cartItems, setCartItems] = useState([]);
 
