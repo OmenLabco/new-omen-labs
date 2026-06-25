@@ -200,6 +200,11 @@ export default function Checkout() {
       }
       cart.clear();
       loadCart();
+      // Crypto: redirect to the hosted NOWPayments invoice to pay.
+      if (payment === 'crypto' && data.crypto_url) {
+        window.location.href = data.crypto_url;
+        return;
+      }
       navigate('/order-confirmed', {
         state: {
           zelle: payment === 'zelle',

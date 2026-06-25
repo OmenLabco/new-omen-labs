@@ -6,6 +6,7 @@ import { signupAffiliate, loginAffiliate, affiliateStats, validateCode } from '.
 import { signupCustomer, loginCustomer, customerMe, enrollAffiliate } from './customer.js';
 import { withSecurity, rateLimit, tooMany, clientIp } from './security.js';
 import { handleZelleNotify } from './zelle.js';
+import { handleCryptoIPN } from './crypto.js';
 import { createPaymentSession, paymentCallback, paymentStatus } from './payment.js';
 
 // Per-endpoint rate limits (max attempts / window). Keyed by client IP.
@@ -141,6 +142,10 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/zelle/notify') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return handleZelleNotify(request, env);
+    }
+    if (pathname === '/api/crypto/ipn') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return handleCryptoIPN(request, env);
     }
     if (pathname === '/api/admin/login') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });

@@ -9,6 +9,7 @@
 import { renderImageEmail, renderOwnerNotification, sendEmail } from './email.js';
 import { signOrder } from './token.js';
 import { priceFor } from './prices.js';
+import { createNowInvoice } from './crypto.js';
 import {
   getAffiliateByCode,
   commissionTier,
@@ -156,9 +157,9 @@ export async function handleOrder(request, env) {
   const shippingLabel = freeShip ? `${shipOpt.label} (Free — ${acctTier.name})` : shipOpt.label;
   const total = +(subtotal - discount + shipping_cost).toFixed(2);
   const isZelle = payment_method === 'zelle';
-  const paymentLabel = isZelle ? 'Zelle — awaiting payment' : isCrypto ? 'Crypto (10% discount applied)' : 'Manual — invoice to follow';
-  // Zelle orders wait for payment confirmation (auto-reconciled via SMS forward).
-  const orderStatus = isZelle ? 'awaiting_payment' : 'processing';
+  const paymentLabel = isZelle ? 'Zelle — awaiting payment' : isCrypto ? 'Crypto — awaiting payment' : 'Manual — invoice to follow';
+  // Zelle + crypto orders wait for payment confirmation (auto-reconciled via SMS / IPN webhook).
+  const orderStatus = (isZelle || isCrypto) ? 'awaiting_payment' : 'processing';
 
   // Points earned (on subtotal, multiplied by tier)
   const pointsEarned = account ? Math.floor(subtotal * POINTS_PER_DOLLAR * acctTier.multiplier) : 0;
@@ -264,7 +265,8 @@ export async function handleOrder(request, env) {
         subject: `Complete your Zelle payment — ${order_number}`,
         html: renderZelleInstructions(order, ZELLE_HANDLE),
       });
-    } else {
+    } else if (!isCrypto) {
+      // Crypto sends its confirmed receipt from the IPN webhook once paid.
       await sendEmail(env, {
         to: customer.email,
         subject: `Order Confirmed — ${order_number}`,
@@ -283,5 +285,12 @@ export async function handleOrder(request, env) {
     return json({ error: 'Order service not configured.' }, 500);
   }
 
-  return json({ ok: true, order_number, points_earned: pointsEarned, points_redeemed: pointsRedeemed });
+  // For crypto, create a hosted NOWPayments invoice and return its URL so the
+  // checkout can redirect the customer to pay. Funds settle to your wallet.
+  let crypto_url = null;
+  if (isCrypto) {
+    try { crypto_url = await createNowInvoice(env, { amount: total, orderNumber: order_number, description: `Omen Labs ${order_number}` }); } catch {}
+  }
+
+  return json({ ok: true, order_number, points_earned: pointsEarned, points_redeemed: pointsRedeemed, crypto_url });
 }
