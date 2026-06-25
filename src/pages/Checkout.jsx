@@ -78,7 +78,7 @@ export default function Checkout() {
       customerMe()
         .then((me) => {
           setAccount(me);
-          setForm((f) => ({ ...f, name: f.name || me.name, email: f.email || me.email }));
+          setForm((f) => ({ ...f, name: f.name || me.name, email: me.email }));
         })
         .catch(() => {});
     }
@@ -374,19 +374,23 @@ export default function Checkout() {
         <form onSubmit={handleSubmit} className="p-6 rounded-2xl border border-border bg-card">
           <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-5">Shipping Details</h2>
           <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
-            {SHIPPING_FIELDS.map((f) => (
+            {SHIPPING_FIELDS.map((f) => {
+              const lockEmail = f.name === 'email' && !!account?.email;
+              return (
               <div key={f.name} className={colClass(f)}>
-                <label className={labelClass}>{f.label}</label>
+                <label className={labelClass}>{f.label}{lockEmail && ' (account)'}</label>
                 {f.options ? (
                   <select name={f.name} required={f.required} value={form[f.name] || ''} onChange={handleChange} className={inputClass}>
                     <option value="" disabled>Select…</option>
                     {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
                   </select>
+                ) : lockEmail ? (
+                  <input name={f.name} type="email" readOnly value={account.email} className={`${inputClass} opacity-70 cursor-not-allowed`} title="Orders are tied to your account email" />
                 ) : (
                   <input name={f.name} type={f.type || 'text'} required={f.required} value={form[f.name] || ''} onChange={handleChange} className={inputClass} />
                 )}
               </div>
-            ))}
+            );})}
             <div className="sm:col-span-6">
               <label className={labelClass}>Order Notes (optional)</label>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
