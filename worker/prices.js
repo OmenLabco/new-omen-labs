@@ -2,6 +2,7 @@
 // Keyed by product_id (`${id}_${dose}`). Do NOT trust client-sent prices.
 // Regenerate from src/data/products.js if catalog prices change.
 export const PRICES = {
+  'test-item_1ct': { price: 1 },
   '69f9871d9cc1fe91aec19c8f_10mg': { price: 80 },
   '69f9871d9cc1fe91aec19c8f_20mg': { price: 100 },
   '69f9871d9cc1fe91aec19c8f_30mg': { price: 130 },

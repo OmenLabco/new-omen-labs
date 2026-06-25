@@ -8,6 +8,19 @@ const GENERIC_STORAGE = "Store at -20°C. Reconstituted: 2-8°C, use within 30 d
 
 export const PRODUCTS = [
   {
+    id: "test-item",
+    name: "Test Item (Do Not Order)",
+    slug: "test-item",
+    category: "Peptide Research",
+    short_description: "Internal $1 test product for payment testing only.",
+    description: "Internal test product used to verify checkout and payment flow. Not a real product — please do not order.",
+    purity: 99,
+    variants: [{ dose: "1ct", price: 1 }],
+    storage: GENERIC_STORAGE,
+    image: null,
+    in_stock: true,
+  },
+  {
     id: "69f9871d9cc1fe91aec19c8f",
     name: "GLP-3 RT",
     slug: "glp-rt",
