@@ -28,7 +28,7 @@ import {
 const SITE = 'https://omenlabs.co';
 // Zelle recipient shown in the payment-instructions email (must be the email/phone
 // enrolled with your Zelle). Keep in sync with the value shown at checkout.
-const ZELLE_HANDLE = 'jacobburlachenko@gmail.com';
+const ZELLE_HANDLE = 'pay@omenlabs.co (or (509) 842-7930)';
 const CRYPTO_DISCOUNT_RATE = 0.10; // 10% off when paying with crypto
 const SHIPPING_OPTIONS = {
   ground: { label: '3–5 Day Ground', price: 9.99 },

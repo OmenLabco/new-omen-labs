@@ -48,7 +48,7 @@ const inputClass =
   'w-full h-11 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30';
 const labelClass = 'block font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5';
 // Zelle recipient shown to customers (keep in sync with worker/order.js ZELLE_HANDLE)
-const ZELLE_HANDLE = 'jacobburlachenko@gmail.com';
+const ZELLE_HANDLE = 'pay@omenlabs.co (or (509) 842-7930)';
 
 export default function Checkout() {
   const { cartItems, loadCart } = useOutletContext();
