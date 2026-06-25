@@ -26,6 +26,9 @@ import {
 } from './customer.js';
 
 const SITE = 'https://omenlabs.co';
+// Zelle recipient shown in the payment-instructions email (must be the email/phone
+// enrolled with your Zelle). Keep in sync with the value shown at checkout.
+const ZELLE_HANDLE = 'jacobburlachenko@gmail.com';
 const CRYPTO_DISCOUNT_RATE = 0.10; // 10% off when paying with crypto
 const SHIPPING_OPTIONS = {
   ground: { label: '3–5 Day Ground', price: 9.99 },
@@ -37,6 +40,24 @@ const json = (data, status = 200) =>
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+
+// Branded dark email telling the customer how to complete their Zelle payment.
+function renderZelleInstructions(order, handle) {
+  return `<!doctype html><html><body style="margin:0;background:#0a0a0b;font-family:Arial,Helvetica,sans-serif;color:#e8e8ea;">
+  <div style="max-width:560px;margin:0 auto;padding:32px 24px;">
+    <p style="font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:#7c83ff;margin:0 0 18px;">Omen Labs</p>
+    <h1 style="font-size:22px;margin:0 0 8px;color:#fff;">Complete your Zelle payment</h1>
+    <p style="font-size:14px;line-height:1.6;color:#a9abb3;margin:0 0 22px;">Your order <b style="color:#fff;">${order.order_number}</b> is reserved. To finish, send your payment via Zelle:</p>
+    <div style="background:#15151a;border:1px solid #2a2b2f;border-radius:12px;padding:20px;margin-bottom:22px;">
+      <p style="margin:0 0 10px;font-size:13px;color:#a9abb3;">Send <b style="color:#fff;font-size:18px;">$${Number(order.total).toFixed(2)}</b> to:</p>
+      <p style="margin:0 0 14px;font-size:16px;color:#7c83ff;font-weight:bold;">${handle}</p>
+      <p style="margin:0;font-size:13px;color:#a9abb3;">In the Zelle <b style="color:#fff;">memo / note</b>, enter your order number:</p>
+      <p style="margin:6px 0 0;font-size:18px;color:#fff;font-weight:bold;letter-spacing:.05em;">${order.order_number}</p>
+    </div>
+    <p style="font-size:13px;line-height:1.6;color:#a9abb3;margin:0 0 8px;">Once we receive your payment, your order is confirmed automatically and you'll get a confirmation email. Including the order number in the memo is required so we can match your payment.</p>
+    <p style="font-size:11px;color:#6b6d77;margin:22px 0 0;">Research Use Only — Not for Human Consumption · support@omenlabs.co · (509) 842-7930</p>
+  </div></body></html>`;
+}
 
 // Order number uses only Roman-numeral letters after "OMEN-"
 // Uses crypto-grade randomness so order numbers aren't predictable.
@@ -134,7 +155,10 @@ export async function handleOrder(request, env) {
   const shipping_cost = freeShip ? 0 : shipOpt.price;
   const shippingLabel = freeShip ? `${shipOpt.label} (Free — ${acctTier.name})` : shipOpt.label;
   const total = +(subtotal - discount + shipping_cost).toFixed(2);
-  const paymentLabel = isCrypto ? 'Crypto (10% discount applied)' : 'Manual — invoice to follow';
+  const isZelle = payment_method === 'zelle';
+  const paymentLabel = isZelle ? 'Zelle — awaiting payment' : isCrypto ? 'Crypto (10% discount applied)' : 'Manual — invoice to follow';
+  // Zelle orders wait for payment confirmation (auto-reconciled via SMS forward).
+  const orderStatus = isZelle ? 'awaiting_payment' : 'processing';
 
   // Points earned (on subtotal, multiplied by tier)
   const pointsEarned = account ? Math.floor(subtotal * POINTS_PER_DOLLAR * acctTier.multiplier) : 0;
@@ -181,7 +205,7 @@ export async function handleOrder(request, env) {
           total,
           paymentLabel,
           billingJson,
-          'processing',
+          orderStatus,
           created_date
         )
         .run();
@@ -234,11 +258,19 @@ export async function handleOrder(request, env) {
     const ownerInbox = env.ORDER_TO_EMAIL || 'support@omenlabs.co';
     const token = await signOrder(order_number, env.ADMIN_PASSWORD);
     const imageUrl = `${SITE}/api/receipt-image?o=${encodeURIComponent(order_number)}&t=${token}&type=confirmation`;
-    await sendEmail(env, {
-      to: customer.email,
-      subject: `Order Confirmed — ${order_number}`,
-      html: renderImageEmail({ imageUrl, order }),
-    });
+    if (isZelle) {
+      await sendEmail(env, {
+        to: customer.email,
+        subject: `Complete your Zelle payment — ${order_number}`,
+        html: renderZelleInstructions(order, ZELLE_HANDLE),
+      });
+    } else {
+      await sendEmail(env, {
+        to: customer.email,
+        subject: `Order Confirmed — ${order_number}`,
+        html: renderImageEmail({ imageUrl, order }),
+      });
+    }
     await sendEmail(env, {
       to: ownerInbox,
       subject: `New Order ${order_number} — ${customer.name} — $${total.toFixed(2)}`,

@@ -6,7 +6,7 @@
 
 import { renderImageEmail, sendEmail } from './email.js';
 import { signOrder } from './token.js';
-import { safeEqual, issueAdminSession, verifyAdminSession } from './security.js';
+import { safeEqual, issueAdminSession, verifyAdminSession, zelleSecret } from './security.js';
 
 const SITE = 'https://omenlabs.co';
 
@@ -159,6 +159,12 @@ export async function updateOrder(request, env) {
   }
 
   return json({ ok: true, order: { ...updated, items: safeParse(updated.items) } });
+}
+
+// GET /api/admin/zelle-setup — admin-only: returns the Zelle webhook secret + URL
+export async function zelleSetup(request, env) {
+  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
+  return json({ secret: await zelleSecret(env), url: 'https://omenlabs.co/api/zelle/notify' });
 }
 
 // POST /api/admin/login — verify password, then issue a signed session token.

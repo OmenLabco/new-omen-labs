@@ -8,6 +8,7 @@ import ProfitView from '@/components/admin/ProfitView';
 import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer } from '@/lib/adminApi';
 
 const STATUS_COLORS = {
+  awaiting_payment: 'text-orange-400 bg-orange-400/10',
   processing: 'text-yellow-400 bg-yellow-400/10',
   confirmed: 'text-blue-400 bg-blue-400/10',
   shipped: 'text-purple-400 bg-purple-400/10',

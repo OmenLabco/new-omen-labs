@@ -1,10 +1,11 @@
 import { handleOrder } from './order.js';
-import { listOrders, updateOrder, adminLogin, listAffiliates, listCustomers, setMembership, deleteCustomer } from './admin.js';
+import { listOrders, updateOrder, adminLogin, listAffiliates, listCustomers, setMembership, deleteCustomer, zelleSetup } from './admin.js';
 import { receiptImage } from './receiptImage.js';
 import { verifyOrder } from './token.js';
 import { signupAffiliate, loginAffiliate, affiliateStats, validateCode } from './affiliate.js';
 import { signupCustomer, loginCustomer, customerMe, enrollAffiliate } from './customer.js';
 import { withSecurity, rateLimit, tooMany, clientIp } from './security.js';
+import { handleZelleNotify } from './zelle.js';
 import { createPaymentSession, paymentCallback, paymentStatus } from './payment.js';
 
 // Per-endpoint rate limits (max attempts / window). Keyed by client IP.
@@ -137,6 +138,10 @@ async function route(request, env, url, pathname, method) {
       return validateCode(request, env);
     }
 
+    if (pathname === '/api/zelle/notify') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return handleZelleNotify(request, env);
+    }
     if (pathname === '/api/admin/login') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return adminLogin(request, env);
@@ -156,6 +161,10 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/admin/customers/delete') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return deleteCustomer(request, env);
+    }
+    if (pathname === '/api/admin/zelle-setup') {
+      if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+      return zelleSetup(request, env);
     }
     if (pathname === '/api/admin/orders') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });

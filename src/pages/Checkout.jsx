@@ -47,6 +47,8 @@ const colClass = (f) => (f.third ? 'sm:col-span-2' : f.half ? 'sm:col-span-3' : 
 const inputClass =
   'w-full h-11 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30';
 const labelClass = 'block font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5';
+// Zelle recipient shown to customers (keep in sync with worker/order.js ZELLE_HANDLE)
+const ZELLE_HANDLE = 'jacobburlachenko@gmail.com';
 
 export default function Checkout() {
   const { cartItems, loadCart } = useOutletContext();
@@ -335,6 +337,7 @@ export default function Checkout() {
           <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-5">Payment Method</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
+              { id: 'zelle', title: 'Zelle', desc: 'Pay by Zelle — auto-confirmed' },
               { id: 'manual', title: 'Manual / Invoice', desc: 'Invoice to follow after order' },
               { id: 'crypto', title: 'Crypto — 10% off', desc: 'Pay with crypto and save 10%' },
             ].map((opt) => (
@@ -354,6 +357,17 @@ export default function Checkout() {
               </button>
             ))}
           </div>
+
+          {payment === 'zelle' && (
+            <div className="mt-4 rounded-xl border border-primary/20 bg-primary/[0.04] p-4 text-sm leading-relaxed">
+              <p className="font-semibold mb-1">How to pay with Zelle</p>
+              <ol className="list-decimal pl-5 space-y-1 text-muted-foreground">
+                <li>Place your order — you'll get an email with the exact amount and your order number.</li>
+                <li>In your bank's Zelle, send the total to <span className="font-semibold text-foreground">{ZELLE_HANDLE}</span>.</li>
+                <li><span className="font-semibold text-foreground">Put your order number in the Zelle memo/note</span> — this is required so we can match and confirm your payment automatically.</li>
+              </ol>
+            </div>
+          )}
         </div>
 
         {/* Shipping + billing + submit */}

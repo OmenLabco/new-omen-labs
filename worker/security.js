@@ -83,6 +83,12 @@ export async function verifyAdminSession(env, token) {
   return !!payload && typeof payload.exp === 'number' && payload.exp > Date.now();
 }
 
+// Secret for the Zelle SMS-forward webhook. Derived from ADMIN_PASSWORD so it's
+// a distinct value (safe to paste into the phone Shortcut) without a new env var.
+export async function zelleSecret(env) {
+  return hmacHex(env.ADMIN_PASSWORD, 'zelle-webhook-v1');
+}
+
 export function clientIp(request) {
   return request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || 'unknown';
 }
