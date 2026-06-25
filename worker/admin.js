@@ -6,7 +6,7 @@
 
 import { renderImageEmail, sendEmail } from './email.js';
 import { signOrder } from './token.js';
-import { safeEqual } from './security.js';
+import { safeEqual, issueAdminSession, verifyAdminSession } from './security.js';
 
 const SITE = 'https://omenlabs.co';
 
@@ -28,13 +28,21 @@ async function sendStatusEmail(env, order, status) {
   });
 }
 
-// Constant-time password check via Authorization: Bearer <password>
-async function authorized(request, env) {
+function bearer(request) {
+  return (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+}
+
+// Login check: the raw admin password (sent only to /api/admin/login).
+async function passwordOk(request, env) {
   if (!env.ADMIN_PASSWORD) return false;
-  const header = request.headers.get('Authorization') || '';
-  const token = header.replace(/^Bearer\s+/i, '');
+  const token = bearer(request);
   if (token.length === 0) return false;
   return safeEqual(token, env.ADMIN_PASSWORD);
+}
+
+// Data-endpoint check: a valid, unexpired signed session token (NOT the password).
+async function authorized(request, env) {
+  return verifyAdminSession(env, bearer(request));
 }
 
 // GET /api/admin/orders — list all orders (newest first)
@@ -153,9 +161,15 @@ export async function updateOrder(request, env) {
   return json({ ok: true, order: { ...updated, items: safeParse(updated.items) } });
 }
 
-// POST /api/admin/login — verify password only (for the login screen)
+// POST /api/admin/login — verify password, then issue a signed session token.
+// The browser stores the TOKEN (expiring), never the password.
 export async function adminLogin(request, env) {
-  return (await authorized(request, env)) ? json({ ok: true }) : json({ error: 'Unauthorized' }, 401);
+  if (!(await passwordOk(request, env))) return json({ error: 'Unauthorized' }, 401);
+  let remember = false;
+  try { remember = !!(await request.json()).remember; } catch {}
+  const ttl = remember ? 7 * 24 * 60 * 60 * 1000 : 12 * 60 * 60 * 1000; // 7d or 12h
+  const token = await issueAdminSession(env, ttl);
+  return json({ ok: true, token });
 }
 
 function safeParse(s) {

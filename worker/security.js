@@ -54,6 +54,35 @@ export function withSecurity(resp) {
   return new Response(resp.body, { status: resp.status, statusText: resp.statusText, headers });
 }
 
+// ---- Admin session tokens ----
+// Stateless, signed, expiring tokens so the browser never stores the raw admin
+// password. Signed with HMAC-SHA256 keyed by ADMIN_PASSWORD (server-only secret).
+async function hmacHex(secret, msg) {
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(secret || 'omen'),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+export async function issueAdminSession(env, ttlMs) {
+  const payload = JSON.stringify({ exp: Date.now() + ttlMs });
+  const b = btoa(payload);
+  const sig = await hmacHex(env.ADMIN_PASSWORD, b);
+  return `${b}.${sig}`;
+}
+
+export async function verifyAdminSession(env, token) {
+  if (!env.ADMIN_PASSWORD || typeof token !== 'string' || !token.includes('.')) return false;
+  const [b, sig] = token.split('.');
+  const expected = await hmacHex(env.ADMIN_PASSWORD, b);
+  if (!(await safeEqual(sig, expected))) return false;
+  let payload;
+  try { payload = JSON.parse(atob(b)); } catch { return false; }
+  return !!payload && typeof payload.exp === 'number' && payload.exp > Date.now();
+}
+
 export function clientIp(request) {
   return request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || 'unknown';
 }

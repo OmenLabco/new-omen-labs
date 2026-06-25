@@ -1,18 +1,21 @@
-// Admin API helpers. The password is kept in sessionStorage (cleared when the tab closes)
-// and sent as a Bearer token on each admin request.
-const PW_KEY = 'omenlabs_admin_pw';
+// Admin API helpers. After login the browser stores a short-lived signed
+// SESSION TOKEN (never the password) and sends it as a Bearer token.
+const TOKEN_KEY = 'omenlabs_admin_token';
 
 export const adminAuth = {
-  get: () => localStorage.getItem(PW_KEY) || sessionStorage.getItem(PW_KEY) || '',
-  set: (pw, remember) => {
+  get: () => localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || '',
+  set: (token, remember) => {
     const store = remember ? localStorage : sessionStorage;
     const other = remember ? sessionStorage : localStorage;
-    store.setItem(PW_KEY, pw);
-    other.removeItem(PW_KEY);
+    store.setItem(TOKEN_KEY, token);
+    other.removeItem(TOKEN_KEY);
   },
   clear: () => {
-    localStorage.removeItem(PW_KEY);
-    sessionStorage.removeItem(PW_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
+    // also clear the legacy password key from older sessions
+    localStorage.removeItem('omenlabs_admin_pw');
+    sessionStorage.removeItem('omenlabs_admin_pw');
   },
 };
 
@@ -27,9 +30,12 @@ export async function adminLogin(password, remember = true) {
   const resp = await fetch('/api/admin/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${password}` },
+    body: JSON.stringify({ remember }),
   });
   if (resp.ok) {
-    adminAuth.set(password, remember);
+    const data = await resp.json().catch(() => ({}));
+    if (!data.token) return false;
+    adminAuth.set(data.token, remember);
     return true;
   }
   return false;
