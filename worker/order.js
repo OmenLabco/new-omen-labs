@@ -28,7 +28,7 @@ import {
 const SITE = 'https://omenlabs.co';
 // Zelle recipient shown in the payment-instructions email (must be the email/phone
 // enrolled with your Zelle). Keep in sync with the value shown at checkout.
-const ZELLE_HANDLE = 'pay@omenlabs.co (or (509) 842-7930)';
+const ZELLE_HANDLE = '“omenlabs” or pay@omenlabs.co';
 const CRYPTO_DISCOUNT_RATE = 0.10; // 10% off when paying with crypto
 const SHIPPING_OPTIONS = {
   ground: { label: '3–5 Day Ground', price: 9.99 },
@@ -55,7 +55,7 @@ function renderZelleInstructions(order, handle) {
       <p style="margin:6px 0 0;font-size:18px;color:#fff;font-weight:bold;letter-spacing:.05em;">${order.order_number}</p>
     </div>
     <p style="font-size:13px;line-height:1.6;color:#a9abb3;margin:0 0 8px;">Once we receive your payment, your order is confirmed automatically and you'll get a confirmation email. Including the order number in the memo is required so we can match your payment.</p>
-    <p style="font-size:11px;color:#6b6d77;margin:22px 0 0;">Research Use Only — Not for Human Consumption · support@omenlabs.co · (509) 842-7930</p>
+    <p style="font-size:11px;color:#6b6d77;margin:22px 0 0;">Research Use Only — Not for Human Consumption · support@omenlabs.co</p>
   </div></body></html>`;
 }
 
