@@ -46,15 +46,15 @@ export async function handleZelleNotify(request, env) {
     return json({ ok: false, reason: 'amount_mismatch', orderNumber, paidAmount, expectedTotal });
   }
 
-  // Mark paid → confirmed
-  await env.DB.prepare("UPDATE orders SET status = 'confirmed' WHERE order_number = ?").bind(orderNumber).run();
+  // Mark paid → confirmed (and update the payment label so the receipt reads "confirmed")
+  await env.DB.prepare("UPDATE orders SET status = 'confirmed', payment_method = 'Zelle — payment confirmed' WHERE order_number = ?").bind(orderNumber).run();
 
   // Send the customer their confirmation (best effort)
   if (env.RESEND_API_KEY && order.customer_email) {
     try {
       const token = await signOrder(orderNumber, env.ADMIN_PASSWORD);
       const imageUrl = `${SITE}/api/receipt-image?o=${encodeURIComponent(orderNumber)}&t=${token}&type=confirmation`;
-      const orderObj = { ...order, items: safeParse(order.items), billing: order.billing ? safeParse(order.billing) : null };
+      const orderObj = { ...order, status: 'confirmed', payment_method: 'Zelle — payment confirmed', items: safeParse(order.items), billing: order.billing ? safeParse(order.billing) : null };
       await sendEmail(env, {
         to: order.customer_email,
         subject: `Payment Received — Order Confirmed ${orderNumber}`,
