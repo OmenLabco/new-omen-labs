@@ -194,13 +194,20 @@ export default function Checkout() {
           billing: billingSame ? null : billing,
         }),
       });
+      const data = await resp.json().catch(() => ({}));
       if (!resp.ok) {
-        const data = await resp.json().catch(() => ({}));
         throw new Error(data.error || 'Something went wrong submitting your order.');
       }
       cart.clear();
       loadCart();
-      navigate('/order-confirmed');
+      navigate('/order-confirmed', {
+        state: {
+          zelle: payment === 'zelle',
+          orderNumber: data.order_number || '',
+          total: Number(total.toFixed(2)),
+          handle: ZELLE_HANDLE,
+        },
+      });
     } catch (err) {
       setError(err.message);
       setSubmitting(false);

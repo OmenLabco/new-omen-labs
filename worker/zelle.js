@@ -46,8 +46,8 @@ export async function handleZelleNotify(request, env) {
     return json({ ok: false, reason: 'amount_mismatch', orderNumber, paidAmount, expectedTotal });
   }
 
-  // Mark paid → processing
-  await env.DB.prepare("UPDATE orders SET status = 'processing' WHERE order_number = ?").bind(orderNumber).run();
+  // Mark paid → confirmed
+  await env.DB.prepare("UPDATE orders SET status = 'confirmed' WHERE order_number = ?").bind(orderNumber).run();
 
   // Send the customer their confirmation (best effort)
   if (env.RESEND_API_KEY && order.customer_email) {
