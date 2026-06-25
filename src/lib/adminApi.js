@@ -41,6 +41,13 @@ export async function adminLogin(password, remember = true) {
   return false;
 }
 
+export async function fetchZelleSetup() {
+  const resp = await fetch('/api/admin/zelle-setup', { headers: headers() });
+  if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }
+  if (!resp.ok) throw new Error('Failed to load Zelle setup.');
+  return resp.json();
+}
+
 export async function fetchOrders() {
   const resp = await fetch('/api/admin/orders', { headers: headers() });
   if (resp.status === 401) {

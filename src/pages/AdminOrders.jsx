@@ -5,7 +5,40 @@ import { Button } from '@/components/ui/button';
 import OrderEditForm from '@/components/admin/OrderEditForm';
 import SalesDashboard from '@/components/admin/SalesDashboard';
 import ProfitView from '@/components/admin/ProfitView';
-import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer } from '@/lib/adminApi';
+import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup } from '@/lib/adminApi';
+
+function ZelleSetup() {
+  const [open, setOpen] = useState(false);
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState('');
+  const load = () => {
+    if (data) { setOpen((o) => !o); return; }
+    fetchZelleSetup().then((d) => { setData(d); setOpen(true); }).catch((e) => setErr(e.message));
+  };
+  return (
+    <div className="mb-6 rounded-2xl border border-border bg-card overflow-hidden">
+      <button onClick={load} className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-accent/40">
+        <span className="text-sm font-semibold">Zelle automation setup</span>
+        <span className="text-xs text-muted-foreground">{open ? 'hide' : 'show secret & steps'}</span>
+      </button>
+      {err && <p className="px-5 pb-3 text-sm text-destructive">{err}</p>}
+      {open && data && (
+        <div className="px-5 pb-5 space-y-3 text-sm">
+          <p className="text-muted-foreground">Paste these into your iPhone Shortcut (Automation → “Message from Bank of America” → Get Contents of URL):</p>
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1">POST URL</p>
+            <code className="block break-all rounded-lg bg-secondary p-2 text-xs">{data.url}</code>
+          </div>
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Header — X-Zelle-Secret</p>
+            <code className="block break-all rounded-lg bg-secondary p-2 text-xs">{data.secret}</code>
+          </div>
+          <p className="text-xs text-muted-foreground">Request body (JSON): <code className="bg-secondary px-1 rounded">{'{ "text": "<the full BoA message text>" }'}</code>. Keep this secret private — anyone with it can mark orders paid.</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const STATUS_COLORS = {
   awaiting_payment: 'text-orange-400 bg-orange-400/10',
@@ -281,6 +314,9 @@ export default function AdminOrders() {
           <CustomersView onLogout={logout} privacy={privacy} />
         ) : (
         <>
+        {/* Zelle automation setup */}
+        <ZelleSetup />
+
         {/* Sales dashboard */}
         {!loading && orders.length > 0 && <SalesDashboard orders={orders} />}
 
