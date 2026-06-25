@@ -8,6 +8,7 @@
 
 import { renderImageEmail, renderOwnerNotification, sendEmail } from './email.js';
 import { signOrder } from './token.js';
+import { priceFor } from './prices.js';
 import {
   getAffiliateByCode,
   commissionTier,
@@ -38,10 +39,13 @@ const json = (data, status = 200) =>
   });
 
 // Order number uses only Roman-numeral letters after "OMEN-"
+// Uses crypto-grade randomness so order numbers aren't predictable.
 function orderNumber() {
   const chars = 'XIVLCDM';
+  const buf = new Uint8Array(6);
+  crypto.getRandomValues(buf);
   let code = '';
-  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 6; i++) code += chars[buf[i] % chars.length];
   return `OMEN-${code}`;
 }
 
@@ -53,17 +57,48 @@ export async function handleOrder(request, env) {
     return json({ error: 'Invalid request body.' }, 400);
   }
 
-  const { customer = {}, items = [], payment_method = 'manual', billing = null, shipping_method = 'ground', affiliate_code = null, customer_token = null, points_to_redeem = 0 } = body;
+  const { customer = {}, items: rawItems = [], payment_method = 'manual', billing = null, shipping_method = 'ground', affiliate_code = null, customer_token = null, points_to_redeem = 0 } = body;
 
   if (!customer.name || !customer.email || !customer.address || !customer.city || !customer.zip) {
     return json({ error: 'Missing required shipping fields.' }, 400);
   }
-  if (!Array.isArray(items) || items.length === 0) {
+  if (!Array.isArray(rawItems) || rawItems.length === 0) {
     return json({ error: 'Cart is empty.' }, 400);
   }
+  if (rawItems.length > 50) {
+    return json({ error: 'Too many line items.' }, 400);
+  }
 
-  // Authoritative server-side pricing
-  const subtotal = items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0);
+  // ---- Authoritative server-side pricing ----
+  // NEVER trust client-sent prices. Look up each item's price from our own
+  // catalog by product_id, clamp quantity, apply the multi-vial discount, and
+  // rebuild the line items so totals, emails, and records all use real prices.
+  const QTY_DISCOUNTS = [
+    { minQty: 10, pct: 15 },
+    { minQty: 5, pct: 10 },
+    { minQty: 3, pct: 5 },
+  ];
+  const qtyPct = (q) => (QTY_DISCOUNTS.find((t) => q >= t.minQty)?.pct || 0);
+
+  const pricedItems = [];
+  for (const i of rawItems) {
+    const entry = priceFor(i && i.product_id);
+    if (!entry) return json({ error: `Unavailable item: ${i?.product_name || i?.product_id || 'unknown'}` }, 400);
+    if (entry.comingSoon || entry.soldOut) return json({ error: `Item not available for purchase: ${i?.product_name || i?.product_id}` }, 400);
+    let q = Math.floor(Number(i.quantity));
+    if (!Number.isFinite(q) || q < 1) return json({ error: 'Invalid quantity.' }, 400);
+    if (q > 100) q = 100;
+    const unit = +(entry.price * (1 - qtyPct(q) / 100)).toFixed(2);
+    pricedItems.push({
+      product_id: i.product_id,
+      product_name: i.product_name || i.product_id,
+      quantity: q,
+      price: unit,
+    });
+  }
+  // From here on, use the server-priced line items only.
+  const items = pricedItems;
+  const subtotal = +(items.reduce((s, i) => s + i.price * i.quantity, 0)).toFixed(2);
   const isCrypto = payment_method === 'crypto';
   const cryptoDiscount = isCrypto ? +(subtotal * CRYPTO_DISCOUNT_RATE).toFixed(2) : 0;
 
