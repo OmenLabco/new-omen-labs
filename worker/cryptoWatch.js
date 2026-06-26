@@ -191,16 +191,21 @@ export async function runCryptoWatch(env) {
 
   for (const p of incoming) {
     try {
-      if (await alreadySeen(env, p.txid)) continue;
+      // Skip only if this tx already CONFIRMED an order. If it was seen but
+      // never matched (order_number null), keep retrying — the order may have
+      // existed at a different amount, or matching ran before the order did.
+      const seen = await env.DB.prepare('SELECT order_number FROM seen_crypto_tx WHERE txid = ?').bind(p.txid).first();
+      if (seen && seen.order_number) continue;
       // For BTC require an on-chain confirmation before auto-confirming.
       if (p.coin === 'BTC' && !p.confirmed) continue;
       const order = await matchOrder(env, p);
       if (order) {
         await confirmOrder(env, order, p);
-        await markSeen(env, p.txid, order.order_number);
-      } else {
-        // No matching awaiting order — record so we don't reprocess every run.
-        await markSeen(env, p.txid, null);
+        await env.DB.prepare(
+          'INSERT INTO seen_crypto_tx (txid, order_number, seen_at) VALUES (?,?,?) ON CONFLICT(txid) DO UPDATE SET order_number = excluded.order_number'
+        ).bind(p.txid, order.order_number, new Date().toISOString()).run();
+      } else if (!seen) {
+        await markSeen(env, p.txid, null); // first sight, no match yet — will retry next run
       }
     } catch {}
   }
