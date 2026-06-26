@@ -25,7 +25,7 @@ const POLY_USDC_CONTRACTS = [
   '0x2791bca1f2de4661ed88a30c99a7a9449aa84174', // bridged USDC.e
 ];
 
-const STABLE_TOL = 0.75;   // $ tolerance for stablecoin matching
+const STABLE_TOL = 0.02;   // near-exact match (order totals are made unique to the cent)
 const BTC_TOL_PCT = 0.03;  // ±3% tolerance for BTC (price drift)
 
 async function jget(url, opts) {

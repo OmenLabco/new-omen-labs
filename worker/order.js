@@ -181,8 +181,21 @@ export async function handleOrder(request, env) {
   const freeShip = acctTier && acctTier.freeShipping;
   const shipping_cost = freeShip ? 0 : shipOpt.price;
   const shippingLabel = freeShip ? `${shipOpt.label} (Free — ${acctTier.name})` : shipOpt.label;
-  const total = +(subtotal - discount + shipping_cost).toFixed(2);
+  let total = +(subtotal - discount + shipping_cost).toFixed(2);
   const isZelle = payment_method === 'zelle';
+  // Crypto: nudge the total by a few cents so it's UNIQUE among open awaiting
+  // crypto orders — lets the on-chain watcher map a payment to exactly one order.
+  if (isCrypto && env.DB) {
+    try {
+      for (let i = 0; i < 100; i++) {
+        const clash = await env.DB.prepare(
+          "SELECT 1 FROM orders WHERE status = 'awaiting_payment' AND payment_method LIKE 'Crypto%' AND ABS(total - ?) < 0.005"
+        ).bind(total).first();
+        if (!clash) break;
+        total = +(total + 0.01).toFixed(2);
+      }
+    } catch {}
+  }
   const paymentLabel = isZelle ? 'Zelle — awaiting payment' : isCrypto ? 'Crypto — awaiting payment' : 'Manual — invoice to follow';
   // Zelle + crypto orders wait for payment confirmation (auto-reconciled via SMS / IPN webhook).
   const orderStatus = (isZelle || isCrypto) ? 'awaiting_payment' : 'processing';
