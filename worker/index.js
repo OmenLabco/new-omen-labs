@@ -6,6 +6,7 @@ import { signupAffiliate, loginAffiliate, affiliateStats, validateCode } from '.
 import { signupCustomer, loginCustomer, customerMe, enrollAffiliate } from './customer.js';
 import { withSecurity, rateLimit, tooMany, clientIp } from './security.js';
 import { handleZelleNotify } from './zelle.js';
+import { runCryptoWatch } from './cryptoWatch.js';
 import { createPaymentSession, paymentCallback, paymentStatus } from './payment.js';
 
 // Per-endpoint rate limits (max attempts / window). Keyed by client IP.
@@ -54,6 +55,11 @@ export default {
     }
 
     return withSecurity(await route(request, env, url, pathname, method));
+  },
+
+  // Cron trigger: watch crypto addresses + auto-confirm paid orders.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runCryptoWatch(env));
   },
 };
 
