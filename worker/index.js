@@ -185,5 +185,14 @@ async function route(request, env, url, pathname, method) {
       return updateOrder(request, env);
     }
 
-    return env.ASSETS.fetch(request);
+    // Static assets / SPA shell. Force browsers to revalidate the HTML shell so
+    // a new deploy is picked up immediately (hashed JS/CSS stay cacheable).
+    const assetResp = await env.ASSETS.fetch(request);
+    const ct = assetResp.headers.get('Content-Type') || '';
+    if (ct.includes('text/html')) {
+      const h = new Headers(assetResp.headers);
+      h.set('Cache-Control', 'no-cache, must-revalidate');
+      return new Response(assetResp.body, { status: assetResp.status, statusText: assetResp.statusText, headers: h });
+    }
+    return assetResp;
 }
