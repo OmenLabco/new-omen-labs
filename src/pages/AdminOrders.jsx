@@ -28,7 +28,7 @@ function CryptoCheckButton() {
           {res.fetchError && <p className="text-destructive">Fetch error: {res.fetchError}</p>}
           <p className="text-muted-foreground">Incoming payments seen on-chain: <b>{res.incoming?.length || 0}</b></p>
           {(res.incoming || []).slice(0, 8).map((p, i) => (
-            <p key={i} className="font-mono text-muted-foreground">· {p.coin} {p.network} — ${p.usd ?? '?'} {p.confirmed ? '' : '(unconfirmed)'}</p>
+            <p key={i} className="font-mono text-muted-foreground">· {p.coin} {p.network} ${p.usd ?? '?'} {p.confirmed ? '' : '(unconfirmed)'} · seen:{p.seen} · → {p.matches}</p>
           ))}
           <p className="text-muted-foreground mt-1">Awaiting crypto orders: <b>{res.awaiting?.length || 0}</b></p>
           {(res.awaiting || []).map((o, i) => (

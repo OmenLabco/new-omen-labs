@@ -173,11 +173,21 @@ export async function cryptoWatchDebug(env) {
     ).all();
     awaiting = results || [];
   } catch {}
+  // For each incoming payment, report seen-status + what it matches to (read-only)
+  const detail = [];
+  for (const p of incoming) {
+    let seen = null;
+    try { seen = await env.DB.prepare('SELECT order_number FROM seen_crypto_tx WHERE txid = ?').bind(p.txid).first(); } catch {}
+    let match = null;
+    try { const o = await matchOrder(env, p); match = o ? `${o.order_number} ($${Number(o.total).toFixed(2)})` : 'NO MATCH'; } catch (e) { match = 'err:' + String(e); }
+    detail.push({ coin: p.coin, network: p.network, usd: p.usd, confirmed: p.confirmed, seen: seen ? (seen.order_number || 'seen-unmatched') : 'new', matches: match });
+  }
+
   return {
     heliusSet: !!env.HELIUS_API_KEY,
     polygonscanSet: !!env.POLYGONSCAN_API_KEY,
     fetchError: err,
-    incoming: incoming.map((p) => ({ coin: p.coin, network: p.network, usd: p.usd, confirmed: p.confirmed, txid: p.txid })),
+    incoming: detail,
     awaiting,
   };
 }
