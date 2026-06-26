@@ -1,5 +1,5 @@
 import { handleOrder } from './order.js';
-import { listOrders, updateOrder, adminLogin, listAffiliates, listCustomers, setMembership, deleteCustomer, zelleSetup, cryptoCheck } from './admin.js';
+import { listOrders, updateOrder, adminLogin, listAffiliates, listCustomers, setMembership, deleteCustomer, zelleSetup, cryptoCheck, deleteOrder } from './admin.js';
 import { receiptImage } from './receiptImage.js';
 import { verifyOrder } from './token.js';
 import { signupAffiliate, loginAffiliate, affiliateStats, validateCode } from './affiliate.js';
@@ -183,6 +183,10 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/admin/orders/update') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return updateOrder(request, env);
+    }
+    if (pathname === '/api/admin/orders/delete') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return deleteOrder(request, env);
     }
 
     // Static assets / SPA shell. Force browsers to revalidate the HTML shell so

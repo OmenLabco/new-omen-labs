@@ -41,6 +41,14 @@ export async function adminLogin(password, remember = true) {
   return false;
 }
 
+export async function deleteOrder(id) {
+  const resp = await fetch('/api/admin/orders/delete', {
+    method: 'POST', headers: headers(), body: JSON.stringify({ id }),
+  });
+  if (!resp.ok) throw new Error('Failed to delete order.');
+  return resp.json();
+}
+
 export async function runCryptoCheck() {
   const resp = await fetch('/api/admin/crypto-check', { headers: headers() });
   if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }

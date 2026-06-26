@@ -127,6 +127,18 @@ export async function deleteCustomer(request, env) {
   return json({ ok: true });
 }
 
+// POST /api/admin/orders/delete — permanently remove an order (test/abandoned)
+export async function deleteOrder(request, env) {
+  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
+  if (!env.DB) return json({ error: 'Database not configured.' }, 500);
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
+  const { id } = body;
+  if (!id) return json({ error: 'Missing order id.' }, 400);
+  await env.DB.prepare('DELETE FROM orders WHERE id = ?').bind(id).run();
+  return json({ ok: true });
+}
+
 // POST /api/admin/orders/update — update status / tracking for one order
 export async function updateOrder(request, env) {
   if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);

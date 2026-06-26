@@ -15,7 +15,7 @@ export const PRODUCTS = [
     short_description: "Internal $1 test product for payment testing only.",
     description: "Internal test product used to verify checkout and payment flow. Not a real product — please do not order.",
     purity: 99,
-    variants: [{ dose: "1ct", price: 1 }],
+    variants: [{ dose: "1ct", price: 1.19 }],
     storage: GENERIC_STORAGE,
     image: null,
     in_stock: true,

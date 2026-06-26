@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import OrderEditForm from '@/components/admin/OrderEditForm';
 import SalesDashboard from '@/components/admin/SalesDashboard';
 import ProfitView from '@/components/admin/ProfitView';
-import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck } from '@/lib/adminApi';
+import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder } from '@/lib/adminApi';
 import { CRYPTO_WALLETS } from '@/data/cryptoWallets';
 
 function CryptoCheckButton() {
@@ -307,6 +307,14 @@ export default function AdminOrders() {
     if (authed) load();
   }, [authed]);
 
+  const removeOrder = async (id, num) => {
+    if (!window.confirm(`Delete order ${num}? This permanently removes it and cannot be undone.`)) return;
+    try {
+      await deleteOrder(id);
+      setOrders((prev) => prev.filter((o) => o.id !== id));
+    } catch (e) { setError(e.message); }
+  };
+
   const logout = () => {
     adminAuth.clear();
     setAuthed(false);
@@ -413,9 +421,10 @@ export default function AdminOrders() {
               const isOpen = expandedId === order.id;
               return (
                 <div key={order.id} className="rounded-2xl border border-border overflow-hidden">
+                  <div className="flex items-stretch">
                   <button
                     onClick={() => setExpandedId(isOpen ? null : order.id)}
-                    className="w-full flex items-center gap-4 px-5 py-4 hover:bg-accent/40 transition-colors text-left"
+                    className="flex-1 min-w-0 flex items-center gap-4 px-5 py-4 hover:bg-accent/40 transition-colors text-left"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3">
@@ -435,6 +444,15 @@ export default function AdminOrders() {
                     </div>
                     {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
                   </button>
+                  <button
+                    onClick={() => removeOrder(order.id, order.order_number)}
+                    aria-label="Delete order"
+                    title="Delete order"
+                    className="px-4 flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/5 border-l border-border transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                  </div>
 
                   <AnimatePresence>
                     {isOpen && (
