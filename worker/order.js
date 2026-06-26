@@ -9,7 +9,6 @@
 import { renderImageEmail, renderOwnerNotification, sendEmail } from './email.js';
 import { signOrder } from './token.js';
 import { priceFor } from './prices.js';
-import { createNowInvoice } from './crypto.js';
 import {
   getAffiliateByCode,
   commissionTier,
@@ -42,7 +41,34 @@ const json = (data, status = 200) =>
     headers: { 'Content-Type': 'application/json' },
   });
 
-// Branded dark email telling the customer how to complete their Zelle payment.
+// Manual crypto receive addresses (mirror of src/data/cryptoWallets.js)
+const CRYPTO_WALLETS = [
+  { coin: 'USDC', network: 'Solana', address: '3Ki9NTBDiDhobUEW7UwMJ8Dnad4zjvK1smGwLpVDF2Kp' },
+  { coin: 'USDT', network: 'Tron (TRC-20)', address: 'TNVyMC9hkAUamS2jZTjxZagwbtN2voFtVz' },
+  { coin: 'BTC', network: 'Bitcoin', address: 'bc1qfv4s0yl33apzafnagkhn4fuh7t5qyqkr7tdwcf' },
+  { coin: 'USDC', network: 'Polygon', address: '0x0EdB90f6d02db9B1D8CE7175523F042D6fa9ddA9' },
+  { coin: 'USDT', network: 'Solana', address: '3Ki9NTBDiDhobUEW7UwMJ8Dnad4zjvK1smGwLpVDF2Kp' },
+];
+
+// Branded dark email telling the customer how to complete their crypto payment.
+function renderCryptoInstructions(order) {
+  const rows = CRYPTO_WALLETS.map((w) => `
+    <div style="background:#15151a;border:1px solid #2a2b2f;border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+      <p style="margin:0 0 4px;font-size:13px;color:#fff;font-weight:bold;">${w.coin} <span style="color:#7c83ff;font-weight:normal;">· ${w.network}</span></p>
+      <p style="margin:0;font-size:12px;color:#a9abb3;word-break:break-all;font-family:monospace;">${w.address}</p>
+    </div>`).join('');
+  return `<!doctype html><html><body style="margin:0;background:#0a0a0b;font-family:Arial,Helvetica,sans-serif;color:#e8e8ea;">
+  <div style="max-width:560px;margin:0 auto;padding:32px 24px;">
+    <p style="font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:#7c83ff;margin:0 0 18px;">Omen Labs</p>
+    <h1 style="font-size:22px;margin:0 0 8px;color:#fff;">Complete your crypto payment</h1>
+    <p style="font-size:14px;line-height:1.6;color:#a9abb3;margin:0 0 18px;">Your order <b style="color:#fff;">${order.order_number}</b> is reserved. Send <b style="color:#fff;">$${Number(order.total).toFixed(2)}</b> (USD equivalent) to ONE of the addresses below:</p>
+    ${rows}
+    <p style="font-size:13px;line-height:1.6;color:#a9abb3;margin:18px 0 8px;">⚠️ Send only the matching coin on the matching network — wrong-network transfers are lost. After you send, reply to this email with your transaction ID so we can confirm and ship your order.</p>
+    <p style="font-size:11px;color:#6b6d77;margin:22px 0 0;">Research Use Only — Not for Human Consumption · support@omenlabs.co</p>
+  </div></body></html>`;
+}
+
+// Order number uses only Roman-numeral letters after "OMEN-"
 function renderZelleInstructions(order, handle) {
   return `<!doctype html><html><body style="margin:0;background:#0a0a0b;font-family:Arial,Helvetica,sans-serif;color:#e8e8ea;">
   <div style="max-width:560px;margin:0 auto;padding:32px 24px;">
@@ -265,8 +291,13 @@ export async function handleOrder(request, env) {
         subject: `Complete your Zelle payment — ${order_number}`,
         html: renderZelleInstructions(order, ZELLE_HANDLE),
       });
-    } else if (!isCrypto) {
-      // Crypto sends its confirmed receipt from the IPN webhook once paid.
+    } else if (isCrypto) {
+      await sendEmail(env, {
+        to: customer.email,
+        subject: `Complete your crypto payment — ${order_number}`,
+        html: renderCryptoInstructions(order),
+      });
+    } else {
       await sendEmail(env, {
         to: customer.email,
         subject: `Order Confirmed — ${order_number}`,
@@ -285,12 +316,5 @@ export async function handleOrder(request, env) {
     return json({ error: 'Order service not configured.' }, 500);
   }
 
-  // For crypto, create a hosted NOWPayments invoice and return its URL so the
-  // checkout can redirect the customer to pay. Funds settle to your wallet.
-  let crypto_url = null;
-  if (isCrypto) {
-    try { crypto_url = await createNowInvoice(env, { amount: total, orderNumber: order_number, description: `Omen Labs ${order_number}` }); } catch {}
-  }
-
-  return json({ ok: true, order_number, points_earned: pointsEarned, points_redeemed: pointsRedeemed, crypto_url });
+  return json({ ok: true, order_number, points_earned: pointsEarned, points_redeemed: pointsRedeemed });
 }

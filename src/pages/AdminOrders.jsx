@@ -6,6 +6,33 @@ import OrderEditForm from '@/components/admin/OrderEditForm';
 import SalesDashboard from '@/components/admin/SalesDashboard';
 import ProfitView from '@/components/admin/ProfitView';
 import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup } from '@/lib/adminApi';
+import { CRYPTO_WALLETS } from '@/data/cryptoWallets';
+
+function CryptoWallets() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mb-6 rounded-2xl border border-border bg-card overflow-hidden">
+      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-accent/40">
+        <span className="text-sm font-semibold">Crypto wallet addresses (your reference)</span>
+        <span className="text-xs text-muted-foreground">{open ? 'hide' : 'show'}</span>
+      </button>
+      {open && (
+        <div className="px-5 pb-5 space-y-2">
+          <p className="text-xs text-muted-foreground mb-2">These are the addresses shown to customers at crypto checkout. Funds land in your Exodus wallet — confirm the order manually once received.</p>
+          {CRYPTO_WALLETS.map((w) => (
+            <div key={`${w.coin}-${w.network}`} className="rounded-lg border border-border p-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-semibold">{w.coin} <span className="font-normal text-muted-foreground">· {w.network}</span></span>
+                {w.note && <span className="text-[10px] text-muted-foreground">{w.note}</span>}
+              </div>
+              <p className="font-mono text-[11px] break-all text-muted-foreground select-all">{w.address}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ZelleSetup() {
   const [open, setOpen] = useState(false);
@@ -316,6 +343,9 @@ export default function AdminOrders() {
         <>
         {/* Zelle automation setup */}
         <ZelleSetup />
+
+        {/* Crypto wallet reference */}
+        <CryptoWallets />
 
         {/* Sales dashboard */}
         {!loading && orders.length > 0 && <SalesDashboard orders={orders} />}
