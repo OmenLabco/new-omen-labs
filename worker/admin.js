@@ -150,7 +150,15 @@ export async function updateOrder(request, env) {
     .bind(status ?? null, tracking_number ?? null, id)
     .run();
 
-  const updated = await env.DB.prepare(`SELECT * FROM orders WHERE id = ?`).bind(id).first();
+  let updated = await env.DB.prepare(`SELECT * FROM orders WHERE id = ?`).bind(id).first();
+
+  // Once an order moves out of "awaiting payment", flip the payment label from
+  // "awaiting payment" to "payment confirmed" so the receipt reads correctly.
+  if (updated && status && status !== 'awaiting_payment' && /awaiting payment/i.test(updated.payment_method || '')) {
+    const fixedLabel = updated.payment_method.replace(/awaiting payment/i, 'payment confirmed');
+    await env.DB.prepare('UPDATE orders SET payment_method = ? WHERE id = ?').bind(fixedLabel, id).run();
+    updated = { ...updated, payment_method: fixedLabel };
+  }
 
   // Notify the customer if the status changed (or notify was explicitly requested)
   const statusChanged = status && (!prev || prev.status !== status);
