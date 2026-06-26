@@ -68,21 +68,32 @@ export async function fetchIncoming(env) {
     }
   } catch {}
 
-  // --- Solana USDC/USDT (needs HELIUS_API_KEY) ---
+  // --- Solana USDC/USDT via direct RPC (needs HELIUS_API_KEY) ---
   if (env.HELIUS_API_KEY) {
-    try {
-      const d = await jget(`https://api.helius.xyz/v0/addresses/${SOL_OWNER}/transactions?api-key=${env.HELIUS_API_KEY}&type=TRANSFER&limit=25`);
-      for (const tx of (d || [])) {
-        for (const tt of (tx.tokenTransfers || [])) {
-          if (tt.toUserAccount !== SOL_OWNER) continue;
-          const coin = tt.mint === SOL_USDC_MINT ? 'USDC' : tt.mint === SOL_USDT_MINT ? 'USDT' : null;
-          if (!coin) continue;
-          const usd = Number(tt.tokenAmount);
-          if (!(usd > 0)) continue;
-          out.push({ txid: `sol:${tx.signature}:${coin}`, usd: +usd.toFixed(2), coin, network: 'Solana', confirmed: true });
+    const rpc = `https://mainnet.helius-rpc.com/?api-key=${env.HELIUS_API_KEY}`;
+    const call = async (method, params) => {
+      const d = await jget(rpc, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+      });
+      return d.result;
+    };
+    for (const [coin, mint] of [['USDC', SOL_USDC_MINT], ['USDT', SOL_USDT_MINT]]) {
+      try {
+        const accts = await call('getTokenAccountsByOwner', [SOL_OWNER, { mint }, { encoding: 'jsonParsed' }]);
+        const ata = accts?.value?.[0]?.pubkey;
+        if (!ata) continue;
+        const sigs = await call('getSignaturesForAddress', [ata, { limit: 8 }]);
+        for (const s of (sigs || [])) {
+          if (s.err) continue;
+          const tx = await call('getTransaction', [s.signature, { maxSupportedTransactionVersion: 0, encoding: 'jsonParsed' }]);
+          const pre = (tx?.meta?.preTokenBalances || []).find((b) => b.owner === SOL_OWNER && b.mint === mint);
+          const post = (tx?.meta?.postTokenBalances || []).find((b) => b.owner === SOL_OWNER && b.mint === mint);
+          const delta = Number(post?.uiTokenAmount?.uiAmount || 0) - Number(pre?.uiTokenAmount?.uiAmount || 0);
+          if (delta > 0) out.push({ txid: `sol:${s.signature}:${coin}`, usd: +delta.toFixed(2), coin, network: 'Solana', confirmed: true });
         }
-      }
-    } catch {}
+      } catch {}
+    }
   }
 
   // --- Polygon USDC (needs POLYGONSCAN_API_KEY) ---
