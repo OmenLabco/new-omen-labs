@@ -1,11 +1,18 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Check, Clock } from 'lucide-react';
+import { Check, Clock, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import OmenLogo from '../components/OmenLogo';
 import { CRYPTO_WALLETS } from '@/data/cryptoWallets';
 
 export default function OrderConfirmed() {
   const { state } = useLocation();
+  const [copied, setCopied] = useState('');
+  const copy = (key, text) => {
+    navigator.clipboard?.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(''), 1500);
+  };
   const isZelle = state?.zelle;
   const isCrypto = state?.crypto;
   const orderNumber = state?.orderNumber || '';
@@ -31,15 +38,26 @@ export default function OrderConfirmed() {
           </p>
 
           <div className="space-y-2.5 mb-6 text-left">
-            {CRYPTO_WALLETS.map((w) => (
-              <div key={`${w.coin}-${w.network}`} className="rounded-xl border border-border bg-card p-3.5">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-semibold">{w.coin} <span className="text-muted-foreground font-normal">· {w.network}</span></span>
-                  {w.note && <span className="text-[10px] text-muted-foreground">{w.note}</span>}
+            {CRYPTO_WALLETS.map((w) => {
+              const key = `${w.coin}-${w.network}`;
+              return (
+                <div key={key} className="rounded-xl border border-border bg-card p-3.5">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm font-semibold">{w.coin} <span className="text-muted-foreground font-normal">· {w.network}</span></span>
+                    {w.note && <span className="text-[10px] text-muted-foreground">{w.note}</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-mono text-[11px] break-all text-muted-foreground select-all flex-1 min-w-0">{w.address}</p>
+                    <button
+                      onClick={() => copy(key, w.address)}
+                      className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-medium hover:bg-accent transition-colors"
+                    >
+                      {copied === key ? <><Check className="h-3 w-3 text-emerald-500" /> Copied</> : <><Copy className="h-3 w-3" /> Copy</>}
+                    </button>
+                  </div>
                 </div>
-                <p className="font-mono text-[11px] break-all text-muted-foreground select-all">{w.address}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] mb-8 text-left">
