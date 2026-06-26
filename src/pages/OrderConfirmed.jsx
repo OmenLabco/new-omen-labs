@@ -5,8 +5,13 @@ import { Button } from '@/components/ui/button';
 import OmenLogo from '../components/OmenLogo';
 import { CRYPTO_WALLETS } from '@/data/cryptoWallets';
 
+function readLastOrder() {
+  try { return JSON.parse(sessionStorage.getItem('omenlabs_last_order') || 'null'); } catch { return null; }
+}
+
 export default function OrderConfirmed() {
-  const { state } = useLocation();
+  const loc = useLocation();
+  const state = loc.state || readLastOrder() || {};
   const [copied, setCopied] = useState('');
   const copy = (key, text) => {
     navigator.clipboard?.writeText(text);

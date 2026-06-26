@@ -200,15 +200,16 @@ export default function Checkout() {
       }
       cart.clear();
       loadCart();
-      navigate('/order-confirmed', {
-        state: {
-          zelle: payment === 'zelle',
-          crypto: payment === 'crypto',
-          orderNumber: data.order_number || '',
-          total: Number(total.toFixed(2)),
-          handle: ZELLE_HANDLE,
-        },
-      });
+      const confirmState = {
+        zelle: payment === 'zelle',
+        crypto: payment === 'crypto',
+        orderNumber: data.order_number || '',
+        total: Number(total.toFixed(2)),
+        handle: ZELLE_HANDLE,
+      };
+      // Persist so the payment-instructions page survives a refresh / revisit.
+      try { sessionStorage.setItem('omenlabs_last_order', JSON.stringify(confirmState)); } catch {}
+      navigate('/order-confirmed', { state: confirmState });
     } catch (err) {
       setError(err.message);
       setSubmitting(false);
