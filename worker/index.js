@@ -1,5 +1,5 @@
 import { handleOrder } from './order.js';
-import { listOrders, updateOrder, adminLogin, listAffiliates, listCustomers, setMembership, deleteCustomer, zelleSetup } from './admin.js';
+import { listOrders, updateOrder, adminLogin, listAffiliates, listCustomers, setMembership, deleteCustomer, zelleSetup, cryptoCheck } from './admin.js';
 import { receiptImage } from './receiptImage.js';
 import { verifyOrder } from './token.js';
 import { signupAffiliate, loginAffiliate, affiliateStats, validateCode } from './affiliate.js';
@@ -167,6 +167,10 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/admin/customers/delete') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return deleteCustomer(request, env);
+    }
+    if (pathname === '/api/admin/crypto-check') {
+      if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+      return cryptoCheck(request, env);
     }
     if (pathname === '/api/admin/zelle-setup') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });

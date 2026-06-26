@@ -41,6 +41,13 @@ export async function adminLogin(password, remember = true) {
   return false;
 }
 
+export async function runCryptoCheck() {
+  const resp = await fetch('/api/admin/crypto-check', { headers: headers() });
+  if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }
+  if (!resp.ok) throw new Error('Crypto check failed.');
+  return resp.json();
+}
+
 export async function fetchZelleSetup() {
   const resp = await fetch('/api/admin/zelle-setup', { headers: headers() });
   if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }

@@ -42,7 +42,7 @@ async function btcUsd() {
 }
 
 // Returns array of { txid, usd, coin, network, confirmed }
-async function fetchIncoming(env) {
+export async function fetchIncoming(env) {
   const out = [];
 
   // --- BTC (keyless) ---
@@ -157,6 +157,29 @@ async function confirmOrder(env, order, payment) {
       });
     } catch {}
   }
+}
+
+// On-demand diagnostics for the admin panel: runs a watch pass, then reports
+// what was seen on-chain + which orders are awaiting, so problems are visible.
+export async function cryptoWatchDebug(env) {
+  await runCryptoWatch(env);
+  let incoming = [];
+  let err = null;
+  try { incoming = await fetchIncoming(env); } catch (e) { err = String(e); }
+  let awaiting = [];
+  try {
+    const { results } = await env.DB.prepare(
+      "SELECT order_number, total, payment_method, created_date FROM orders WHERE status = 'awaiting_payment' AND payment_method LIKE 'Crypto%' ORDER BY id DESC LIMIT 20"
+    ).all();
+    awaiting = results || [];
+  } catch {}
+  return {
+    heliusSet: !!env.HELIUS_API_KEY,
+    polygonscanSet: !!env.POLYGONSCAN_API_KEY,
+    fetchError: err,
+    incoming: incoming.map((p) => ({ coin: p.coin, network: p.network, usd: p.usd, confirmed: p.confirmed, txid: p.txid })),
+    awaiting,
+  };
 }
 
 export async function runCryptoWatch(env) {

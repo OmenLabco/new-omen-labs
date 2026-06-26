@@ -7,6 +7,7 @@
 import { renderImageEmail, sendEmail } from './email.js';
 import { signOrder } from './token.js';
 import { safeEqual, issueAdminSession, verifyAdminSession, zelleSecret } from './security.js';
+import { cryptoWatchDebug } from './cryptoWatch.js';
 
 const SITE = 'https://omenlabs.co';
 
@@ -167,6 +168,13 @@ export async function updateOrder(request, env) {
   }
 
   return json({ ok: true, order: { ...updated, items: safeParse(updated.items) } });
+}
+
+// GET /api/admin/crypto-check — admin-only: run the crypto watcher now + diagnostics
+export async function cryptoCheck(request, env) {
+  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
+  if (!env.DB) return json({ error: 'Database not configured.' }, 500);
+  return json(await cryptoWatchDebug(env));
 }
 
 // GET /api/admin/zelle-setup — admin-only: returns the Zelle webhook secret + URL

@@ -5,8 +5,40 @@ import { Button } from '@/components/ui/button';
 import OrderEditForm from '@/components/admin/OrderEditForm';
 import SalesDashboard from '@/components/admin/SalesDashboard';
 import ProfitView from '@/components/admin/ProfitView';
-import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup } from '@/lib/adminApi';
+import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck } from '@/lib/adminApi';
 import { CRYPTO_WALLETS } from '@/data/cryptoWallets';
+
+function CryptoCheckButton() {
+  const [busy, setBusy] = useState(false);
+  const [res, setRes] = useState(null);
+  const [err, setErr] = useState('');
+  const run = async () => {
+    setBusy(true); setErr(''); setRes(null);
+    try { setRes(await runCryptoCheck()); } catch (e) { setErr(e.message); } finally { setBusy(false); }
+  };
+  return (
+    <div className="mb-3 rounded-lg border border-primary/20 bg-primary/[0.04] p-3">
+      <button onClick={run} disabled={busy} className="h-8 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
+        {busy ? 'Checking chain…' : 'Run payment check now'}
+      </button>
+      {err && <p className="text-xs text-destructive mt-2">{err}</p>}
+      {res && (
+        <div className="mt-2 text-[11px] space-y-1">
+          <p className="text-muted-foreground">Solana key: <b className={res.heliusSet ? 'text-emerald-600' : 'text-destructive'}>{res.heliusSet ? 'set' : 'missing'}</b> · Polygon key: <b className={res.polygonscanSet ? 'text-emerald-600' : 'text-muted-foreground'}>{res.polygonscanSet ? 'set' : 'off'}</b></p>
+          {res.fetchError && <p className="text-destructive">Fetch error: {res.fetchError}</p>}
+          <p className="text-muted-foreground">Incoming payments seen on-chain: <b>{res.incoming?.length || 0}</b></p>
+          {(res.incoming || []).slice(0, 8).map((p, i) => (
+            <p key={i} className="font-mono text-muted-foreground">· {p.coin} {p.network} — ${p.usd ?? '?'} {p.confirmed ? '' : '(unconfirmed)'}</p>
+          ))}
+          <p className="text-muted-foreground mt-1">Awaiting crypto orders: <b>{res.awaiting?.length || 0}</b></p>
+          {(res.awaiting || []).map((o, i) => (
+            <p key={i} className="font-mono text-muted-foreground">· {o.order_number} — ${Number(o.total).toFixed(2)}</p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function CryptoWallets() {
   const [open, setOpen] = useState(false);
@@ -18,7 +50,8 @@ function CryptoWallets() {
       </button>
       {open && (
         <div className="px-5 pb-5 space-y-2">
-          <p className="text-xs text-muted-foreground mb-2">These are the addresses shown to customers at crypto checkout. Funds land in your Exodus wallet — confirm the order manually once received.</p>
+          <CryptoCheckButton />
+          <p className="text-xs text-muted-foreground mb-2">These are the addresses shown to customers at crypto checkout. Funds land in your Exodus wallet — auto-confirmed by the watcher, or confirm manually.</p>
           {CRYPTO_WALLETS.map((w) => (
             <div key={`${w.coin}-${w.network}`} className="rounded-lg border border-border p-3">
               <div className="flex items-center justify-between mb-1">
