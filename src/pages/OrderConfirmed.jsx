@@ -30,29 +30,33 @@ export default function OrderConfirmed() {
   // Live status polling — auto-flips the page to "Payment received" when the
   // watcher/Zelle confirms the order, even if the customer leaves it open.
   const [liveStatus, setLiveStatus] = useState(null);
+  const [checking, setChecking] = useState(false);
+  const canPoll = awaitingFlow && orderNumber && statusToken;
+
+  const checkNow = async () => {
+    if (!canPoll) return;
+    setChecking(true);
+    try {
+      const r = await fetch(`/api/order/status?o=${encodeURIComponent(orderNumber)}&t=${encodeURIComponent(statusToken)}`);
+      if (r.ok) { const d = await r.json(); if (d.status) setLiveStatus(d.status); }
+    } catch {}
+    setChecking(false);
+  };
+
   useEffect(() => {
-    if (!awaitingFlow || !orderNumber || !statusToken) return;
-    let stopped = false, tries = 0;
-    const poll = async () => {
-      try {
-        const r = await fetch(`/api/order/status?o=${encodeURIComponent(orderNumber)}&t=${encodeURIComponent(statusToken)}`);
-        if (r.ok) {
-          const d = await r.json();
-          if (d.status) {
-            setLiveStatus(d.status);
-            if (d.status !== 'awaiting_payment') stopped = true;
-          }
-        }
-      } catch {}
-    };
-    poll();
+    if (!canPoll) return;
+    let tries = 0;
+    checkNow();
     const id = setInterval(() => {
       tries += 1;
-      if (stopped || tries > 320) { clearInterval(id); return; } // ~64 min cap
-      poll();
+      if (tries > 320) { clearInterval(id); return; } // ~64 min cap
+      checkNow();
     }, 12000);
-    return () => clearInterval(id);
-  }, [awaitingFlow, orderNumber, statusToken]);
+    const onVis = () => { if (document.visibilityState === 'visible') checkNow(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVis); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canPoll, orderNumber, statusToken]);
 
   const paid = liveStatus && liveStatus !== 'awaiting_payment';
 
@@ -68,19 +72,21 @@ export default function OrderConfirmed() {
     </div>
   );
 
-  const liveBadge = (
-    <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5">
-      <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
-      <span className="text-xs text-muted-foreground">Watching for your payment… this page updates automatically</span>
+  const topWatcher = (
+    <div className="mb-7 rounded-2xl border border-primary/25 bg-primary/[0.05] px-4 py-3.5">
+      <div className="flex items-center justify-center gap-2">
+        <Loader2 className="h-4 w-4 text-primary animate-spin" />
+        <span className="text-sm font-medium text-foreground">Watching for your payment</span>
+        <button onClick={checkNow} disabled={checking} className="ml-1 text-[12px] font-semibold text-primary hover:underline disabled:opacity-50">
+          {checking ? 'Checking…' : 'Check now'}
+        </button>
+      </div>
+      <p className="mt-1.5 text-[11px] text-muted-foreground leading-relaxed">
+        You can <span className="font-medium text-foreground">close this page</span> or keep it open — it updates on its own.
+        Allow <span className="font-medium text-foreground">1–5 minutes</span>
+        {isCrypto ? <> (<span className="font-medium text-foreground">10–60 min</span> for Bitcoin)</> : null}.
+      </p>
     </div>
-  );
-
-  const timingNote = (
-    <p className="mt-3 text-xs text-muted-foreground">
-      You can <span className="font-medium text-foreground">close this page</span> or keep it open — your order updates on its own.
-      Allow <span className="font-medium text-foreground">1–5 minutes</span> to confirm
-      {isCrypto ? <> (<span className="font-medium text-foreground">10–60 minutes</span> for Bitcoin)</> : null}.
-    </p>
   );
 
   // ---- Payment received (auto-flips here once confirmed) ----
@@ -111,6 +117,7 @@ export default function OrderConfirmed() {
   if (isCrypto) {
     return (
       <Wrap>
+        {topWatcher}
         <div className="h-20 w-20 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-6">
           <Clock className="h-10 w-10 text-amber-500" />
         </div>
@@ -152,9 +159,6 @@ export default function OrderConfirmed() {
           </p>
         </div>
 
-        {liveBadge}
-        {timingNote}
-
         <div className="flex flex-col sm:flex-row gap-3 justify-center mt-7">
           <Button asChild variant="outline"><Link to="/account">View My Orders</Link></Button>
           <Button asChild><Link to="/catalog">Continue Shopping</Link></Button>
@@ -167,6 +171,7 @@ export default function OrderConfirmed() {
   if (isZelle) {
     return (
       <Wrap>
+        {topWatcher}
         <div className="h-20 w-20 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-6">
           <Clock className="h-10 w-10 text-amber-500" />
         </div>
@@ -197,9 +202,6 @@ export default function OrderConfirmed() {
             <li>Once received, your order confirms <span className="font-semibold text-foreground">automatically</span>.</li>
           </ol>
         </div>
-
-        {liveBadge}
-        {timingNote}
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center mt-7">
           <Button asChild variant="outline"><Link to="/account">View My Orders</Link></Button>
