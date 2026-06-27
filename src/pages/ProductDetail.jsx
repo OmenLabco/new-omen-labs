@@ -8,6 +8,7 @@ import { cart } from '@/lib/cart';
 import ProductVialImage from '../components/ProductVialImage';
 import { Button } from '@/components/ui/button';
 import PurityBadge from '../components/PurityBadge';
+import FdaDisclaimer from '../components/FdaDisclaimer';
 import { DISCOUNT_TIERS, getDiscountPct, getDiscountedPrice } from '../lib/discountTiers';
 
 export default function ProductDetail() {
@@ -318,6 +319,8 @@ export default function ProductDetail() {
             )}
           </motion.div>
         </div>
+
+        <FdaDisclaimer className="mt-12" />
       </div>
 
       {/* Mobile sticky buy bar */}
