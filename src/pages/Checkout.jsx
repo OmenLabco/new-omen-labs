@@ -204,6 +204,7 @@ export default function Checkout() {
         zelle: payment === 'zelle',
         crypto: payment === 'crypto',
         orderNumber: data.order_number || '',
+        statusToken: data.status_token || '',
         total: Number(total.toFixed(2)),
         handle: ZELLE_HANDLE,
       };

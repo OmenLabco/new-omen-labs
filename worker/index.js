@@ -1,4 +1,4 @@
-import { handleOrder } from './order.js';
+import { handleOrder, orderStatus } from './order.js';
 import { listOrders, updateOrder, adminLogin, listAffiliates, listCustomers, setMembership, deleteCustomer, zelleSetup, cryptoCheck, deleteOrder } from './admin.js';
 import { receiptImage } from './receiptImage.js';
 import { verifyOrder } from './token.js';
@@ -67,6 +67,10 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/order') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return handleOrder(request, env);
+    }
+    if (pathname === '/api/order/status') {
+      if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+      return orderStatus(request, env);
     }
 
     // Card payments (hosted/tokenized) — inert until configured

@@ -7,8 +7,21 @@
 //   ORDER_FROM_EMAIL - verified sender (default: Omen Labs <orders@omenlabs.co>)
 
 import { renderImageEmail, renderOwnerNotification, sendEmail } from './email.js';
-import { signOrder } from './token.js';
+import { signOrder, verifyOrder } from './token.js';
 import { priceFor } from './prices.js';
+
+// GET /api/order/status?o=ORDER&t=TOKEN — public status poll for the awaiting page.
+// Token-gated (HMAC) so order numbers can't be enumerated. Returns only status.
+export async function orderStatus(request, env) {
+  const url = new URL(request.url);
+  const o = url.searchParams.get('o');
+  const t = url.searchParams.get('t');
+  if (!o || !(await verifyOrder(o, t, env.ADMIN_PASSWORD))) return json({ error: 'Not found' }, 404);
+  if (!env.DB) return json({ error: 'Unavailable' }, 503);
+  const row = await env.DB.prepare('SELECT status FROM orders WHERE order_number = ?').bind(o).first();
+  if (!row) return json({ error: 'Not found' }, 404);
+  return json({ status: row.status });
+}
 import {
   getAffiliateByCode,
   commissionTier,
@@ -329,5 +342,6 @@ export async function handleOrder(request, env) {
     return json({ error: 'Order service not configured.' }, 500);
   }
 
-  return json({ ok: true, order_number, points_earned: pointsEarned, points_redeemed: pointsRedeemed });
+  const status_token = await signOrder(order_number, env.ADMIN_PASSWORD);
+  return json({ ok: true, order_number, points_earned: pointsEarned, points_redeemed: pointsRedeemed, status_token });
 }
