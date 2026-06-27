@@ -53,7 +53,42 @@ export async function pushToShipStation(env, order) {
   } catch {}
 }
 
-// ShipStation webhook (configure URL with ?key=<shipstation secret> in their UI).
+// Cron sync (no webhook needed): pull recent ShipStation shipments and mark the
+// matching orders shipped + save tracking + email the customer once.
+export async function runShipstationSync(env) {
+  if (!ssEnabled(env) || !env.DB) return;
+  try {
+    const since = new Date(Date.now() - 4 * 86400000).toISOString().slice(0, 10);
+    const r = await fetch(`${SS}/shipments?shipDateStart=${since}&pageSize=100`, { headers: { Authorization: ssAuth(env) } });
+    if (!r.ok) return;
+    const d = await r.json();
+    for (const s of (d.shipments || [])) {
+      if (s.voided || !s.orderNumber || !s.trackingNumber) continue;
+      const prev = await env.DB.prepare('SELECT status, customer_email FROM orders WHERE order_number = ?').bind(s.orderNumber).first();
+      if (!prev) continue;
+      if (['shipped', 'out_for_delivery', 'delivered'].includes(prev.status)) continue; // already advanced
+      await env.DB.prepare("UPDATE orders SET status = 'shipped', tracking_number = ? WHERE order_number = ?")
+        .bind(s.trackingNumber, s.orderNumber).run();
+      if (env.RESEND_API_KEY && prev.customer_email) {
+        try {
+          await sendEmail(env, {
+            to: prev.customer_email,
+            subject: `Your Omen Labs order has shipped — ${s.orderNumber}`,
+            html: `<div style="font-family:Arial,sans-serif;background:#0a0a0b;color:#e8e8ea;padding:28px;border-radius:12px;max-width:520px;margin:auto;">
+              <p style="letter-spacing:.2em;text-transform:uppercase;color:#7c83ff;font-size:12px;margin:0 0 12px;">Omen Labs</p>
+              <h2 style="color:#fff;margin:0 0 8px;">Your order is on its way 📦</h2>
+              <p style="color:#a9abb3;font-size:14px;">Order <b style="color:#fff;">${s.orderNumber}</b> has shipped.</p>
+              <p style="color:#a9abb3;font-size:14px;">Tracking: <b style="color:#fff;">${s.trackingNumber}</b>${s.carrierCode ? ` (${s.carrierCode.toUpperCase()})` : ''}</p>
+              <p style="color:#6b6d77;font-size:11px;margin-top:20px;">Research Use Only — Not for Human Consumption</p>
+            </div>`,
+          });
+        } catch {}
+      }
+    }
+  } catch {}
+}
+
+// ShipStation webhook (optional alternative to the cron sync, if your plan has it).
 export async function handleShipstationWebhook(request, env) {
   if (!env.DB) return json({ ok: true });
   const url = new URL(request.url);

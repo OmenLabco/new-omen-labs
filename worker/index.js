@@ -7,7 +7,7 @@ import { signupCustomer, loginCustomer, customerMe, enrollAffiliate } from './cu
 import { withSecurity, rateLimit, tooMany, clientIp } from './security.js';
 import { handleZelleNotify } from './zelle.js';
 import { runCryptoWatch } from './cryptoWatch.js';
-import { handleShipstationWebhook } from './shipstation.js';
+import { handleShipstationWebhook, runShipstationSync } from './shipstation.js';
 import { runTrackingWatch } from './tracking.js';
 import { createPaymentSession, paymentCallback, paymentStatus } from './payment.js';
 
@@ -61,7 +61,7 @@ export default {
 
   // Cron trigger: auto-confirm crypto payments + advance shipped orders via USPS tracking.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(Promise.all([runCryptoWatch(env), runTrackingWatch(env)]));
+    ctx.waitUntil(Promise.all([runCryptoWatch(env), runShipstationSync(env), runTrackingWatch(env)]));
   },
 };
 
