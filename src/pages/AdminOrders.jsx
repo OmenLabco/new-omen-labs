@@ -284,6 +284,7 @@ export default function AdminOrders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
   const [privacy, setPrivacy] = useState(false);
 
@@ -323,13 +324,17 @@ export default function AdminOrders() {
 
   if (!authed) return <LoginScreen onSuccess={() => setAuthed(true)} />;
 
-  const filtered = orders.filter(
-    (o) =>
-      !search ||
-      o.order_number?.toLowerCase().includes(search.toLowerCase()) ||
-      o.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
-      o.customer_email?.toLowerCase().includes(search.toLowerCase())
-  );
+  const statusCount = (s) => orders.filter((o) => o.status === s).length;
+  const filtered = orders.filter((o) => {
+    if (statusFilter !== 'all' && o.status !== statusFilter) return false;
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      o.order_number?.toLowerCase().includes(q) ||
+      o.customer_name?.toLowerCase().includes(q) ||
+      o.customer_email?.toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="min-h-screen py-20 px-6">
@@ -390,6 +395,28 @@ export default function AdminOrders() {
           <CustomersView onLogout={logout} privacy={privacy} />
         ) : (
         <>
+        {/* Status filter tabs with counts */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-none mb-4 -mx-1 px-1">
+          {[
+            { key: 'all', label: 'All Orders', count: orders.length },
+            { key: 'awaiting_payment', label: 'Awaiting Payment', count: statusCount('awaiting_payment') },
+            { key: 'processing', label: 'Processing', count: statusCount('processing') },
+            { key: 'confirmed', label: 'Confirmed', count: statusCount('confirmed') },
+            { key: 'shipped', label: 'Shipped', count: statusCount('shipped') },
+            { key: 'out_for_delivery', label: 'Out for Delivery', count: statusCount('out_for_delivery') },
+            { key: 'delivered', label: 'Delivered', count: statusCount('delivered') },
+          ].map((s) => (
+            <button
+              key={s.key}
+              onClick={() => setStatusFilter(s.key)}
+              className={`shrink-0 inline-flex items-center gap-2 px-3.5 h-9 rounded-full text-sm font-medium transition-colors ${statusFilter === s.key ? 'bg-foreground text-background' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}
+            >
+              {s.label}
+              <span className={`text-[11px] font-semibold rounded-full px-1.5 py-0.5 ${statusFilter === s.key ? 'bg-background/20' : 'bg-background'}`}>{s.count}</span>
+            </button>
+          ))}
+        </div>
+
         {/* Search */}
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
