@@ -17,6 +17,12 @@ export const adminAuth = {
     localStorage.removeItem('omenlabs_admin_pw');
     sessionStorage.removeItem('omenlabs_admin_pw');
   },
+  // Decode the role embedded in the signed session token (display gating only;
+  // the real enforcement is server-side).
+  role: () => {
+    const t = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || '';
+    try { return JSON.parse(atob(t.split('.')[0])).role || 'admin'; } catch { return null; }
+  },
 };
 
 function headers() {
@@ -53,6 +59,14 @@ export async function runCryptoCheck() {
   const resp = await fetch('/api/admin/crypto-check', { headers: headers() });
   if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }
   if (!resp.ok) throw new Error('Crypto check failed.');
+  return resp.json();
+}
+
+export async function fetchProfitCosts() {
+  const resp = await fetch('/api/admin/profit-costs', { headers: headers() });
+  if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }
+  if (resp.status === 403) throw new Error('forbidden');
+  if (!resp.ok) throw new Error('Failed to load cost data.');
   return resp.json();
 }
 

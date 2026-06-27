@@ -66,21 +66,24 @@ async function hmacHex(secret, msg) {
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-export async function issueAdminSession(env, ttlMs) {
-  const payload = JSON.stringify({ exp: Date.now() + ttlMs });
+export async function issueAdminSession(env, ttlMs, role = 'admin') {
+  const payload = JSON.stringify({ exp: Date.now() + ttlMs, role });
   const b = btoa(payload);
   const sig = await hmacHex(env.ADMIN_PASSWORD, b);
   return `${b}.${sig}`;
 }
 
+// Returns the role string ('admin' | 'staff') if the token is valid & unexpired,
+// otherwise null.
 export async function verifyAdminSession(env, token) {
-  if (!env.ADMIN_PASSWORD || typeof token !== 'string' || !token.includes('.')) return false;
+  if (!env.ADMIN_PASSWORD || typeof token !== 'string' || !token.includes('.')) return null;
   const [b, sig] = token.split('.');
   const expected = await hmacHex(env.ADMIN_PASSWORD, b);
-  if (!(await safeEqual(sig, expected))) return false;
+  if (!(await safeEqual(sig, expected))) return null;
   let payload;
-  try { payload = JSON.parse(atob(b)); } catch { return false; }
-  return !!payload && typeof payload.exp === 'number' && payload.exp > Date.now();
+  try { payload = JSON.parse(atob(b)); } catch { return null; }
+  if (!payload || typeof payload.exp !== 'number' || payload.exp <= Date.now()) return null;
+  return payload.role || 'admin';
 }
 
 // Secret for the Zelle SMS-forward webhook. Derived from ADMIN_PASSWORD so it's

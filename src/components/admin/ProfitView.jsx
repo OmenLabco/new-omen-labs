@@ -1,7 +1,39 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { DollarSign, TrendingUp, Wallet, Percent } from 'lucide-react';
-import { COST_SHEET, costForItem } from '@/data/costs';
+import { fetchProfitCosts } from '@/lib/adminApi';
+
+// Build cost lookup helpers from the owner-only cost payload (server-gated).
+function makeCostHelpers(costData) {
+  const sheet = costData?.sheet || [];
+  const byProductId = costData?.byProductId || {};
+  const byName = costData?.byName || {};
+  const byBaseName = {};
+  for (const r of sheet) {
+    const base = (r.name || '').toLowerCase();
+    (byBaseName[base] = byBaseName[base] || []).push({ sellPrice: r.sellPrice, cost: r.cost });
+  }
+  const costForItem = (item) => {
+    if (!item) return null;
+    if (item.product_id != null && item.product_id in byProductId) return byProductId[item.product_id];
+    const nm = (item.product_name || item.name || '').trim().toLowerCase();
+    if (!nm) return null;
+    if (nm in byName) return byName[nm];
+    const variants = byBaseName[nm];
+    if (variants && variants.length) {
+      if (variants.length === 1) return variants[0].cost;
+      const price = Number(item.price);
+      if (Number.isFinite(price)) {
+        let best = variants[0], diff = Infinity;
+        for (const v of variants) { if (v.sellPrice == null) continue; const d = Math.abs(v.sellPrice - price); if (d < diff) { diff = d; best = v; } }
+        return best.cost;
+      }
+      return variants[0].cost;
+    }
+    return null;
+  };
+  return { COST_SHEET: sheet, costForItem };
+}
 
 const RANGES = [
   { key: '24h', label: '24 hours', days: 1 },
@@ -20,6 +52,12 @@ const Mask = ({ on, children }) => (
 
 export default function ProfitView({ orders, privacy = false }) {
   const [range, setRange] = useState('7d');
+  const [costData, setCostData] = useState(null);
+  const [costErr, setCostErr] = useState('');
+  useEffect(() => {
+    fetchProfitCosts().then(setCostData).catch((e) => setCostErr(e.message));
+  }, []);
+  const { COST_SHEET, costForItem } = useMemo(() => makeCostHelpers(costData), [costData]);
 
   const data = useMemo(() => {
     const now = Date.now();
@@ -67,7 +105,7 @@ export default function ProfitView({ orders, privacy = false }) {
       .sort((a, b) => b.profit - a.profit);
 
     return { revenue, cost, profit, margin, rows, uncostedUnits, costedUnits, orderCount: inRange.length };
-  }, [orders, range]);
+  }, [orders, range, costForItem]);
 
   const cfg = RANGES.find((r) => r.key === range);
 
@@ -77,6 +115,9 @@ export default function ProfitView({ orders, privacy = false }) {
     { icon: TrendingUp, label: `Profit · ${cfg.label}`, value: money(data.profit), tint: 'text-primary bg-primary/10', note: 'revenue − cost', sensitive: true },
     { icon: Percent, label: 'Margin', value: `${data.margin.toFixed(1)}%`, tint: 'text-amber-500 bg-amber-500/10', note: 'profit / revenue', sensitive: true },
   ];
+
+  if (costErr) return <p className="text-sm text-destructive py-8 text-center">{costErr === 'forbidden' ? 'Profit data is restricted to the owner account.' : costErr}</p>;
+  if (!costData) return <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" /></div>;
 
   return (
     <div>
@@ -110,7 +151,7 @@ export default function ProfitView({ orders, privacy = false }) {
 
       {data.uncostedUnits > 0 && (
         <p className="text-[11px] text-amber-600 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mb-5">
-          {data.uncostedUnits} unit{data.uncostedUnits === 1 ? '' : 's'} sold have no cost set — excluded from cost/profit. Add their cost in <span className="font-mono">src/data/costs.js</span>.
+          {data.uncostedUnits} unit{data.uncostedUnits === 1 ? '' : 's'} sold have no cost set — excluded from cost/profit. Add their cost in <span className="font-mono">worker/costs.js</span>.
         </p>
       )}
 
@@ -160,7 +201,7 @@ export default function ProfitView({ orders, privacy = false }) {
       <div className="rounded-2xl border border-border bg-card p-5">
         <div className="flex items-center justify-between mb-1">
           <p className="text-sm font-semibold">Cost sheet — my cost per vial</p>
-          <p className="text-[11px] text-muted-foreground">Edit in src/data/costs.js</p>
+          <p className="text-[11px] text-muted-foreground">Edit in worker/costs.js</p>
         </div>
         <p className="text-[11px] text-muted-foreground mb-4">Sell price vs. my wholesale cost, and the margin on each vial.</p>
         <div className="overflow-x-auto">

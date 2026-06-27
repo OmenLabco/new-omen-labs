@@ -8,6 +8,7 @@ import { renderImageEmail, sendEmail } from './email.js';
 import { signOrder } from './token.js';
 import { safeEqual, issueAdminSession, verifyAdminSession, zelleSecret } from './security.js';
 import { cryptoWatchDebug } from './cryptoWatch.js';
+import { COST_SHEET, COST_BY_PRODUCT_ID, COST_BY_NAME } from './costs.js';
 
 const SITE = 'https://omenlabs.co';
 
@@ -33,15 +34,17 @@ function bearer(request) {
   return (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
 }
 
-// Login check: the raw admin password (sent only to /api/admin/login).
-async function passwordOk(request, env) {
-  if (!env.ADMIN_PASSWORD) return false;
+// Login check: returns the role for the supplied password, or null.
+async function loginRole(request, env) {
   const token = bearer(request);
-  if (token.length === 0) return false;
-  return safeEqual(token, env.ADMIN_PASSWORD);
+  if (!token) return null;
+  if (env.ADMIN_PASSWORD && (await safeEqual(token, env.ADMIN_PASSWORD))) return 'admin';
+  if (env.STAFF_PASSWORD && (await safeEqual(token, env.STAFF_PASSWORD))) return 'staff';
+  return null;
 }
 
-// Data-endpoint check: a valid, unexpired signed session token (NOT the password).
+// Data-endpoint check: returns the role ('admin'|'staff') from a valid session
+// token, or null. Use truthiness for "any logged-in staff", or check === 'admin'.
 async function authorized(request, env) {
   return verifyAdminSession(env, bearer(request));
 }
@@ -198,12 +201,22 @@ export async function zelleSetup(request, env) {
 // POST /api/admin/login — verify password, then issue a signed session token.
 // The browser stores the TOKEN (expiring), never the password.
 export async function adminLogin(request, env) {
-  if (!(await passwordOk(request, env))) return json({ error: 'Unauthorized' }, 401);
+  const role = await loginRole(request, env);
+  if (!role) return json({ error: 'Unauthorized' }, 401);
   let remember = false;
   try { remember = !!(await request.json()).remember; } catch {}
   const ttl = remember ? 7 * 24 * 60 * 60 * 1000 : 12 * 60 * 60 * 1000; // 7d or 12h
-  const token = await issueAdminSession(env, ttl);
-  return json({ ok: true, token });
+  const token = await issueAdminSession(env, ttl, role);
+  return json({ ok: true, token, role });
+}
+
+// GET /api/admin/profit-costs — OWNER ONLY. Returns cost data for the Profit tab.
+// Staff sessions get 403, so cost/profit is never exposed to them.
+export async function profitCosts(request, env) {
+  const role = await authorized(request, env);
+  if (!role) return json({ error: 'Unauthorized' }, 401);
+  if (role !== 'admin') return json({ error: 'Forbidden' }, 403);
+  return json({ sheet: COST_SHEET, byProductId: COST_BY_PRODUCT_ID, byName: COST_BY_NAME });
 }
 
 function safeParse(s) {

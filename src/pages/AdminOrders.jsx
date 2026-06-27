@@ -359,7 +359,7 @@ export default function AdminOrders() {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 rounded-xl border border-border p-1 w-fit">
-          {['overview', 'orders', 'profit', 'affiliates', 'customers'].map((t) => (
+          {(adminAuth.role() === 'admin' ? ['overview', 'orders', 'profit', 'affiliates', 'customers'] : ['overview', 'orders', 'affiliates', 'customers']).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
