@@ -279,7 +279,7 @@ function CustomersView({ onLogout, privacy }) {
 
 export default function AdminOrders() {
   const [authed, setAuthed] = useState(!!adminAuth.get());
-  const [tab, setTab] = useState('orders');
+  const [tab, setTab] = useState('overview');
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -338,7 +338,7 @@ export default function AdminOrders() {
         <div className="mb-10 flex items-start justify-between">
           <div>
             <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Admin</span>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight">{tab === 'orders' ? 'Orders' : tab === 'profit' ? 'Profit' : tab === 'affiliates' ? 'Affiliates' : 'Customers'}</h1>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight">{tab === 'overview' ? 'Overview' : tab === 'orders' ? 'Orders' : tab === 'profit' ? 'Profit' : tab === 'affiliates' ? 'Affiliates' : 'Customers'}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{tab === 'orders' ? `${orders.length} total orders` : tab === 'profit' ? 'Peptide revenue, cost & profit' : tab === 'affiliates' ? 'Affiliate partners' : 'Reward members'}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -359,7 +359,7 @@ export default function AdminOrders() {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 rounded-xl border border-border p-1 w-fit">
-          {['orders', 'profit', 'affiliates', 'customers'].map((t) => (
+          {['overview', 'orders', 'profit', 'affiliates', 'customers'].map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -370,7 +370,15 @@ export default function AdminOrders() {
           ))}
         </div>
 
-        {tab === 'profit' ? (
+        {tab === 'overview' ? (
+          <>
+            {/* Sales dashboard */}
+            {!loading && orders.length > 0 && <SalesDashboard orders={orders} />}
+            {/* Payment automation reference */}
+            <ZelleSetup />
+            <CryptoWallets />
+          </>
+        ) : tab === 'profit' ? (
           loading ? (
             <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" /></div>
           ) : (
@@ -382,15 +390,6 @@ export default function AdminOrders() {
           <CustomersView onLogout={logout} privacy={privacy} />
         ) : (
         <>
-        {/* Zelle automation setup */}
-        <ZelleSetup />
-
-        {/* Crypto wallet reference */}
-        <CryptoWallets />
-
-        {/* Sales dashboard */}
-        {!loading && orders.length > 0 && <SalesDashboard orders={orders} />}
-
         {/* Search */}
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
