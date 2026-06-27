@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Package, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cart } from '@/lib/cart';
 import { validateAffiliateCode } from '@/lib/affiliateApi';
 import { customerAuth, customerMe } from '@/lib/customerApi';
+
+const STATE_ABBR = { alabama:'AL',alaska:'AK',arizona:'AZ',arkansas:'AR',california:'CA',colorado:'CO',connecticut:'CT',delaware:'DE','district of columbia':'DC',florida:'FL',georgia:'GA',hawaii:'HI',idaho:'ID',illinois:'IL',indiana:'IN',iowa:'IA',kansas:'KS',kentucky:'KY',louisiana:'LA',maine:'ME',maryland:'MD',massachusetts:'MA',michigan:'MI',minnesota:'MN',mississippi:'MS',missouri:'MO',montana:'MT',nebraska:'NE',nevada:'NV','new hampshire':'NH','new jersey':'NJ','new mexico':'NM','new york':'NY','north carolina':'NC','north dakota':'ND',ohio:'OH',oklahoma:'OK',oregon:'OR',pennsylvania:'PA','rhode island':'RI','south carolina':'SC','south dakota':'SD',tennessee:'TN',texas:'TX',utah:'UT',vermont:'VT',virginia:'VA',washington:'WA','west virginia':'WV',wisconsin:'WI',wyoming:'WY' };
+const stateAbbr = (s) => STATE_ABBR[(s || '').toLowerCase()] || s || '';
 
 const CRYPTO_DISCOUNT_RATE = 0.10;
 const SHIPPING_OPTIONS = [
@@ -71,6 +74,39 @@ export default function Checkout() {
 
   const [account, setAccount] = useState(null);
   const [redeem, setRedeem] = useState(false);
+
+  // Address autocomplete (Photon — free, no key)
+  const [addrSug, setAddrSug] = useState([]);
+  const [showSug, setShowSug] = useState(false);
+  const addrTimer = useRef(null);
+  const onAddressInput = (value) => {
+    setForm((f) => ({ ...f, address: value }));
+    if (addrTimer.current) clearTimeout(addrTimer.current);
+    if (!value || value.trim().length < 4) { setAddrSug([]); return; }
+    addrTimer.current = setTimeout(async () => {
+      try {
+        const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(value)}&limit=5&lang=en`);
+        const d = await r.json();
+        const feats = (d.features || []).filter((ft) => ft.properties?.countrycode === 'US' && (ft.properties?.housenumber || ft.properties?.street));
+        setAddrSug(feats);
+        setShowSug(true);
+      } catch { setAddrSug([]); }
+    }, 300);
+  };
+  const pickAddress = (ft) => {
+    const p = ft.properties || {};
+    const street = [p.housenumber, p.street || p.name].filter(Boolean).join(' ');
+    setForm((f) => ({
+      ...f,
+      address: street || f.address,
+      city: p.city || p.town || p.village || p.district || f.city || '',
+      state: stateAbbr(p.state) || f.state || '',
+      zip: p.postcode || f.zip || '',
+      country: 'United States',
+    }));
+    setAddrSug([]);
+    setShowSug(false);
+  };
 
   // Load logged-in customer (points balance, tier) and prefill name/email
   useEffect(() => {
@@ -396,6 +432,38 @@ export default function Checkout() {
                   </select>
                 ) : lockEmail ? (
                   <input name={f.name} type="email" readOnly value={account.email} className={`${inputClass} opacity-70 cursor-not-allowed`} title="Orders are tied to your account email" />
+                ) : f.name === 'address' ? (
+                  <div className="relative">
+                    <input
+                      name="address"
+                      autoComplete="off"
+                      required={f.required}
+                      value={form.address || ''}
+                      onChange={(e) => onAddressInput(e.target.value)}
+                      onFocus={() => addrSug.length && setShowSug(true)}
+                      onBlur={() => setTimeout(() => setShowSug(false), 150)}
+                      placeholder="Start typing your address…"
+                      className={inputClass}
+                    />
+                    {showSug && addrSug.length > 0 && (
+                      <ul className="absolute z-20 left-0 right-0 mt-1 max-h-64 overflow-auto rounded-xl border border-border bg-card shadow-xl">
+                        {addrSug.map((ft, i) => {
+                          const p = ft.properties || {};
+                          const line1 = [p.housenumber, p.street || p.name].filter(Boolean).join(' ');
+                          const line2 = [p.city || p.town || p.village || p.district, stateAbbr(p.state), p.postcode].filter(Boolean).join(', ');
+                          return (
+                            <li key={i}>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => pickAddress(ft)}
+                                className="w-full text-left px-3 py-2 hover:bg-accent transition-colors">
+                                <span className="block text-sm">{line1 || p.name}</span>
+                                <span className="block text-xs text-muted-foreground">{line2}</span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
                 ) : (
                   <input name={f.name} type={f.type || 'text'} required={f.required} value={form[f.name] || ''} onChange={handleChange} className={inputClass} />
                 )}
