@@ -8,6 +8,7 @@
 //   Polygon USDC      → POLYGONSCAN_API_KEY
 import { renderImageEmail, sendEmail } from './email.js';
 import { signOrder } from './token.js';
+import { pushToShipStation } from './shipstation.js';
 
 const SITE = 'https://omenlabs.co';
 
@@ -158,6 +159,9 @@ async function confirmOrder(env, order, payment) {
       });
     } catch {}
   }
+  // Hand the paid order to ShipStation for fulfillment (no-op if not configured)
+  await pushToShipStation(env, { ...order, status: 'confirmed', payment_method: fixedLabel });
+
   // Notify the owner that an auto-confirm happened
   if (env.RESEND_API_KEY) {
     try {

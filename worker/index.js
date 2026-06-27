@@ -7,6 +7,8 @@ import { signupCustomer, loginCustomer, customerMe, enrollAffiliate } from './cu
 import { withSecurity, rateLimit, tooMany, clientIp } from './security.js';
 import { handleZelleNotify } from './zelle.js';
 import { runCryptoWatch } from './cryptoWatch.js';
+import { handleShipstationWebhook } from './shipstation.js';
+import { runTrackingWatch } from './tracking.js';
 import { createPaymentSession, paymentCallback, paymentStatus } from './payment.js';
 
 // Per-endpoint rate limits (max attempts / window). Keyed by client IP.
@@ -57,9 +59,9 @@ export default {
     return withSecurity(await route(request, env, url, pathname, method));
   },
 
-  // Cron trigger: watch crypto addresses + auto-confirm paid orders.
+  // Cron trigger: auto-confirm crypto payments + advance shipped orders via USPS tracking.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runCryptoWatch(env));
+    ctx.waitUntil(Promise.all([runCryptoWatch(env), runTrackingWatch(env)]));
   },
 };
 
@@ -148,6 +150,10 @@ async function route(request, env, url, pathname, method) {
       return validateCode(request, env);
     }
 
+    if (pathname === '/api/shipstation/webhook') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return handleShipstationWebhook(request, env);
+    }
     if (pathname === '/api/zelle/notify') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return handleZelleNotify(request, env);

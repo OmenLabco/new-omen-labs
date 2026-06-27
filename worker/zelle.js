@@ -5,6 +5,7 @@
 import { renderImageEmail, sendEmail } from './email.js';
 import { signOrder } from './token.js';
 import { safeEqual, zelleSecret } from './security.js';
+import { pushToShipStation } from './shipstation.js';
 
 const SITE = 'https://omenlabs.co';
 const json = (data, status = 200) =>
@@ -48,6 +49,9 @@ export async function handleZelleNotify(request, env) {
 
   // Mark paid → confirmed (and update the payment label so the receipt reads "confirmed")
   await env.DB.prepare("UPDATE orders SET status = 'confirmed', payment_method = 'Zelle — payment confirmed' WHERE order_number = ?").bind(orderNumber).run();
+
+  // Hand the paid order to ShipStation for fulfillment (no-op if not configured)
+  await pushToShipStation(env, { ...order, status: 'confirmed', payment_method: 'Zelle — payment confirmed' });
 
   // Send the customer their confirmation (best effort)
   if (env.RESEND_API_KEY && order.customer_email) {
