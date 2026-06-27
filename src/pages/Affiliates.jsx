@@ -218,9 +218,9 @@ function Landing({ onAuthed }) {
           <h2 className="text-xl font-bold tracking-tight">Who it's for</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-muted-foreground">
-          <p>Content creators &amp; influencers in the research space.</p>
-          <p>Researchers and community leaders with an engaged audience.</p>
-          <p>Anyone who wants to earn by sharing products they believe in.</p>
+          <p>Educators &amp; content creators in the research space.</p>
+          <p>Researchers and community leaders with an engaged following.</p>
+          <p>Anyone who wants to earn by referring fellow researchers.</p>
         </div>
       </div>
 
