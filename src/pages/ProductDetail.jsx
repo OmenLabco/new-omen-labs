@@ -84,7 +84,7 @@ export default function ProductDetail() {
               className="aspect-square rounded-2xl overflow-hidden relative" style={{background:'radial-gradient(circle at 50% 42%, #ffffff, #e9ecf2)'}}
             >
               <ProductVialImage
-                image={product.image}
+                image={variant.image || product.image}
                 name={product.name}
                 className="w-full h-full"
               />
