@@ -1,5 +1,4 @@
 // AUTO-DERIVED server-side price table — source of truth for /api/order.
-// Keyed by product_id (`${id}_${dose}`). Do NOT trust client-sent prices.
 export const PRICES = {
   'test-item_1ct': { price: 1.19 },
   '69f9871d9cc1fe91aec19c8f_10mg': { price: 80 },
@@ -27,7 +26,6 @@ export const PRICES = {
   '69f9871d9cc1fe91aec19c90_10mg': { price: 40 },
   'ipamorelin_10mg': { price: 50 },
   'cjc-ipamorelin_5mg/5mg': { price: 80 },
-  'cjc-ipamorelin_10mg/10mg': { price: 120 },
   'kpv_10mg': { price: 50 },
   'igf1-lr3_1mg': { price: 95 },
   '69fc30ecf179623737bd64e9_10mL': { price: 10.99 },

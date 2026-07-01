@@ -292,18 +292,17 @@ export const PRODUCTS = [
   },
   {
     id: "cjc-ipamorelin",
-    name: "CJC + Ipamorelin",
+    name: "CJC-1295 (No DAC) + Ipamorelin",
     slug: "cjc-ipamorelin",
     category: "Metabolic Research",
-    short_description: "CJC-1295 and Ipamorelin blend for synergistic GH axis research.",
+    short_description: "CJC-1295 (No DAC) and Ipamorelin blend for GH-axis research.",
     description:
-      "A combined preparation of CJC-1295 (a GHRH analog) and Ipamorelin (a ghrelin receptor agonist), studied for synergistic effects on the growth hormone axis. Research focuses on amplified pulsatile GH release and downstream IGF-1 signaling.",
+      "A combined preparation of CJC-1295 (No DAC, a GHRH analog) and Ipamorelin (a ghrelin receptor agonist), studied for synergistic effects on the growth hormone axis. Research focuses on amplified pulsatile GH release and downstream IGF-1 signaling.",
     molecular_weight: "",
     sequence: "",
     purity: 99.0,
     variants: [
       { dose: "5mg/5mg", price: 80 },
-      { dose: "10mg/10mg", price: 120 },
     ],
     storage: GENERIC_STORAGE,
     image: "/products/cjc-ipamorelin.png",
