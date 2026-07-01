@@ -480,9 +480,9 @@ for (const p of PRODUCTS) {
 // Catalog order — mirrors Amino Club's catalog sequence, mapped to our products,
 // with Bacteriostatic Water first. (coming-soon items still sink to the bottom.)
 const POPULARITY_ORDER = [
-  "bacteriostatic-water", "glp-rt", "tirzepatide", "bpc-157", "ghk-cu", "tesamorelin",
-  "tb-500", "mt2", "nad", "mots-c", "cjc-ipamorelin", "wolverine", "glow", "semax",
-  "adamax", "selank", "semax-selank", "klow", "kpv", "ipamorelin", "igf1-lr3", "mt1",
+  "bacteriostatic-water", "glp-rt", "tirzepatide", "bpc-157", "ghk-cu", "glow", "klow",
+  "tesamorelin", "tb-500", "mt2", "nad", "mots-c", "cjc-ipamorelin", "wolverine", "semax",
+  "adamax", "selank", "semax-selank", "kpv", "ipamorelin", "igf1-lr3", "mt1",
   "test-item",
 ];
 
