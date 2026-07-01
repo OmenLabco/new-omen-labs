@@ -1,6 +1,5 @@
 // AUTO-DERIVED server-side price table — source of truth for /api/order.
 // Keyed by product_id (`${id}_${dose}`). Do NOT trust client-sent prices.
-// Regenerate from src/data/products.js if catalog prices change.
 export const PRICES = {
   'test-item_1ct': { price: 1.19 },
   '69f9871d9cc1fe91aec19c8f_10mg': { price: 80 },
@@ -39,7 +38,7 @@ export const PRICES = {
   'semax-selank_5mg/5mg': { price: null },
 };
 
-export function priceFor(productId) {
+export function priceFor(productId){
   const e = PRICES[productId];
   return e && typeof e.price === 'number' ? e : null;
 }

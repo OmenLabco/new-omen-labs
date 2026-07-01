@@ -384,7 +384,6 @@ export const PRODUCTS = [
     image: "/products/adamax.png",
     paired_products: ["Semax", "Selank"],
     in_stock: false,
-    coming_soon: true,
     featured: false,
   },
   {
@@ -403,7 +402,6 @@ export const PRODUCTS = [
     image: "/products/mt1.png",
     paired_products: ["MT2", "GHK-Cu"],
     in_stock: false,
-    coming_soon: true,
     featured: false,
   },
   {
@@ -423,7 +421,6 @@ export const PRODUCTS = [
     image: "/products/wolverine.png",
     paired_products: ["BPC-157", "GHK-Cu"],
     in_stock: false,
-    coming_soon: true,
     featured: false,
   },
   {
@@ -442,7 +439,6 @@ export const PRODUCTS = [
     image: "/products/tesamorelin.png",
     paired_products: ["CJC + Ipamorelin", "Ipamorelin"],
     in_stock: false,
-    coming_soon: true,
     featured: false,
   },
   {
@@ -462,7 +458,6 @@ export const PRODUCTS = [
     image: "/products/semax-selank.png",
     paired_products: ["Semax", "Selank"],
     in_stock: false,
-    coming_soon: true,
     featured: false,
   },
 ];
