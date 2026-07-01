@@ -33,7 +33,7 @@ export const PRODUCTS = [
     sequence: "His-Ala-Glu-Gly-Thr-Phe-Thr-Ser-Asp-Val-Ser-Ser-Tyr-Leu-Glu-Gly",
     purity: 99.5,
     variants: [
-      { dose: "10mg", price: 80 },
+      { dose: "10mg", price: 80, coa: "/coa/glp-rt-10mg.pdf" },
       { dose: "20mg", price: 100, coa: "/coa/glp-rt-20mg.pdf" },
       { dose: "30mg", price: 130 },
     ],
