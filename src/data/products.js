@@ -34,7 +34,7 @@ export const PRODUCTS = [
     purity: 99.5,
     variants: [
       { dose: "10mg", price: 80 },
-      { dose: "20mg", price: 100 },
+      { dose: "20mg", price: 100, coa: "/coa/glp-rt-20mg.pdf" },
       { dose: "30mg", price: 130 },
     ],
     storage: GENERIC_STORAGE,

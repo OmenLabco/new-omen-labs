@@ -278,16 +278,26 @@ export default function ProductDetail() {
 
             {/* COA */}
             <div className="mt-10 p-5 rounded-2xl border border-primary/20 bg-primary/[0.02]">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <FileCheck className="h-5 w-5 text-primary" />
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <FileCheck className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Certificate of Analysis (COA)</p>
+                    <p className="text-[12px] text-muted-foreground">
+                      {variant.coa
+                        ? `HPLC COA available for ${product.name} ${variant.dose}.`
+                        : 'Coming soon — a full HPLC COA will be provided for every product.'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium">Certificate of Analysis (COA)</p>
-                  <p className="text-[12px] text-muted-foreground">
-                    Coming soon — a full HPLC COA will be provided for every product.
-                  </p>
-                </div>
+                {variant.coa && (
+                  <a href={variant.coa} target="_blank" rel="noopener noreferrer"
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-3.5 py-2 text-xs font-semibold hover:bg-primary/90 transition-colors">
+                    View COA
+                  </a>
+                )}
               </div>
             </div>
 
