@@ -477,9 +477,13 @@ for (const p of PRODUCTS) {
 
 // Demand-weighted order (GLP-1s lead the market, BPC/TB recovery classics next,
 // blends + aesthetics mid, niche compounds lower) — intentionally not a strict ranking.
+// Catalog order — mirrors Amino Club's catalog sequence, mapped to our products,
+// with Bacteriostatic Water first. (coming-soon items still sink to the bottom.)
 const POPULARITY_ORDER = [
-  "glp-rt", "tirzepatide", "bpc-157", "tb-500", "klow", "ghk-cu", "glow", "nad",
-  "ipamorelin", "semax", "cjc-ipamorelin", "mots-c", "mt2", "selank", "kpv", "igf1-lr3",
+  "bacteriostatic-water", "glp-rt", "tirzepatide", "bpc-157", "ghk-cu", "tesamorelin",
+  "tb-500", "mt2", "nad", "mots-c", "cjc-ipamorelin", "wolverine", "glow", "semax",
+  "adamax", "selank", "semax-selank", "klow", "kpv", "ipamorelin", "igf1-lr3", "mt1",
+  "test-item",
 ];
 
 export function getProductBySlug(slug) {
