@@ -80,24 +80,6 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* FDA disclaimer */}
-        <div className="mt-12 pt-8 border-t border-border">
-          <div className="rounded-xl border border-amber-300/60 bg-amber-50/70 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <svg className="h-3.5 w-3.5 text-amber-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              <p className="font-mono text-[10px] uppercase tracking-widest text-amber-700">FDA Disclaimer</p>
-            </div>
-            <p className="text-[11px] leading-relaxed text-amber-900/80">
-              Statements made regarding our products have not been evaluated by the U.S. Food and Drug Administration.
-              The efficacy of these products has not been confirmed by FDA-approved research. These products are not
-              drugs and are not intended to diagnose, treat, cure, or prevent any disease. All products are sold strictly
-              as reference standards for in-vitro laboratory research and are not for human or animal use. This notice is
-              required under the Federal Food, Drug, and Cosmetic Act.{' '}
-              <Link to="/terms" className="font-semibold text-amber-700 hover:underline">Read the full disclaimer →</Link>
-            </p>
-          </div>
-        </div>
-
         {/* Bottom bar */}
         <div className="mt-10 pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="font-mono text-[11px] text-muted-foreground">

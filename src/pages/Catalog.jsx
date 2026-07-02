@@ -6,7 +6,6 @@ import { PRODUCTS, getProductsByCategory, sortByPopularity, getCategories } from
 import OmenLogo from '../components/OmenLogo';
 import CategoryFilter from '../components/CategoryFilter';
 import ProductVialImage from '../components/ProductVialImage';
-import FdaDisclaimer from '../components/FdaDisclaimer';
 
 // Soft pastel image backdrops, picked by the product's primary category —
 // mirrors the per-product tinted cards on the reference store.
@@ -190,7 +189,6 @@ export default function Catalog() {
           </p>
         </div>
 
-        <FdaDisclaimer className="mt-6" />
       </div>
     </div>
   );
