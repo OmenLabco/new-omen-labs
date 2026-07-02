@@ -24,10 +24,17 @@ export default function Footer() {
               Pioneering peptide research with pharmaceutical-grade compounds.
               Every product undergoes rigorous HPLC testing to ensure ≥98% purity.
             </p>
-            <div className="mt-5 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-destructive/20 bg-destructive/5">
-              <span className="font-mono text-[10px] text-destructive uppercase tracking-wider">
+            <div className="mt-5 rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+              <p className="font-mono text-[10px] text-destructive uppercase tracking-wider mb-1">
                 For Research Use Only — Not for Human Consumption
-              </span>
+              </p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                All products sold by Omen Labs are intended strictly as reference standards for in-vitro laboratory
+                and scientific research. They are not drugs, foods, cosmetics, or dietary supplements, are not for
+                human or veterinary use, and must not be administered to or consumed by humans or animals. By
+                purchasing, you certify you are a qualified researcher or institution and will use these products
+                in a lawful manner consistent with their intended research use only.
+              </p>
             </div>
           </div>
 
@@ -82,11 +89,10 @@ export default function Footer() {
             </div>
             <p className="text-[11px] leading-relaxed text-amber-900/80">
               Statements made regarding our products have not been evaluated by the U.S. Food and Drug Administration.
-              The efficacy of these products has not been confirmed by FDA-approved research. Products are not intended
-              to diagnose, treat, cure, or prevent any disease. Information presented on this website is not a substitute
-              for, or alternative to, information from a qualified health care practitioner. Please consult a licensed
-              health care professional regarding any potential interactions or complications before using any product.
-              This notice is required under the Federal Food, Drug, and Cosmetic Act.{' '}
+              The efficacy of these products has not been confirmed by FDA-approved research. These products are not
+              drugs and are not intended to diagnose, treat, cure, or prevent any disease. All products are sold strictly
+              as reference standards for in-vitro laboratory research and are not for human or animal use. This notice is
+              required under the Federal Food, Drug, and Cosmetic Act.{' '}
               <Link to="/terms" className="font-semibold text-amber-700 hover:underline">Read the full disclaimer →</Link>
             </p>
           </div>

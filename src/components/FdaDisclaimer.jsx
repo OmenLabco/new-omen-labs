@@ -9,11 +9,10 @@ export default function FdaDisclaimer({ className = '' }) {
       </div>
       <p className="text-[11px] leading-relaxed text-amber-900/80">
         Statements made regarding our products have not been evaluated by the U.S. Food and Drug Administration.
-        The efficacy of these products has not been confirmed by FDA-approved research. Products are not intended
-        to diagnose, treat, cure, or prevent any disease. Information presented on this website is not a substitute
-        for, or alternative to, information from a qualified health care practitioner. Please consult a licensed
-        health care professional regarding any potential interactions or complications before using any product.
-        This notice is required under the Federal Food, Drug, and Cosmetic Act.{' '}
+        The efficacy of these products has not been confirmed by FDA-approved research. These products are not
+        drugs and are not intended to diagnose, treat, cure, or prevent any disease. All products are sold strictly
+        as reference standards for in-vitro laboratory research and are not for human or animal use. This notice is
+        required under the Federal Food, Drug, and Cosmetic Act.{' '}
         <Link to="/terms" className="font-semibold text-amber-700 hover:underline">Read the full disclaimer →</Link>
       </p>
     </div>
