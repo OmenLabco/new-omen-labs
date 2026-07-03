@@ -57,7 +57,7 @@ export const PRODUCTS = [
     variants: [
       { dose: "10mg", price: 60 },
       { dose: "20mg", price: 100 },
-      { dose: "30mg", price: 125 },
+      { dose: "30mg", price: 125, coa: "/coa/tirzepatide-30mg.jpg" },
     ],
     storage: GENERIC_STORAGE,
     image: "/products/tirzepatide.png",
@@ -78,7 +78,7 @@ export const PRODUCTS = [
     purity: 99.8,
     variants: [
       { dose: "5mg", price: 40 },
-      { dose: "10mg", price: 50 },
+      { dose: "10mg", price: 50, coa: "/coa/bpc-157-10mg.jpg" },
     ],
     storage: GENERIC_STORAGE,
     image: "/products/bpc-157.jpg",
@@ -223,7 +223,7 @@ export const PRODUCTS = [
     sequence: "Met-Arg-Trp-Gln-Glu-Met-Gly-Tyr-Ile-Phe-Tyr-Pro-Arg-Lys-Leu-Arg",
     purity: 99.0,
     variants: [
-      { dose: "10mg", price: 54.99 },
+      { dose: "10mg", price: 54.99, coa: "/coa/mots-c-10mg.jpg" },
       { dose: "40mg", price: 120 },
     ],
     storage: GENERIC_STORAGE,
@@ -433,7 +433,7 @@ export const PRODUCTS = [
     molecular_weight: "5,135.9 Da",
     sequence: "",
     purity: 99.1,
-    variants: [{ dose: "10mg", price: null }],
+    variants: [{ dose: "10mg", price: null, coa: "/coa/tesamorelin-10mg.jpg" }],
     storage: GENERIC_STORAGE,
     image: "/products/tesamorelin.png",
     paired_products: ["CJC + Ipamorelin", "Ipamorelin"],
