@@ -154,6 +154,10 @@
 .card-lift:hover{transform:translateY(-6px);box-shadow:0 26px 54px -26px rgba(0,0,0,.35)}
 @keyframes node{0%,100%{box-shadow:0 0 0 0 rgba(43,107,255,.45)}50%{box-shadow:0 0 0 3px rgba(43,107,255,0)}}
 
+/* live-visitor globe marker pulse */
+@keyframes visitorDotPulse{0%{transform:scale(1);opacity:.55}70%{transform:scale(2.6);opacity:0}100%{transform:scale(2.6);opacity:0}}
+.visitor-dot-pulse{animation:visitorDotPulse 2s ease-out infinite}
+
 /* ── peptide hamburger ── */
 .burger .bar{display:block;width:20px;height:2px;background:hsl(var(--foreground));border-radius:2px;position:relative;transition:transform .55s cubic-bezier(.2,.7,.3,1),opacity .3s,width .4s}
 .burger .bar::after{content:"";position:absolute;right:-2px;top:50%;width:4px;height:4px;border-radius:50%;background:hsl(var(--primary));transform:translateY(-50%);transition:transform .55s cubic-bezier(.2,.7,.3,1),opacity .3s;animation:node 2.4s ease-in-out infinite}

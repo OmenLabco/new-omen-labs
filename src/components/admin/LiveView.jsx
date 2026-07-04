@@ -52,11 +52,12 @@ export default function LiveView({ onLogout }) {
   const maxPage = Math.max(1, ...pages.map((p) => p.count));
   const maxProduct = Math.max(1, ...products.map((p) => p.count));
 
-  // Globe markers: one per active place, dot scaled by how many are there.
-  const markers = locations.map((l) => ({
-    location: [l.lat, l.lon],
-    size: 0.028 + Math.min(l.count, 8) * 0.007,
-  }));
+  // Globe dots: one per active place, with a hover label.
+  const globePoints = locations.map((l) => {
+    const place = l.city || l.region || countryName(l.country);
+    const label = l.city && l.country ? `${l.city}, ${countryName(l.country)}` : (place || 'Unknown');
+    return { key: `${l.city || ''}|${l.country || ''}|${l.lat},${l.lon}`, lat: l.lat, lon: l.lon, label, count: l.count };
+  });
   const maxCountry = Math.max(1, ...countries.map((c) => c.count));
   const geoKnown = countries.reduce((s, c) => s + c.count, 0);
 
@@ -163,13 +164,13 @@ export default function LiveView({ onLogout }) {
             </div>
             <p className="text-xs text-white/50 mb-2">Drag to spin · live positions</p>
             <div className="flex-1 flex items-center justify-center py-2">
-              {markers.length === 0 ? (
-                <div className="text-center py-10">
-                  <VisitorGlobe markers={[]} />
-                  <p className="text-xs text-white/40 -mt-4">Visitor locations will light up here in real time.</p>
+              {globePoints.length === 0 ? (
+                <div className="text-center py-10 w-full">
+                  <VisitorGlobe points={[]} />
+                  <p className="text-xs text-white/40 mt-2">Visitor locations will light up here in real time.</p>
                 </div>
               ) : (
-                <VisitorGlobe markers={markers} />
+                <VisitorGlobe points={globePoints} />
               )}
             </div>
           </div>
