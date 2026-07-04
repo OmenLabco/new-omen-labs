@@ -1,12 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, ShoppingCart, CreditCard, Eye, Radio, Activity } from 'lucide-react';
+import { Users, ShoppingCart, CreditCard, Eye, Radio, Activity, Globe as GlobeIcon, MapPin } from 'lucide-react';
 import { fetchLive } from '@/lib/adminApi';
+import VisitorGlobe from './VisitorGlobe';
 
 const STATE_BADGE = {
   checkout: { label: 'Checking out', cls: 'text-emerald-600 bg-emerald-500/12' },
   product: { label: 'Viewing product', cls: 'text-primary bg-primary/12' },
   browsing: { label: 'Browsing', cls: 'text-muted-foreground bg-secondary' },
+};
+
+// ISO alpha-2 -> flag emoji + English country name (both built into the browser).
+let REGION_NAMES;
+try { REGION_NAMES = new Intl.DisplayNames(['en'], { type: 'region' }); } catch { REGION_NAMES = null; }
+const countryName = (cc) => { if (!cc) return 'Unknown'; try { return REGION_NAMES?.of(cc) || cc; } catch { return cc; } };
+const flagEmoji = (cc) => {
+  if (!cc || cc.length !== 2) return '🌐';
+  const A = 0x1f1e6;
+  const u = cc.toUpperCase();
+  return String.fromCodePoint(A + u.charCodeAt(0) - 65, A + u.charCodeAt(1) - 65);
 };
 
 export default function LiveView({ onLogout }) {
@@ -36,8 +48,16 @@ export default function LiveView({ onLogout }) {
   if (err) return <p className="text-destructive text-sm">{err}</p>;
   if (!data) return <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" /></div>;
 
-  const { online = 0, carts = 0, checkingOut = 0, viewingProduct = 0, itemsInCarts = 0, pages = [], sessions = [] } = data;
+  const { online = 0, carts = 0, checkingOut = 0, viewingProduct = 0, itemsInCarts = 0, pages = [], sessions = [], locations = [], countries = [] } = data;
   const maxPage = Math.max(1, ...pages.map((p) => p.count));
+
+  // Globe markers: one per active place, dot scaled by how many are there.
+  const markers = locations.map((l) => ({
+    location: [l.lat, l.lon],
+    size: 0.028 + Math.min(l.count, 8) * 0.007,
+  }));
+  const maxCountry = Math.max(1, ...countries.map((c) => c.count));
+  const geoKnown = countries.reduce((s, c) => s + c.count, 0);
 
   const stats = [
     { icon: ShoppingCart, label: 'Active carts', value: carts, tint: 'text-primary bg-primary/10' },
@@ -95,6 +115,62 @@ export default function LiveView({ onLogout }) {
             <p className="text-[11px] text-muted-foreground mt-1.5">{s.label}</p>
           </div>
         ))}
+      </div>
+
+      {/* live visitor globe + top locations */}
+      <div className="relative overflow-hidden rounded-3xl border border-primary/20 mb-4"
+        style={{ background: 'radial-gradient(120% 120% at 15% 0%, #132a5e 0%, #0d1830 45%, #0a0a0b 100%)' }}>
+        <div className="grid lg:grid-cols-[1.15fr_1fr]">
+          {/* globe */}
+          <div className="relative p-5 sm:p-6 flex flex-col">
+            <div className="flex items-center gap-2 mb-1">
+              <GlobeIcon className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold text-white">Where they're from</span>
+            </div>
+            <p className="text-xs text-white/50 mb-2">Drag to spin · live positions</p>
+            <div className="flex-1 flex items-center justify-center py-2">
+              {markers.length === 0 ? (
+                <div className="text-center py-10">
+                  <VisitorGlobe markers={[]} />
+                  <p className="text-xs text-white/40 -mt-4">Visitor locations will light up here in real time.</p>
+                </div>
+              ) : (
+                <VisitorGlobe markers={markers} />
+              )}
+            </div>
+          </div>
+
+          {/* top locations list */}
+          <div className="relative p-5 sm:p-6 border-t lg:border-t-0 lg:border-l border-white/10">
+            <div className="flex items-center gap-2 mb-4">
+              <MapPin className="h-4 w-4 text-primary" />
+              <span className="text-xs font-mono uppercase tracking-[0.18em] text-white/60">Top locations</span>
+            </div>
+            {countries.length === 0 ? (
+              <p className="text-xs text-white/40 py-8 text-center">No located visitors right now.</p>
+            ) : (
+              <div className="space-y-3">
+                {countries.map((c) => (
+                  <div key={c.country} className="group">
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <span className="text-lg leading-none">{flagEmoji(c.country)}</span>
+                      <span className="text-sm text-white/90 flex-1 truncate">{countryName(c.country)}</span>
+                      <span className="text-sm font-semibold text-white tabular-nums">{c.count}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                      <motion.div className="h-full rounded-full"
+                        style={{ background: 'linear-gradient(90deg, #2b6bff, #5b8dff)' }}
+                        initial={{ width: 0 }} animate={{ width: `${(c.count / maxCountry) * 100}%` }} transition={{ duration: 0.5 }} />
+                    </div>
+                  </div>
+                ))}
+                {online > geoKnown && (
+                  <p className="text-[11px] text-white/40 pt-1">+{online - geoKnown} with location hidden</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-5 gap-3">
