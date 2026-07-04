@@ -9,6 +9,7 @@ import { handleZelleNotify } from './zelle.js';
 import { runCryptoWatch } from './cryptoWatch.js';
 import { handleShipstationWebhook, runShipstationSync } from './shipstation.js';
 import { runTrackingWatch } from './tracking.js';
+import { recordPresence, liveStats } from './presence.js';
 import { createPaymentSession, paymentCallback, paymentStatus } from './payment.js';
 
 // Per-endpoint rate limits (max attempts / window). Keyed by client IP.
@@ -73,6 +74,14 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/order/status') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
       return orderStatus(request, env);
+    }
+    if (pathname === '/api/presence') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return recordPresence(request, env);
+    }
+    if (pathname === '/api/admin/live') {
+      if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+      return liveStats(request, env);
     }
 
     // Card payments (hosted/tokenized) — inert until configured

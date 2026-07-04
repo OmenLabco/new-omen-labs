@@ -16,6 +16,37 @@ export default function Layout() {
   const [cartOpen, setCartOpen] = useState(false);
   const [cartItems, setCartItems] = useState([]);
 
+  // Live presence heartbeat (powers the admin Live View). Skips admin pages.
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.startsWith('/admin')) return;
+    let sid = sessionStorage.getItem('omenlabs_sid');
+    if (!sid) { sid = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('omenlabs_sid', sid); }
+    const pageLabel = () => {
+      if (path === '/') return 'Home';
+      if (path.startsWith('/product/')) return 'Product page';
+      if (path === '/catalog') return 'Catalog';
+      if (path === '/checkout') return 'Checkout';
+      if (path === '/account') return 'Account';
+      if (path === '/order-confirmed') return 'Order confirmation';
+      if (path === '/affiliates') return 'Affiliates';
+      return path.replace('/', '').replace(/-/g, ' ') || 'Site';
+    };
+    const stateOf = () => (path === '/checkout' ? 'checkout' : path.startsWith('/product/') ? 'product' : 'browsing');
+    const ping = () => {
+      const cartCount = cart.list().reduce((s, i) => s + (i.quantity || 0), 0);
+      try {
+        fetch('/api/presence', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+          body: JSON.stringify({ sid, path, page: pageLabel(), state: stateOf(), cartCount }),
+        });
+      } catch {}
+    };
+    ping();
+    const id = setInterval(ping, 15000);
+    return () => clearInterval(id);
+  }, [location.pathname]);
+
   const loadCart = () => {
     setCartItems(cart.list());
   };

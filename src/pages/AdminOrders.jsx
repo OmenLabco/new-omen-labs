@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import OrderEditForm from '@/components/admin/OrderEditForm';
 import SalesDashboard from '@/components/admin/SalesDashboard';
 import ProfitView from '@/components/admin/ProfitView';
+import LiveView from '@/components/admin/LiveView';
 import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder } from '@/lib/adminApi';
 import { CRYPTO_WALLETS } from '@/data/cryptoWallets';
 
@@ -343,8 +344,8 @@ export default function AdminOrders() {
         <div className="mb-10 flex items-start justify-between">
           <div>
             <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Admin</span>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight">{tab === 'overview' ? 'Overview' : tab === 'orders' ? 'Orders' : tab === 'profit' ? 'Profit' : tab === 'affiliates' ? 'Affiliates' : 'Customers'}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{tab === 'orders' ? `${orders.length} total orders` : tab === 'profit' ? 'Peptide revenue, cost & profit' : tab === 'affiliates' ? 'Affiliate partners' : 'Reward members'}</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight">{tab === 'live' ? 'Live View' : tab === 'overview' ? 'Overview' : tab === 'orders' ? 'Orders' : tab === 'profit' ? 'Profit' : tab === 'affiliates' ? 'Affiliates' : 'Customers'}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{tab === 'live' ? 'Who’s on your site right now' : tab === 'orders' ? `${orders.length} total orders` : tab === 'profit' ? 'Peptide revenue, cost & profit' : tab === 'affiliates' ? 'Affiliate partners' : tab === 'customers' ? 'Reward members' : 'Store performance'}</p>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -363,19 +364,22 @@ export default function AdminOrders() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 rounded-xl border border-border p-1 w-fit">
-          {(adminAuth.role() === 'admin' ? ['overview', 'orders', 'profit', 'affiliates', 'customers'] : ['overview', 'orders', 'affiliates', 'customers']).map((t) => (
+        <div className="flex gap-1 mb-6 rounded-xl border border-border p-1 w-fit max-w-full overflow-x-auto scrollbar-none">
+          {(adminAuth.role() === 'admin' ? ['live', 'overview', 'orders', 'profit', 'affiliates', 'customers'] : ['live', 'overview', 'orders', 'affiliates', 'customers']).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-4 h-9 rounded-lg text-sm font-medium capitalize transition-colors ${tab === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+              className={`shrink-0 px-4 h-9 rounded-lg text-sm font-medium capitalize transition-colors inline-flex items-center gap-1.5 ${tab === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
             >
+              {t === 'live' && <span className={`h-1.5 w-1.5 rounded-full ${tab === t ? 'bg-white' : 'bg-emerald-500'} animate-pulse`} />}
               {t}
             </button>
           ))}
         </div>
 
-        {tab === 'overview' ? (
+        {tab === 'live' ? (
+          <LiveView onLogout={logout} />
+        ) : tab === 'overview' ? (
           <>
             {/* Sales dashboard */}
             {!loading && orders.length > 0 && <SalesDashboard orders={orders} />}

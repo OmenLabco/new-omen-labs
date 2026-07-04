@@ -70,6 +70,13 @@ export async function fetchProfitCosts() {
   return resp.json();
 }
 
+export async function fetchLive() {
+  const resp = await fetch('/api/admin/live', { headers: headers() });
+  if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }
+  if (!resp.ok) throw new Error('Failed to load live view.');
+  return resp.json();
+}
+
 export async function fetchZelleSetup() {
   const resp = await fetch('/api/admin/zelle-setup', { headers: headers() });
   if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }
