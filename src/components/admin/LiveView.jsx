@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, ShoppingCart, CreditCard, Eye, Radio, Activity, Globe as GlobeIcon, MapPin } from 'lucide-react';
+import { Users, ShoppingCart, CreditCard, Eye, Radio, Activity, Globe as GlobeIcon, MapPin, Package } from 'lucide-react';
 import { fetchLive } from '@/lib/adminApi';
 import VisitorGlobe from './VisitorGlobe';
 
@@ -48,8 +48,9 @@ export default function LiveView({ onLogout }) {
   if (err) return <p className="text-destructive text-sm">{err}</p>;
   if (!data) return <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" /></div>;
 
-  const { online = 0, carts = 0, checkingOut = 0, viewingProduct = 0, itemsInCarts = 0, pages = [], sessions = [], locations = [], countries = [] } = data;
+  const { online = 0, carts = 0, checkingOut = 0, viewingProduct = 0, itemsInCarts = 0, pages = [], sessions = [], products = [], locations = [], countries = [] } = data;
   const maxPage = Math.max(1, ...pages.map((p) => p.count));
+  const maxProduct = Math.max(1, ...products.map((p) => p.count));
 
   // Globe markers: one per active place, dot scaled by how many are there.
   const markers = locations.map((l) => ({
@@ -115,6 +116,39 @@ export default function LiveView({ onLogout }) {
             <p className="text-[11px] text-muted-foreground mt-1.5">{s.label}</p>
           </div>
         ))}
+      </div>
+
+      {/* products being viewed right now */}
+      <div className="rounded-2xl border border-border bg-card p-5 mb-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Package className="h-4 w-4 text-primary" />
+          <p className="text-sm font-semibold">Products being viewed right now</p>
+          {products.length > 0 && (
+            <span className="ml-auto text-[11px] font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5">{viewingProduct} viewing</span>
+          )}
+        </div>
+        {products.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-6 text-center">No products being viewed right now.</p>
+        ) : (
+          <div className="space-y-3">
+            <AnimatePresence initial={false}>
+              {products.map((p, i) => (
+                <motion.div key={p.name} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <span className="text-[11px] font-mono text-muted-foreground w-4 tabular-nums">{i + 1}</span>
+                    <span className="text-sm font-medium flex-1 truncate">{p.name}</span>
+                    <span className="inline-flex items-center gap-1 text-sm font-semibold tabular-nums">
+                      <Eye className="h-3.5 w-3.5 text-primary" />{p.count}
+                    </span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-secondary overflow-hidden ml-7">
+                    <motion.div className="h-full rounded-full bg-primary" initial={{ width: 0 }} animate={{ width: `${(p.count / maxProduct) * 100}%` }} transition={{ duration: 0.5 }} />
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
 
       {/* live visitor globe + top locations */}
@@ -210,7 +244,7 @@ export default function LiveView({ onLogout }) {
                     <motion.div key={`${s.page}-${i}`} layout initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
                       className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
                       <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                      <span className="text-sm flex-1 min-w-0 truncate">{s.page}</span>
+                      <span className="text-sm flex-1 min-w-0 truncate">{s.product || s.page}</span>
                       {s.cartCount > 0 && (
                         <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
                           <ShoppingCart className="h-3 w-3" />{s.cartCount}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { cart } from '@/lib/cart';
+import { getProductBySlug } from '@/data/products';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import ScrollProgress from './ScrollProgress';
@@ -33,12 +34,19 @@ export default function Layout() {
       return path.replace('/', '').replace(/-/g, ' ') || 'Site';
     };
     const stateOf = () => (path === '/checkout' ? 'checkout' : path.startsWith('/product/') ? 'product' : 'browsing');
+    // On a product page, resolve the slug to the real product name so the admin
+    // Live View can show exactly which product each visitor is viewing.
+    const productName = () => {
+      if (!path.startsWith('/product/')) return null;
+      const slug = path.split('/product/')[1]?.split('/')[0];
+      return slug ? (getProductBySlug(slug)?.name || null) : null;
+    };
     const ping = () => {
       const cartCount = cart.list().reduce((s, i) => s + (i.quantity || 0), 0);
       try {
         fetch('/api/presence', {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
-          body: JSON.stringify({ sid, path, page: pageLabel(), state: stateOf(), cartCount }),
+          body: JSON.stringify({ sid, path, page: pageLabel(), state: stateOf(), cartCount, product: productName() }),
         });
       } catch {}
     };
