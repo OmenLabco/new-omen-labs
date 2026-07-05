@@ -13,11 +13,11 @@ let schemaReady = false;
 async function ensureTable(env) {
   if (schemaReady) return;
   await env.DB.prepare(
-    'CREATE TABLE IF NOT EXISTS presence (sid TEXT PRIMARY KEY, page TEXT, path TEXT, state TEXT, cart_count INTEGER, updated_at INTEGER, lat REAL, lon REAL, country TEXT, city TEXT, region TEXT, product TEXT)'
+    'CREATE TABLE IF NOT EXISTS presence (sid TEXT PRIMARY KEY, page TEXT, path TEXT, state TEXT, cart_count INTEGER, updated_at INTEGER, lat REAL, lon REAL, country TEXT, city TEXT, region TEXT, product TEXT, cart TEXT)'
   ).run();
   // Add newer columns to tables created before they existed. ALTER throws
   // "duplicate column" once they exist — safe to ignore.
-  for (const col of ['lat REAL', 'lon REAL', 'country TEXT', 'city TEXT', 'region TEXT', 'product TEXT']) {
+  for (const col of ['lat REAL', 'lon REAL', 'country TEXT', 'city TEXT', 'region TEXT', 'product TEXT', 'cart TEXT']) {
     try { await env.DB.prepare(`ALTER TABLE presence ADD COLUMN ${col}`).run(); } catch {}
   }
   schemaReady = true;
@@ -51,10 +51,15 @@ export async function recordPresence(request, env) {
   try {
     await ensureTable(env);
     const product = b.product ? String(b.product).slice(0, 80) : null;
+    // Compact cart summary [{n:name,q:qty}] as JSON (already capped client-side).
+    let cartJson = null;
+    if (Array.isArray(b.cartItems) && b.cartItems.length) {
+      cartJson = JSON.stringify(b.cartItems.slice(0, 20).map((i) => ({ n: String(i.n || 'Item').slice(0, 60), q: Number(i.q) || 0 }))).slice(0, 2000);
+    }
     await env.DB.prepare(
-      `INSERT INTO presence (sid, page, path, state, cart_count, updated_at, lat, lon, country, city, region, product) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-       ON CONFLICT(sid) DO UPDATE SET page=excluded.page, path=excluded.path, state=excluded.state, cart_count=excluded.cart_count, updated_at=excluded.updated_at, lat=excluded.lat, lon=excluded.lon, country=excluded.country, city=excluded.city, region=excluded.region, product=excluded.product`
-    ).bind(sid, String(b.page || '').slice(0, 60), String(b.path || '').slice(0, 120), String(b.state || 'browsing').slice(0, 20), Number(b.cartCount) || 0, now, geo.lat, geo.lon, geo.country, geo.city, geo.region, product).run();
+      `INSERT INTO presence (sid, page, path, state, cart_count, updated_at, lat, lon, country, city, region, product, cart) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+       ON CONFLICT(sid) DO UPDATE SET page=excluded.page, path=excluded.path, state=excluded.state, cart_count=excluded.cart_count, updated_at=excluded.updated_at, lat=excluded.lat, lon=excluded.lon, country=excluded.country, city=excluded.city, region=excluded.region, product=excluded.product, cart=excluded.cart`
+    ).bind(sid, String(b.page || '').slice(0, 60), String(b.path || '').slice(0, 120), String(b.state || 'browsing').slice(0, 20), Number(b.cartCount) || 0, now, geo.lat, geo.lon, geo.country, geo.city, geo.region, product, cartJson).run();
     // prune rows older than 5 min occasionally
     if ((now % 10) === 0) await env.DB.prepare('DELETE FROM presence WHERE updated_at < ?').bind(now - 300000).run();
   } catch {}
@@ -66,12 +71,12 @@ function bearer(request) { return (request.headers.get('Authorization') || '').r
 // GET /api/admin/live  (admin/staff auth)
 export async function liveStats(request, env) {
   if (!(await verifyAdminSession(env, bearer(request)))) return json({ error: 'Unauthorized' }, 401);
-  if (!env.DB) return json({ online: 0, carts: 0, checkingOut: 0, itemsInCarts: 0, pages: [], sessions: [], products: [], locations: [], countries: [] });
+  if (!env.DB) return json({ online: 0, carts: 0, checkingOut: 0, itemsInCarts: 0, pages: [], sessions: [], products: [], cartContents: [], locations: [], countries: [] });
   await ensureTable(env);
   const now = Date.now();
   const cutoff = now - 60000; // active in last 60s
   const { results } = await env.DB.prepare(
-    'SELECT sid, page, path, state, cart_count, updated_at, lat, lon, country, city, region, product FROM presence WHERE updated_at >= ? ORDER BY updated_at DESC'
+    'SELECT sid, page, path, state, cart_count, updated_at, lat, lon, country, city, region, product, cart FROM presence WHERE updated_at >= ? ORDER BY updated_at DESC'
   ).bind(cutoff).all();
   const rows = results || [];
 
@@ -105,6 +110,25 @@ export async function liveStats(request, env) {
   }
   const products = [...prodMap.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 12);
 
+  // What's actually in carts right now: sum quantities per product across all
+  // active carts, and count how many distinct carts contain each product.
+  const cartMap = new Map();
+  for (const r of rows) {
+    if (!r.cart) continue;
+    let items;
+    try { items = JSON.parse(r.cart); } catch { continue; }
+    if (!Array.isArray(items)) continue;
+    for (const it of items) {
+      const name = String(it.n || 'Item').slice(0, 60);
+      const qty = Number(it.q) || 0;
+      if (qty <= 0) continue;
+      const cur = cartMap.get(name);
+      if (cur) { cur.qty += qty; cur.carts += 1; }
+      else cartMap.set(name, { name, qty, carts: 1 });
+    }
+  }
+  const cartContents = [...cartMap.values()].sort((a, b) => b.qty - a.qty).slice(0, 20);
+
   // Geo: cluster active sessions by city so the globe plots one marker per place
   // (with a live count), and roll up a country breakdown for the list.
   const locMap = new Map();
@@ -120,5 +144,5 @@ export async function liveStats(request, env) {
   const locations = [...locMap.values()].sort((a, b) => b.count - a.count).slice(0, 30);
   const countries = [...countryMap.entries()].map(([country, count]) => ({ country, count })).sort((a, b) => b.count - a.count).slice(0, 12);
 
-  return json({ online, carts, checkingOut, viewingProduct, itemsInCarts, pages, sessions, products, locations, countries });
+  return json({ online, carts, checkingOut, viewingProduct, itemsInCarts, pages, sessions, products, cartContents, locations, countries });
 }

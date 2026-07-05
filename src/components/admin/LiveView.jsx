@@ -48,9 +48,10 @@ export default function LiveView({ onLogout }) {
   if (err) return <p className="text-destructive text-sm">{err}</p>;
   if (!data) return <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" /></div>;
 
-  const { online = 0, carts = 0, checkingOut = 0, viewingProduct = 0, itemsInCarts = 0, pages = [], sessions = [], products = [], locations = [], countries = [] } = data;
+  const { online = 0, carts = 0, checkingOut = 0, viewingProduct = 0, itemsInCarts = 0, pages = [], sessions = [], products = [], cartContents = [], locations = [], countries = [] } = data;
   const maxPage = Math.max(1, ...pages.map((p) => p.count));
   const maxProduct = Math.max(1, ...products.map((p) => p.count));
+  const maxCartQty = Math.max(1, ...cartContents.map((c) => c.qty));
 
   // Globe dots: one per active place, with a hover label.
   const globePoints = locations.map((l) => {
@@ -144,6 +145,37 @@ export default function LiveView({ onLogout }) {
                   </div>
                   <div className="h-1.5 rounded-full bg-secondary overflow-hidden ml-7">
                     <motion.div className="h-full rounded-full bg-primary" initial={{ width: 0 }} animate={{ width: `${(p.count / maxProduct) * 100}%` }} transition={{ duration: 0.5 }} />
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
+
+      {/* what's in carts right now */}
+      <div className="rounded-2xl border border-border bg-card p-5 mb-4">
+        <div className="flex items-center gap-2 mb-4">
+          <ShoppingCart className="h-4 w-4 text-amber-500" />
+          <p className="text-sm font-semibold">What's in carts right now</p>
+          {cartContents.length > 0 && (
+            <span className="ml-auto text-[11px] font-medium text-amber-600 bg-amber-500/10 rounded-full px-2 py-0.5">{itemsInCarts} items · {carts} {carts === 1 ? 'cart' : 'carts'}</span>
+          )}
+        </div>
+        {cartContents.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-6 text-center">No active carts right now.</p>
+        ) : (
+          <div className="space-y-3">
+            <AnimatePresence initial={false}>
+              {cartContents.map((c) => (
+                <motion.div key={c.name} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <span className="text-sm font-medium flex-1 truncate">{c.name}</span>
+                    <span className="text-[11px] text-muted-foreground">in {c.carts} {c.carts === 1 ? 'cart' : 'carts'}</span>
+                    <span className="text-sm font-semibold tabular-nums w-8 text-right">×{c.qty}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                    <motion.div className="h-full rounded-full bg-amber-500" initial={{ width: 0 }} animate={{ width: `${(c.qty / maxCartQty) * 100}%` }} transition={{ duration: 0.5 }} />
                   </div>
                 </motion.div>
               ))}

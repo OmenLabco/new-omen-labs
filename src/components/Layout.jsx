@@ -42,11 +42,15 @@ export default function Layout() {
       return slug ? (getProductBySlug(slug)?.name || null) : null;
     };
     const ping = () => {
-      const cartCount = cart.list().reduce((s, i) => s + (i.quantity || 0), 0);
+      const items = cart.list();
+      const cartCount = items.reduce((s, i) => s + (i.quantity || 0), 0);
+      // Compact cart summary (name + qty) so the admin Live View can show what's
+      // actually in each cart, not just a count. Capped to keep the payload small.
+      const cartItems = items.slice(0, 20).map((i) => ({ n: String(i.product_name || 'Item').slice(0, 60), q: i.quantity || 0 }));
       try {
         fetch('/api/presence', {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
-          body: JSON.stringify({ sid, path, page: pageLabel(), state: stateOf(), cartCount, product: productName() }),
+          body: JSON.stringify({ sid, path, page: pageLabel(), state: stateOf(), cartCount, cartItems, product: productName() }),
         });
       } catch {}
     };
