@@ -272,8 +272,13 @@ function PayoutBox({ payout, onDone }) {
   const [ok, setOk] = useState('');
   const methods = payout.methods || {};
 
+  const over = amount !== '' && Number(amount) > payout.available;
+
   const submit = async (e) => {
-    e.preventDefault(); setError(''); setOk(''); setBusy(true);
+    e.preventDefault(); setError(''); setOk('');
+    if (amount !== '' && (!(Number(amount) > 0))) { setError('Enter a valid amount.'); return; }
+    if (over) { setError(`You can withdraw at most $${payout.available.toFixed(2)}.`); return; }
+    setBusy(true);
     try {
       const res = await affiliateRequestPayout({ method, handle, amount: amount ? Number(amount) : undefined });
       setOk(`Payout requested: $${Number(res.amount).toFixed(2)} via ${methods[res.method] || res.method}. We'll send it shortly.`);
@@ -315,13 +320,17 @@ function PayoutBox({ payout, onDone }) {
           <Field label={method === 'crypto' ? 'USDT Wallet (Solana)' : 'Send To'} required value={handle}
             onChange={(e) => setHandle(e.target.value)} placeholder={HANDLE_HINT[method]} />
           <div>
-            <label className="block font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Amount (optional)</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Amount (optional)</label>
+              <button type="button" onClick={() => setAmount(String(payout.available.toFixed(2)))} className="font-mono text-[10px] uppercase tracking-wider text-primary hover:underline">Max ${payout.available.toFixed(2)}</button>
+            </div>
             <input type="number" step="0.01" min="0" max={payout.available} value={amount} onChange={(e) => setAmount(e.target.value)}
               placeholder={`Full balance · $${payout.available.toFixed(2)}`}
-              className="w-full h-11 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              className={`w-full h-11 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 ${over ? 'border-destructive focus:ring-destructive/30' : 'border-border focus:ring-primary/30'}`} />
+            {over && <p className="text-xs text-destructive mt-1.5">Max you can withdraw is ${payout.available.toFixed(2)}.</p>}
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" disabled={busy} className="w-full h-11">{busy ? 'Requesting…' : `Request $${amount ? Number(amount).toFixed(2) : payout.available.toFixed(2)} payout`}</Button>
+          <Button type="submit" disabled={busy || over} className="w-full h-11">{busy ? 'Requesting…' : `Request $${amount ? Number(amount || 0).toFixed(2) : payout.available.toFixed(2)} payout`}</Button>
         </form>
       )}
 

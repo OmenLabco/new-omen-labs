@@ -173,7 +173,9 @@ export async function requestPayout(request, env) {
 
   let amount = b.amount != null ? Number(b.amount) : ps.available;
   if (!Number.isFinite(amount) || amount <= 0) return json({ error: 'Enter a valid amount.' }, 400);
-  amount = Math.min(+amount.toFixed(2), ps.available);
+  amount = +amount.toFixed(2);
+  // Never allow requesting more than what's actually available to withdraw.
+  if (amount > ps.available + 0.001) return json({ error: `You can withdraw at most $${ps.available.toFixed(2)}.` }, 400);
 
   const now = new Date().toISOString();
   await env.DB.prepare(
