@@ -183,6 +183,8 @@ function AffiliatesView({ onLogout, privacy }) {
 
   const tierOf = (n) => (n >= 30 ? 'Platinum' : n >= 10 ? 'Gold' : 'Silver');
   const pending = payouts.filter((p) => p.status === 'requested');
+  const paidReceipts = payouts.filter((p) => p.status === 'paid');
+  const totalPaid = paidReceipts.reduce((s, p) => s + Number(p.amount || 0), 0);
   const marketingList = affiliates.filter((a) => a.marketing_opt_in);
 
   const markPaid = async (id) => {
@@ -255,6 +257,35 @@ function AffiliatesView({ onLogout, privacy }) {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Payout receipts log */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Payout receipts · {paidReceipts.length}</h3>
+          {paidReceipts.length > 0 && <span className="text-xs text-muted-foreground">${totalPaid.toFixed(2)} paid out</span>}
+        </div>
+        {paidReceipts.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-6 text-center border border-border rounded-2xl">No payouts sent yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {paidReceipts.map((p) => (
+              <div key={p.id} className="flex items-center justify-between gap-4 p-4 rounded-2xl border border-border">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-xs font-semibold">{p.receipt_no || `#${p.id}`}</span>
+                    <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{p.code}</span>
+                    <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">{PAYOUT_LABELS[p.method] || p.method}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    {p.name ? `${p.name} · ` : ''}{p.paid_date ? new Date(p.paid_date).toLocaleString() : ''} · to <Mask on={privacy}>{p.handle}</Mask>
+                  </p>
+                </div>
+                <span className="font-mono text-sm font-semibold text-emerald-500 shrink-0">${Number(p.amount || 0).toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

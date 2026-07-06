@@ -4,12 +4,12 @@
 //   DB             - D1 database binding
 //   ADMIN_PASSWORD - secret password for admin access
 
-import { renderImageEmail, sendEmail } from './email.js';
+import { renderImageEmail, sendEmail, renderPayoutReceipt } from './email.js';
 import { signOrder } from './token.js';
 import { safeEqual, issueAdminSession, verifyAdminSession, zelleSecret } from './security.js';
 import { cryptoWatchDebug } from './cryptoWatch.js';
 import { COST_SHEET, COST_BY_PRODUCT_ID, COST_BY_NAME } from './costs.js';
-import { ensureAffiliateSchema } from './affiliate.js';
+import { ensureAffiliateSchema, PAYOUT_METHODS } from './affiliate.js';
 
 const SITE = 'https://omenlabs.co';
 
@@ -113,14 +113,15 @@ export async function listPayouts(request, env) {
   if (!env.DB) return json({ payouts: [] });
   await ensureAffiliateSchema(env);
   const { results } = await env.DB.prepare(
-    `SELECT p.id, p.code, p.email, p.amount, p.method, p.handle, p.status, p.created_date, p.paid_date, a.name
+    `SELECT p.id, p.code, p.email, p.amount, p.method, p.handle, p.status, p.created_date, p.paid_date, p.receipt_no, a.name
      FROM payouts p LEFT JOIN affiliates a ON a.code = p.code
      ORDER BY (p.status = 'requested') DESC, p.id DESC`
   ).all();
   return json({ payouts: results || [] });
 }
 
-// POST /api/admin/payouts/update — mark a payout request paid (or revert)
+// POST /api/admin/payouts/update — mark a payout request paid (or revert).
+// On "paid" we stamp a receipt number + timestamp and email the affiliate a receipt.
 export async function updatePayout(request, env) {
   if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
   if (!env.DB) return json({ error: 'Service unavailable.' }, 500);
@@ -129,9 +130,41 @@ export async function updatePayout(request, env) {
   const id = Number(b.id);
   const status = b.status === 'paid' ? 'paid' : b.status === 'requested' ? 'requested' : null;
   if (!id || !status) return json({ error: 'Invalid request.' }, 400);
-  const paid_date = status === 'paid' ? new Date().toISOString() : null;
-  await env.DB.prepare('UPDATE payouts SET status = ?, paid_date = ? WHERE id = ?').bind(status, paid_date, id).run();
-  return json({ ok: true, id, status });
+
+  const payout = await env.DB.prepare('SELECT * FROM payouts WHERE id = ?').bind(id).first();
+  if (!payout) return json({ error: 'Payout not found.' }, 404);
+
+  if (status === 'requested') {
+    await env.DB.prepare('UPDATE payouts SET status = ?, paid_date = NULL WHERE id = ?').bind(status, id).run();
+    return json({ ok: true, id, status });
+  }
+
+  // status === 'paid': stamp receipt (reuse existing one if reverting/re-marking)
+  const paid_date = new Date().toISOString();
+  const receipt_no = payout.receipt_no || `OMEN-PO-${crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
+  await env.DB.prepare('UPDATE payouts SET status = ?, paid_date = ?, receipt_no = ? WHERE id = ?').bind('paid', paid_date, receipt_no, id).run();
+
+  // Email the affiliate their receipt (best-effort).
+  if (env.RESEND_API_KEY && payout.email) {
+    const aff = await env.DB.prepare('SELECT name FROM affiliates WHERE code = ?').bind(payout.code).first();
+    try {
+      await sendEmail(env, {
+        to: payout.email,
+        subject: `Payout sent — $${Number(payout.amount).toFixed(2)} · ${receipt_no}`,
+        html: renderPayoutReceipt({
+          name: aff?.name,
+          code: payout.code,
+          amount: payout.amount,
+          methodLabel: PAYOUT_METHODS[payout.method] || payout.method,
+          handle: payout.handle,
+          receiptNo: receipt_no,
+          paidDate: paid_date,
+        }),
+      });
+    } catch {}
+  }
+
+  return json({ ok: true, id, status: 'paid', receipt_no, paid_date });
 }
 
 // GET /api/admin/customers — list customers with points, spend, tier, order count

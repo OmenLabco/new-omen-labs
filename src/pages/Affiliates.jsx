@@ -336,15 +336,25 @@ function PayoutBox({ payout, onDone }) {
 
       {payout.history?.length > 0 && (
         <div className="mt-5 pt-5 border-t border-border">
-          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Payout history</p>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Payout receipts</p>
           <div className="space-y-2">
             {payout.history.map((h) => (
-              <div key={h.id} className="flex items-center justify-between text-sm">
-                <div>
-                  <span className="font-medium">${Number(h.amount).toFixed(2)}</span>
-                  <span className="text-muted-foreground"> · {methods[h.method] || h.method}</span>
+              <div key={h.id} className="flex items-start justify-between gap-3 p-3 rounded-xl border border-border">
+                <div className="min-w-0">
+                  <p className="text-sm">
+                    <span className="font-semibold">${Number(h.amount).toFixed(2)}</span>
+                    <span className="text-muted-foreground"> · {methods[h.method] || h.method}</span>
+                  </p>
+                  {h.status === 'paid' ? (
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {h.paid_date ? new Date(h.paid_date).toLocaleString() : ''}
+                      {h.receipt_no ? <> · <span className="font-mono">{h.receipt_no}</span></> : null}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Requested {h.created_date ? new Date(h.created_date).toLocaleDateString() : ''}</p>
+                  )}
                 </div>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${h.status === 'paid' ? 'text-emerald-500 bg-emerald-500/10' : 'text-amber-500 bg-amber-500/10'}`}>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${h.status === 'paid' ? 'text-emerald-500 bg-emerald-500/10' : 'text-amber-500 bg-amber-500/10'}`}>
                   {h.status === 'paid' ? 'Paid' : 'Requested'}
                 </span>
               </div>

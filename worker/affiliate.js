@@ -56,8 +56,9 @@ export async function ensureAffiliateSchema(env) {
     try { await env.DB.prepare(`ALTER TABLE affiliates ADD COLUMN ${col}`).run(); } catch {}
   }
   await env.DB.prepare(
-    'CREATE TABLE IF NOT EXISTS payouts (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT, email TEXT, amount REAL, method TEXT, handle TEXT, status TEXT, created_date TEXT, paid_date TEXT)'
+    'CREATE TABLE IF NOT EXISTS payouts (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT, email TEXT, amount REAL, method TEXT, handle TEXT, status TEXT, created_date TEXT, paid_date TEXT, receipt_no TEXT)'
   ).run();
+  try { await env.DB.prepare('ALTER TABLE payouts ADD COLUMN receipt_no TEXT').run(); } catch {}
   affSchemaReady = true;
 }
 
@@ -65,7 +66,7 @@ export async function ensureAffiliateSchema(env) {
 async function payoutSummary(env, code, totalCommission) {
   await ensureAffiliateSchema(env);
   const { results } = await env.DB.prepare(
-    'SELECT id, amount, method, handle, status, created_date, paid_date FROM payouts WHERE code = ? ORDER BY id DESC'
+    'SELECT id, amount, method, handle, status, created_date, paid_date, receipt_no FROM payouts WHERE code = ? ORDER BY id DESC'
   ).bind(code).all();
   const payouts = results || [];
   const paid = payouts.filter((p) => p.status === 'paid').reduce((s, p) => s + Number(p.amount || 0), 0);

@@ -166,6 +166,32 @@ export function renderImageEmail({ imageUrl, order, heading = 'Order Confirmed' 
 </html>`;
 }
 
+// Affiliate payout receipt — sent when the owner marks a payout as paid.
+export function renderPayoutReceipt({ name, code, amount, methodLabel, handle, receiptNo, paidDate }) {
+  let when;
+  try { when = new Date(paidDate).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short', timeZone: 'America/New_York' }) + ' ET'; }
+  catch { when = new Date(paidDate).toUTCString(); }
+  const row = (k, v, opts = {}) => `<tr>
+    <td style="padding:14px 20px;border-bottom:1px solid ${ROW_BORDER};font-size:13px;color:${MUTED}">${esc(k)}</td>
+    <td style="padding:14px 20px;border-bottom:1px solid ${ROW_BORDER};font-size:${opts.big ? '20px' : '14px'};font-weight:${opts.big ? '700' : '400'};color:${opts.big ? '#4ade80' : '#e5e8ef'};text-align:right${opts.mono ? `;font-family:${MONO}` : ''}">${v}</td>
+  </tr>`;
+  return layout(`
+    ${heading('Payout Sent')}
+    ${divider()}
+    ${para(`Hi ${esc(name || 'there')},`)}
+    ${para('Your affiliate commission payout has been sent. Keep this receipt for your records.')}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 6px;background:${PANEL};border:1px solid ${BORDER};border-radius:12px;border-collapse:separate;overflow:hidden">
+      ${row('Amount paid', `$${Number(amount).toFixed(2)}`, { big: true })}
+      ${row('Method', esc(methodLabel))}
+      ${row('Sent to', esc(handle), { mono: true })}
+      ${row('Date & time', esc(when))}
+      ${row('Receipt #', esc(receiptNo), { mono: true })}
+      ${row('Affiliate code', esc(code), { mono: true })}
+    </table>
+    ${para('If anything looks off, just reply to this email and we\'ll sort it out.')}
+  `);
+}
+
 // Helper to send via Resend
 export async function sendEmail(env, { to, subject, html, replyTo }) {
   if (!env.RESEND_API_KEY) return;
