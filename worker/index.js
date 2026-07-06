@@ -1,8 +1,8 @@
 import { handleOrder, orderStatus } from './order.js';
-import { listOrders, updateOrder, adminLogin, listAffiliates, listCustomers, setMembership, deleteCustomer, zelleSetup, cryptoCheck, deleteOrder, profitCosts } from './admin.js';
+import { listOrders, updateOrder, adminLogin, listAffiliates, listCustomers, setMembership, deleteCustomer, zelleSetup, cryptoCheck, deleteOrder, profitCosts, listPayouts, updatePayout } from './admin.js';
 import { receiptImage } from './receiptImage.js';
 import { verifyOrder } from './token.js';
-import { signupAffiliate, loginAffiliate, affiliateStats, validateCode } from './affiliate.js';
+import { loginAffiliate, affiliateStats, validateCode, requestPayout } from './affiliate.js';
 import { signupCustomer, loginCustomer, customerMe, enrollAffiliate } from './customer.js';
 import { withSecurity, rateLimit, tooMany, clientIp } from './security.js';
 import { handleZelleNotify } from './zelle.js';
@@ -18,7 +18,7 @@ const LIMITS = {
   '/api/customer/login': { max: 10, windowMs: 10 * 60 * 1000 },
   '/api/affiliate/login': { max: 10, windowMs: 10 * 60 * 1000 },
   '/api/customer/signup': { max: 10, windowMs: 60 * 60 * 1000 },
-  '/api/affiliate/signup': { max: 10, windowMs: 60 * 60 * 1000 },
+  '/api/affiliate/payout': { max: 12, windowMs: 60 * 60 * 1000 },
   '/api/order': { max: 40, windowMs: 10 * 60 * 1000 },
   '/api/pay/session': { max: 40, windowMs: 10 * 60 * 1000 },
 };
@@ -141,11 +141,7 @@ async function route(request, env, url, pathname, method) {
       return enrollAffiliate(request, env);
     }
 
-    // Affiliate program
-    if (pathname === '/api/affiliate/signup') {
-      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
-      return signupAffiliate(request, env);
-    }
+    // Affiliate program (unified login — join/enroll happens via the customer account)
     if (pathname === '/api/affiliate/login') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return loginAffiliate(request, env);
@@ -153,6 +149,10 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/affiliate/stats') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
       return affiliateStats(request, env);
+    }
+    if (pathname === '/api/affiliate/payout') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return requestPayout(request, env);
     }
     if (pathname === '/api/affiliate/validate') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
@@ -178,6 +178,14 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/admin/customers') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
       return listCustomers(request, env);
+    }
+    if (pathname === '/api/admin/payouts') {
+      if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+      return listPayouts(request, env);
+    }
+    if (pathname === '/api/admin/payouts/update') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return updatePayout(request, env);
     }
     if (pathname === '/api/admin/customers/membership') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });

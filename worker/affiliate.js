@@ -39,6 +39,41 @@ async function hashPw(pw, email, env) {
 
 const normCode = (c = '') => String(c).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 20);
 
+// Supported affiliate payout methods (owner sends the money manually).
+export const PAYOUT_METHODS = {
+  cashapp: 'CashApp',
+  paypal: 'PayPal',
+  zelle: 'Zelle',
+  crypto: 'Crypto (USDT · Solana)',
+};
+
+// Lazy schema: add the newer affiliate columns + the payouts table. Cached per
+// isolate so we don't run ALTER on every request.
+let affSchemaReady = false;
+export async function ensureAffiliateSchema(env) {
+  if (affSchemaReady || !env.DB) return;
+  for (const col of ['marketing_opt_in INTEGER DEFAULT 0', 'payout_method TEXT', 'payout_handle TEXT']) {
+    try { await env.DB.prepare(`ALTER TABLE affiliates ADD COLUMN ${col}`).run(); } catch {}
+  }
+  await env.DB.prepare(
+    'CREATE TABLE IF NOT EXISTS payouts (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT, email TEXT, amount REAL, method TEXT, handle TEXT, status TEXT, created_date TEXT, paid_date TEXT)'
+  ).run();
+  affSchemaReady = true;
+}
+
+// Commission owed vs already paid/requested, for one affiliate code.
+async function payoutSummary(env, code, totalCommission) {
+  await ensureAffiliateSchema(env);
+  const { results } = await env.DB.prepare(
+    'SELECT id, amount, method, handle, status, created_date, paid_date FROM payouts WHERE code = ? ORDER BY id DESC'
+  ).bind(code).all();
+  const payouts = results || [];
+  const paid = payouts.filter((p) => p.status === 'paid').reduce((s, p) => s + Number(p.amount || 0), 0);
+  const pending = payouts.filter((p) => p.status === 'requested').reduce((s, p) => s + Number(p.amount || 0), 0);
+  const available = Math.max(0, +(totalCommission - paid - pending).toFixed(2));
+  return { available, paid: +paid.toFixed(2), pending: +pending.toFixed(2), payouts };
+}
+
 export async function getAffiliateByCode(env, code) {
   if (!env.DB || !code) return null;
   return env.DB.prepare('SELECT * FROM affiliates WHERE code = ?').bind(normCode(code)).first();
@@ -51,33 +86,6 @@ export async function getAffiliateByEmail(env, email) {
 
 export const normalizeCode = normCode;
 
-// POST /api/affiliate/signup
-export async function signupAffiliate(request, env) {
-  if (!env.DB) return json({ error: 'Service unavailable.' }, 500);
-  let b;
-  try { b = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
-  const name = (b.name || '').trim();
-  const email = (b.email || '').trim().toLowerCase();
-  const code = normCode(b.code);
-  const password = b.password || '';
-
-  if (!name || !email || !code || !password) return json({ error: 'All fields are required.' }, 400);
-  if (code.length < 3) return json({ error: 'Code must be at least 3 characters (letters/numbers).' }, 400);
-  if (password.length < 6) return json({ error: 'Password must be at least 6 characters.' }, 400);
-
-  const existsCode = await env.DB.prepare('SELECT 1 FROM affiliates WHERE code = ?').bind(code).first();
-  if (existsCode) return json({ error: 'That code is already taken — pick another.' }, 409);
-  const existsEmail = await env.DB.prepare('SELECT 1 FROM affiliates WHERE email = ?').bind(email).first();
-  if (existsEmail) return json({ error: 'An account with that email already exists.' }, 409);
-
-  const password_hash = await hashPw(password, email, env);
-  await env.DB.prepare(
-    'INSERT INTO affiliates (code, name, email, password_hash, created_date) VALUES (?,?,?,?,?)'
-  ).bind(code, name, email, password_hash, new Date().toISOString()).run();
-
-  return json({ ok: true, code, name });
-}
-
 // Decode "Authorization: Bearer base64(email:password)" and verify
 async function authedAffiliate(request, env) {
   const header = request.headers.get('Authorization') || '';
@@ -89,10 +97,15 @@ async function authedAffiliate(request, env) {
   if (idx === -1) return null;
   const email = decoded.slice(0, idx).toLowerCase();
   const password = decoded.slice(idx + 1);
-  const aff = await env.DB.prepare('SELECT * FROM affiliates WHERE email = ?').bind(email).first();
+  const aff = await env.DB.prepare('SELECT * FROM affiliates WHERE LOWER(email) = ?').bind(email).first();
   if (!aff) return null;
   const hash = await hashPw(password, email, env);
-  return (await safeEqual(hash, aff.password_hash || '')) ? aff : null;
+  if (await safeEqual(hash, aff.password_hash || '')) return aff;
+  // Unified login: the website (customer) account with the same email also works,
+  // so affiliates never need a separate password. Same hashing scheme + pepper.
+  const cust = await env.DB.prepare('SELECT password_hash FROM customers WHERE LOWER(email) = ?').bind(email).first();
+  if (cust && (await safeEqual(hash, cust.password_hash || ''))) return aff;
+  return null;
 }
 
 // POST /api/affiliate/login
@@ -120,13 +133,56 @@ export async function affiliateStats(request, env) {
   const tier = commissionTier(orders.length);
   const nextTier = tier.name === 'Silver' ? { name: 'Gold', at: 10 } : tier.name === 'Gold' ? { name: 'Platinum', at: 30 } : null;
 
+  const ps = await payoutSummary(env, aff.code, totalCommission);
+
   return json({
     affiliate: { name: aff.name, code: aff.code, email: aff.email },
     stats: { orders: orders.length, totalSales, totalCommission },
     tier: { name: tier.name, rate: Math.round(tier.rate * 100) },
     nextTier: nextTier ? { name: nextTier.name, salesNeeded: Math.max(0, nextTier.at - orders.length) } : null,
     recent: orders.slice(0, 50),
+    payout: {
+      available: ps.available,
+      paid: ps.paid,
+      pending: ps.pending,
+      method: aff.payout_method || null,
+      handle: aff.payout_handle || null,
+      methods: PAYOUT_METHODS,
+      history: ps.payouts.slice(0, 20),
+    },
+    marketingOptIn: !!aff.marketing_opt_in,
   });
+}
+
+// POST /api/affiliate/payout — affiliate requests a payout of available commission.
+// The owner pays manually and marks it paid in admin; we only track the request.
+export async function requestPayout(request, env) {
+  if (!env.DB) return json({ error: 'Service unavailable.' }, 500);
+  const aff = await authedAffiliate(request, env);
+  if (!aff) return json({ error: 'Unauthorized' }, 401);
+  let b; try { b = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
+
+  const method = String(b.method || '').toLowerCase();
+  const handle = String(b.handle || '').trim().slice(0, 120);
+  if (!PAYOUT_METHODS[method]) return json({ error: 'Choose a valid payout method.' }, 400);
+  if (!handle) return json({ error: 'Enter your payout details (handle, email, or address).' }, 400);
+
+  const totalCommission = await env.DB.prepare('SELECT COALESCE(SUM(commission),0) AS c FROM orders WHERE affiliate_code = ?').bind(aff.code).first();
+  const ps = await payoutSummary(env, aff.code, Number(totalCommission?.c || 0));
+  if (ps.available <= 0) return json({ error: 'No commission available to pay out yet.' }, 400);
+
+  let amount = b.amount != null ? Number(b.amount) : ps.available;
+  if (!Number.isFinite(amount) || amount <= 0) return json({ error: 'Enter a valid amount.' }, 400);
+  amount = Math.min(+amount.toFixed(2), ps.available);
+
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    'INSERT INTO payouts (code, email, amount, method, handle, status, created_date) VALUES (?,?,?,?,?,?,?)'
+  ).bind(aff.code, aff.email.toLowerCase(), amount, method, handle, 'requested', now).run();
+  // Remember these details as the affiliate's default for next time.
+  await env.DB.prepare('UPDATE affiliates SET payout_method = ?, payout_handle = ? WHERE code = ?').bind(method, handle, aff.code).run();
+
+  return json({ ok: true, amount, method, handle });
 }
 
 // GET /api/affiliate/validate?code=XXX&email=YYY  (public — used by checkout)

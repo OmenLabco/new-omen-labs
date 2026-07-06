@@ -9,6 +9,7 @@ import { signOrder } from './token.js';
 import { safeEqual, issueAdminSession, verifyAdminSession, zelleSecret } from './security.js';
 import { cryptoWatchDebug } from './cryptoWatch.js';
 import { COST_SHEET, COST_BY_PRODUCT_ID, COST_BY_NAME } from './costs.js';
+import { ensureAffiliateSchema } from './affiliate.js';
 
 const SITE = 'https://omenlabs.co';
 
@@ -69,19 +70,68 @@ export async function listOrders(request, env) {
 export async function listAffiliates(request, env) {
   if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
   if (!env.DB) return json({ affiliates: [] });
+  await ensureAffiliateSchema(env);
 
   const { results } = await env.DB.prepare(
-    `SELECT a.code, a.name, a.email, a.created_date,
+    `SELECT a.code, a.name, a.email, a.created_date, a.marketing_opt_in, a.payout_method, a.payout_handle,
             COUNT(o.id) AS order_count,
             COALESCE(SUM(o.total), 0) AS total_sales,
             COALESCE(SUM(o.commission), 0) AS total_commission
      FROM affiliates a
      LEFT JOIN orders o ON o.affiliate_code = a.code
-     GROUP BY a.code, a.name, a.email, a.created_date
+     GROUP BY a.code, a.name, a.email, a.created_date, a.marketing_opt_in, a.payout_method, a.payout_handle
      ORDER BY total_commission DESC`
   ).all();
 
-  return json({ affiliates: results || [] });
+  // Fold in payout totals (paid / pending) per affiliate code.
+  const { results: pr } = await env.DB.prepare(
+    "SELECT code, status, COALESCE(SUM(amount),0) AS amt FROM payouts GROUP BY code, status"
+  ).all();
+  const paidBy = {}, pendBy = {};
+  for (const row of pr || []) {
+    if (row.status === 'paid') paidBy[row.code] = Number(row.amt || 0);
+    if (row.status === 'requested') pendBy[row.code] = Number(row.amt || 0);
+  }
+  const affiliates = (results || []).map((a) => {
+    const paid = paidBy[a.code] || 0;
+    const pending = pendBy[a.code] || 0;
+    return {
+      ...a,
+      marketing_opt_in: !!a.marketing_opt_in,
+      paid_out: +paid.toFixed(2),
+      pending_payout: +pending.toFixed(2),
+      owed: +Math.max(0, Number(a.total_commission || 0) - paid - pending).toFixed(2),
+    };
+  });
+
+  return json({ affiliates });
+}
+
+// GET /api/admin/payouts — payout requests (pending first)
+export async function listPayouts(request, env) {
+  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
+  if (!env.DB) return json({ payouts: [] });
+  await ensureAffiliateSchema(env);
+  const { results } = await env.DB.prepare(
+    `SELECT p.id, p.code, p.email, p.amount, p.method, p.handle, p.status, p.created_date, p.paid_date, a.name
+     FROM payouts p LEFT JOIN affiliates a ON a.code = p.code
+     ORDER BY (p.status = 'requested') DESC, p.id DESC`
+  ).all();
+  return json({ payouts: results || [] });
+}
+
+// POST /api/admin/payouts/update — mark a payout request paid (or revert)
+export async function updatePayout(request, env) {
+  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
+  if (!env.DB) return json({ error: 'Service unavailable.' }, 500);
+  await ensureAffiliateSchema(env);
+  let b; try { b = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
+  const id = Number(b.id);
+  const status = b.status === 'paid' ? 'paid' : b.status === 'requested' ? 'requested' : null;
+  if (!id || !status) return json({ error: 'Invalid request.' }, 400);
+  const paid_date = status === 'paid' ? new Date().toISOString() : null;
+  await env.DB.prepare('UPDATE payouts SET status = ?, paid_date = ? WHERE id = ?').bind(status, paid_date, id).run();
+  return json({ ok: true, id, status });
 }
 
 // GET /api/admin/customers — list customers with points, spend, tier, order count

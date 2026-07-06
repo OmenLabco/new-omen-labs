@@ -106,6 +106,22 @@ export async function fetchAffiliates() {
   return data.affiliates || [];
 }
 
+export async function fetchPayouts() {
+  const resp = await fetch('/api/admin/payouts', { headers: headers() });
+  if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }
+  if (!resp.ok) throw new Error('Failed to load payouts.');
+  const data = await resp.json();
+  return data.payouts || [];
+}
+
+export async function markPayout(id, status) {
+  const resp = await fetch('/api/admin/payouts/update', {
+    method: 'POST', headers: headers(), body: JSON.stringify({ id, status }),
+  });
+  if (!resp.ok) throw new Error('Failed to update payout.');
+  return resp.json();
+}
+
 export async function fetchCustomers() {
   const resp = await fetch('/api/admin/customers', { headers: headers() });
   if (resp.status === 401) {

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut, Trash2, Eye, EyeOff, Check, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import OrderEditForm from '@/components/admin/OrderEditForm';
 import SalesDashboard from '@/components/admin/SalesDashboard';
 import ProfitView from '@/components/admin/ProfitView';
 import LiveView from '@/components/admin/LiveView';
-import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder } from '@/lib/adminApi';
+import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout } from '@/lib/adminApi';
 import { CRYPTO_WALLETS } from '@/data/cryptoWallets';
 
 function CryptoCheckButton() {
@@ -161,41 +161,101 @@ const Mask = ({ on, children }) => (
   <span className={on ? 'blur-[6px] select-none pointer-events-none' : ''}>{children}</span>
 );
 
+const PAYOUT_LABELS = { cashapp: 'CashApp', paypal: 'PayPal', zelle: 'Zelle', crypto: 'Crypto · USDT/SOL' };
+
 function AffiliatesView({ onLogout, privacy }) {
   const [affiliates, setAffiliates] = useState([]);
+  const [payouts, setPayouts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(0);
+  const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    fetchAffiliates()
-      .then(setAffiliates)
-      .catch((e) => (e.message === 'unauthorized' ? onLogout() : setError(e.message)))
-      .finally(() => setLoading(false));
-  }, []);
+  const load = () => Promise.all([fetchAffiliates(), fetchPayouts()])
+    .then(([a, p]) => { setAffiliates(a); setPayouts(p); })
+    .catch((e) => (e.message === 'unauthorized' ? onLogout() : setError(e.message)))
+    .finally(() => setLoading(false));
+  useEffect(() => { load(); }, []);
 
   if (loading) return <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" /></div>;
   if (error) return <p className="text-destructive text-sm">{error}</p>;
   if (affiliates.length === 0) return <div className="text-center py-16 text-muted-foreground text-sm">No affiliates yet.</div>;
 
   const tierOf = (n) => (n >= 30 ? 'Platinum' : n >= 10 ? 'Gold' : 'Silver');
+  const pending = payouts.filter((p) => p.status === 'requested');
+  const marketingList = affiliates.filter((a) => a.marketing_opt_in);
+
+  const markPaid = async (id) => {
+    setBusy(id);
+    try { await markPayout(id, 'paid'); await load(); }
+    catch (e) { setError(e.message); } finally { setBusy(0); }
+  };
+  const copyMarketing = () => {
+    navigator.clipboard.writeText(marketingList.map((a) => a.email).join(', '));
+    setCopied(true); setTimeout(() => setCopied(false), 1500);
+  };
 
   return (
-    <div className="space-y-2">
-      {affiliates.map((a) => (
-        <div key={a.code} className="flex items-center justify-between p-4 rounded-2xl border border-border">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-mono font-semibold text-sm">{a.code}</span>
-              <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">{tierOf(a.order_count)}</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">{a.name} · <Mask on={privacy}>{a.email}</Mask></p>
-          </div>
-          <div className="text-right shrink-0">
-            <p className="font-mono text-sm font-semibold text-emerald-500">${Number(a.total_commission || 0).toFixed(2)}</p>
-            <p className="text-xs text-muted-foreground">{a.order_count} sales · ${Number(a.total_sales || 0).toFixed(2)}</p>
+    <div className="space-y-6">
+      {/* Pending payout requests */}
+      {pending.length > 0 && (
+        <div>
+          <h3 className="font-mono text-[11px] uppercase tracking-[0.2em] text-amber-500 mb-3">Payout requests · {pending.length}</h3>
+          <div className="space-y-2">
+            {pending.map((p) => (
+              <div key={p.id} className="flex items-center justify-between gap-4 p-4 rounded-2xl border border-amber-500/30 bg-amber-500/[0.04]">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-semibold text-sm">{p.code}</span>
+                    <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">{PAYOUT_LABELS[p.method] || p.method}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    Send to <span className="text-foreground font-medium">{p.handle}</span>{p.name ? ` · ${p.name}` : ''}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="font-mono text-sm font-semibold text-emerald-500">${Number(p.amount || 0).toFixed(2)}</span>
+                  <Button onClick={() => markPaid(p.id)} disabled={busy === p.id} className="h-8 px-3 text-xs gap-1.5">
+                    {busy === p.id ? '…' : <><Check className="h-3.5 w-3.5" /> Mark paid</>}
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      ))}
+      )}
+
+      {/* Marketing opt-in list */}
+      <div className="flex items-center justify-between gap-4 p-4 rounded-2xl border border-border bg-card">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">Email promotions list</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{marketingList.length} affiliate{marketingList.length === 1 ? '' : 's'} opted into promotions, events &amp; updates.</p>
+        </div>
+        <Button variant="outline" onClick={copyMarketing} disabled={marketingList.length === 0} className="h-8 px-3 text-xs gap-1.5 shrink-0">
+          {copied ? <><Check className="h-3.5 w-3.5 text-emerald-500" /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy emails</>}
+        </Button>
+      </div>
+
+      {/* Affiliates */}
+      <div className="space-y-2">
+        {affiliates.map((a) => (
+          <div key={a.code} className="flex items-center justify-between p-4 rounded-2xl border border-border">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-semibold text-sm">{a.code}</span>
+                <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">{tierOf(a.order_count)}</span>
+                {a.marketing_opt_in && <span title="Opted into email promotions" className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-violet-500/15 text-violet-500">Promos</span>}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">{a.name} · <Mask on={privacy}>{a.email}</Mask></p>
+              {a.owed > 0 && <p className="text-[11px] text-amber-500 mt-0.5">${a.owed.toFixed(2)} owed{a.pending_payout > 0 ? ` · $${a.pending_payout.toFixed(2)} requested` : ''}</p>}
+            </div>
+            <div className="text-right shrink-0">
+              <p className="font-mono text-sm font-semibold text-emerald-500">${Number(a.total_commission || 0).toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground">{a.order_count} sales · ${Number(a.total_sales || 0).toFixed(2)}</p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

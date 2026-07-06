@@ -51,11 +51,11 @@ export async function customerMe() {
   return resp.json();
 }
 
-export async function customerEnrollAffiliate(code) {
+export async function customerEnrollAffiliate(code, marketing = false) {
   const resp = await fetch('/api/customer/affiliate-enroll', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${customerAuth.token()}` },
-    body: JSON.stringify({ code }),
+    body: JSON.stringify({ code, marketing }),
   });
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) throw new Error(data.error || 'Enrollment failed.');

@@ -8,26 +8,15 @@ export const affiliateAuth = {
   clear: () => { sessionStorage.removeItem(KEY); localStorage.removeItem(KEY); },
 };
 
-export async function affiliateSignup({ name, email, code, password }) {
-  const resp = await fetch('/api/affiliate/signup', {
+export async function affiliateRequestPayout({ method, handle, amount }) {
+  const resp = await fetch('/api/affiliate/payout', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email, code, password }),
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${affiliateAuth.get()}` },
+    body: JSON.stringify({ method, handle, amount }),
   });
   const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(data.error || 'Signup failed.');
-  affiliateAuth.set(email, password);
-  return data;
-}
-
-export async function affiliateLogin({ email, password }) {
-  const resp = await fetch('/api/affiliate/login', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${btoa(`${email}:${password}`)}` },
-  });
-  const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(data.error || 'Login failed.');
-  affiliateAuth.set(email, password);
+  if (resp.status === 401) { affiliateAuth.clear(); throw new Error('unauthorized'); }
+  if (!resp.ok) throw new Error(data.error || 'Payout request failed.');
   return data;
 }
 

@@ -22,7 +22,7 @@ export function membershipStatus(customer) {
   };
 }
 
-import { getAffiliateByEmail, commissionTier, normalizeCode } from './affiliate.js';
+import { getAffiliateByEmail, commissionTier, normalizeCode, ensureAffiliateSchema } from './affiliate.js';
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
@@ -159,10 +159,13 @@ export async function enrollAffiliate(request, env) {
   const taken = await env.DB.prepare('SELECT 1 FROM affiliates WHERE code = ?').bind(code).first();
   if (taken) return json({ error: 'That code is already taken — pick another.' }, 409);
 
-  // copy the customer's password_hash so /affiliates login works with the same password
+  await ensureAffiliateSchema(env);
+  const marketing = b.marketing ? 1 : 0;
+  // Copy the customer's password_hash + identity so the affiliate account IS the
+  // website account (same login, email locked to the signed-in customer).
   await env.DB.prepare(
-    'INSERT INTO affiliates (code, name, email, password_hash, created_date) VALUES (?,?,?,?,?)'
-  ).bind(code, cust.name, cust.email.toLowerCase(), cust.password_hash, new Date().toISOString()).run();
+    'INSERT INTO affiliates (code, name, email, password_hash, created_date, marketing_opt_in) VALUES (?,?,?,?,?,?)'
+  ).bind(code, cust.name, cust.email.toLowerCase(), cust.password_hash, new Date().toISOString(), marketing).run();
 
-  return json({ ok: true, code });
+  return json({ ok: true, code, marketing: !!marketing });
 }

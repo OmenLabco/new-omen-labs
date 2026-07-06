@@ -2,20 +2,40 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Check, Copy, DollarSign, Package, TrendingUp, LogOut,
-  UserPlus, Share2, Wallet, Tag, BarChart3, Zap, Megaphone, Users,
+  UserPlus, Share2, Wallet, Tag, BarChart3, Zap, Megaphone, Users, Lock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { affiliateAuth, affiliateSignup, affiliateLogin, affiliateStats } from '@/lib/affiliateApi';
-import { customerAuth, customerMe, customerEnrollAffiliate } from '@/lib/customerApi';
+import { affiliateAuth, affiliateStats, affiliateRequestPayout } from '@/lib/affiliateApi';
+import { customerAuth, customerMe, customerSignup, customerLogin, customerEnrollAffiliate } from '@/lib/customerApi';
 
-// Enroll panel for a logged-in customer (one-click, no new password)
-function EnrollPanel({ onEnrolled }) {
+const RESEARCH_FIELDS = ['Pharmacology', 'Molecular Biology', 'Medicinal Chemistry', 'Biochemistry', 'Cell Biology', 'Biotechnology', 'Endocrinology', 'Academic / University Research', 'Institutional / Laboratory Research', 'Other Research Use'];
+
+// Placeholder hints per payout method
+const HANDLE_HINT = {
+  cashapp: '$YourCashtag',
+  paypal: 'PayPal email',
+  zelle: 'Zelle email or phone',
+  crypto: 'USDT wallet address (Solana)',
+};
+
+function Field({ label, ...props }) {
+  return (
+    <div>
+      <label className="block font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">{label}</label>
+      <input {...props} className="w-full h-11 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-70" />
+    </div>
+  );
+}
+
+// Enroll panel for a logged-in customer — email is locked to the website account.
+function EnrollPanel({ email, onEnrolled }) {
   const [code, setCode] = useState('');
+  const [marketing, setMarketing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const submit = async (e) => {
     e.preventDefault(); setError(''); setBusy(true);
-    try { await customerEnrollAffiliate(code); onEnrolled(); }
+    try { await customerEnrollAffiliate(code, marketing); onEnrolled(); }
     catch (err) { setError(err.message); } finally { setBusy(false); }
   };
   return (
@@ -29,10 +49,23 @@ function EnrollPanel({ onEnrolled }) {
       </p>
       <form onSubmit={submit} className="space-y-4 p-6 rounded-2xl border border-border bg-card">
         <div>
+          <label className="block font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Account Email</label>
+          <div className="relative">
+            <input value={email} disabled readOnly
+              className="w-full h-11 px-3 pr-9 rounded-lg border border-border bg-muted/40 text-sm text-muted-foreground" />
+            <Lock className="h-3.5 w-3.5 text-muted-foreground absolute right-3 top-1/2 -translate-y-1/2" />
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-1">Locked to your website account — one login for both.</p>
+        </div>
+        <div>
           <label className="block font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Choose Your Code</label>
           <input value={code} onChange={(e) => setCode(e.target.value)} required placeholder="e.g. JACOB10"
             className="w-full h-11 px-3 rounded-lg border border-border bg-background text-sm uppercase focus:outline-none focus:ring-2 focus:ring-primary/30" />
         </div>
+        <label className="flex items-start gap-2.5 cursor-pointer select-none">
+          <input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} className="h-4 w-4 mt-0.5 accent-primary" />
+          <span className="text-sm text-muted-foreground leading-snug">Sign me up for email promotions, events, product drops &amp; affiliate updates.</span>
+        </label>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={busy} className="w-full h-11">{busy ? 'Activating…' : 'Activate Affiliate Code'}</Button>
       </form>
@@ -40,61 +73,56 @@ function EnrollPanel({ onEnrolled }) {
   );
 }
 
-function Field({ label, ...props }) {
-  return (
-    <div>
-      <label className="block font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">{label}</label>
-      <input
-        {...props}
-        className="w-full h-11 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-      />
-    </div>
-  );
-}
-
-function AuthForms({ onAuthed }) {
-  const [mode, setMode] = useState('signup');
+// Website-account auth (same login as the rest of the site). Signup or log in.
+function CustomerAuthForms({ onAuthed }) {
+  const [mode, setMode] = useState('login');
   const [form, setForm] = useState({});
+  const [remember, setRemember] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   const submit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setBusy(true);
+    e.preventDefault(); setError(''); setBusy(true);
     try {
-      if (mode === 'signup') await affiliateSignup(form);
-      else await affiliateLogin(form);
+      const payload = { ...form, remember };
+      mode === 'signup' ? await customerSignup(payload) : await customerLogin(payload);
       onAuthed();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
+    } catch (err) { setError(err.message); } finally { setBusy(false); }
   };
 
   return (
     <div className="max-w-md mx-auto w-full">
+      <p className="text-sm text-muted-foreground text-center mb-6">Sign in with your Omen Labs account — the same login you use to shop. No separate affiliate password.</p>
       <div className="flex rounded-xl border border-border p-1 mb-6">
-        {['signup', 'login'].map((m) => (
-          <button
-            key={m}
-            onClick={() => { setMode(m); setError(''); }}
-            className={`flex-1 h-9 rounded-lg text-sm font-medium transition-colors ${mode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
-          >
-            {m === 'signup' ? 'Sign Up' : 'Log In'}
+        {['login', 'signup'].map((m) => (
+          <button key={m} onClick={() => { setMode(m); setError(''); }}
+            className={`flex-1 h-9 rounded-lg text-sm font-medium transition-colors ${mode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>
+            {m === 'signup' ? 'Create Account' : 'Log In'}
           </button>
         ))}
       </div>
       <form onSubmit={submit} className="space-y-4 p-6 rounded-2xl border border-border bg-card">
         {mode === 'signup' && <Field label="Full Name" required value={form.name || ''} onChange={set('name')} />}
+        {mode === 'signup' && (
+          <div>
+            <label className="block font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Research Field</label>
+            <select required value={form.research_field || ''} onChange={set('research_field')}
+              className="w-full h-11 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+              <option value="" disabled>Select your research field…</option>
+              {RESEARCH_FIELDS.map((f) => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </div>
+        )}
         <Field label="Email" type="email" required value={form.email || ''} onChange={set('email')} />
-        {mode === 'signup' && <Field label="Choose Your Code" required value={form.code || ''} onChange={set('code')} placeholder="e.g. JACOB" />}
         <Field label="Password" type="password" required value={form.password || ''} onChange={set('password')} />
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="h-4 w-4 accent-primary" />
+          <span className="text-sm text-muted-foreground">Remember me</span>
+        </label>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={busy} className="w-full h-11">
-          {busy ? 'Please wait…' : mode === 'signup' ? 'Create Affiliate Account' : 'Log In'}
+          {busy ? 'Please wait…' : mode === 'signup' ? 'Create Account & Continue' : 'Log In'}
         </Button>
       </form>
     </div>
@@ -102,9 +130,9 @@ function AuthForms({ onAuthed }) {
 }
 
 const STEPS = [
-  { icon: UserPlus, title: 'Sign up free', desc: 'Create your account in seconds and choose your own custom discount code.' },
+  { icon: UserPlus, title: 'Sign up free', desc: 'Use your Omen Labs account and choose your own custom discount code.' },
   { icon: Share2, title: 'Share your code', desc: 'Promote your code and share link with your audience, friends, or community.' },
-  { icon: Wallet, title: 'Get paid', desc: 'Earn commission on every order placed with your code — tracked in real time.' },
+  { icon: Wallet, title: 'Get paid', desc: 'Request a payout to CashApp, PayPal, Zelle, or crypto right from your dashboard.' },
 ];
 
 const PERKS = [
@@ -112,7 +140,7 @@ const PERKS = [
   { icon: Tag, title: '20% off for your audience', desc: 'New customers save 20% on their first order (10% after).' },
   { icon: BarChart3, title: 'Real-time dashboard', desc: 'Track clicks, orders, and earnings live.' },
   { icon: Zap, title: 'Custom code', desc: 'Pick your own memorable, on-brand code.' },
-  { icon: DollarSign, title: 'No cost to join', desc: 'Free to sign up — start earning right away.' },
+  { icon: DollarSign, title: 'Flexible payouts', desc: 'Cash out via CashApp, PayPal, Zelle, or USDT (Solana).' },
   { icon: Megaphone, title: 'Marketing-ready', desc: 'Share links auto-apply your code at checkout.' },
 ];
 
@@ -124,18 +152,17 @@ const TIERS = [
 
 const FAQS = [
   { q: 'How much does it cost to join?', a: 'Nothing — the affiliate program is completely free to join.' },
+  { q: 'Do I need a separate affiliate account?', a: 'No. Your affiliate program uses the same login as your Omen Labs website account — one email, one password for both.' },
   { q: 'How do I earn commission?', a: 'Every time someone orders using your code, you earn a percentage of that order. Your rate increases as you reach higher tiers.' },
   { q: 'What do my customers get?', a: 'New customers get 20% off their first order, and 10% off afterward — a great incentive to use your code.' },
   { q: 'How do tiers work?', a: 'You start at Silver (5%). After 10 sales you reach Gold (10%), and after 30 sales you reach Platinum (17%).' },
-  { q: 'How do I track my earnings?', a: 'Your dashboard shows your code, total orders, sales, commission earned, and your current tier in real time.' },
-  { q: 'How do I get paid?', a: 'Reach out to support@omenlabs.co to arrange payouts of your earned commission.' },
+  { q: 'How do I get paid?', a: 'From your dashboard, hit “Request payout” and choose CashApp, PayPal, Zelle, or crypto (USDT on Solana). We send your commission to the details you provide.' },
 ];
 
 function Landing({ onAuthed }) {
   const scrollToJoin = () => document.getElementById('join')?.scrollIntoView({ behavior: 'smooth' });
   return (
     <div className="max-w-5xl mx-auto">
-      {/* Hero */}
       <div className="text-center max-w-2xl mx-auto">
         <div className="flex items-center gap-2 mb-3 justify-center">
           <div className="h-px w-6 bg-primary" />
@@ -150,13 +177,8 @@ function Landing({ onAuthed }) {
         <Button onClick={scrollToJoin} className="h-12 px-8 text-sm font-medium tracking-wide">Become an Affiliate</Button>
       </div>
 
-      {/* Stats band */}
       <div className="grid grid-cols-3 gap-4 mt-16 mb-20">
-        {[
-          { v: '17%', l: 'Top commission' },
-          { v: '20%', l: 'Off for new customers' },
-          { v: '$0', l: 'Cost to join' },
-        ].map((s) => (
+        {[{ v: '17%', l: 'Top commission' }, { v: '20%', l: 'Off for new customers' }, { v: '$0', l: 'Cost to join' }].map((s) => (
           <div key={s.l} className="text-center p-5 rounded-2xl border border-border bg-card">
             <p className="text-3xl md:text-4xl font-bold text-primary">{s.v}</p>
             <p className="text-xs text-muted-foreground mt-1">{s.l}</p>
@@ -164,7 +186,6 @@ function Landing({ onAuthed }) {
         ))}
       </div>
 
-      {/* Tiers */}
       <div className="mb-20">
         <h2 className="text-2xl font-bold tracking-tight text-center mb-3">Commission tiers</h2>
         <p className="text-sm text-muted-foreground text-center mb-10">The more you sell, the more you earn.</p>
@@ -179,7 +200,6 @@ function Landing({ onAuthed }) {
         </div>
       </div>
 
-      {/* How it works */}
       <div className="mb-20">
         <h2 className="text-2xl font-bold tracking-tight text-center mb-10">How it works</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -196,7 +216,6 @@ function Landing({ onAuthed }) {
         </div>
       </div>
 
-      {/* Perks */}
       <div className="mb-20">
         <h2 className="text-2xl font-bold tracking-tight text-center mb-10">Why partner with us</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -210,8 +229,6 @@ function Landing({ onAuthed }) {
         </div>
       </div>
 
-
-      {/* Who it's for */}
       <div className="mb-20 p-8 rounded-2xl border border-border bg-card">
         <div className="flex items-center gap-3 mb-5">
           <Users className="h-5 w-5 text-primary" />
@@ -224,7 +241,6 @@ function Landing({ onAuthed }) {
         </div>
       </div>
 
-      {/* FAQ */}
       <div className="mb-20 max-w-2xl mx-auto">
         <h2 className="text-2xl font-bold tracking-tight text-center mb-10">Frequently asked questions</h2>
         <div className="space-y-5">
@@ -237,12 +253,96 @@ function Landing({ onAuthed }) {
         </div>
       </div>
 
-      {/* Join form */}
       <div id="join" className="scroll-mt-24">
         <h2 className="text-2xl font-bold tracking-tight text-center mb-2">Join the program</h2>
-        <p className="text-sm text-muted-foreground text-center mb-8">Create your account or log in to your dashboard.</p>
-        <AuthForms onAuthed={onAuthed} />
+        <CustomerAuthForms onAuthed={onAuthed} />
       </div>
+    </div>
+  );
+}
+
+// Payout card — request a payout of available commission.
+function PayoutBox({ payout, onDone }) {
+  const [open, setOpen] = useState(false);
+  const [method, setMethod] = useState(payout.method || 'cashapp');
+  const [handle, setHandle] = useState(payout.handle || '');
+  const [amount, setAmount] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
+  const methods = payout.methods || {};
+
+  const submit = async (e) => {
+    e.preventDefault(); setError(''); setOk(''); setBusy(true);
+    try {
+      const res = await affiliateRequestPayout({ method, handle, amount: amount ? Number(amount) : undefined });
+      setOk(`Payout requested: $${Number(res.amount).toFixed(2)} via ${methods[res.method] || res.method}. We'll send it shortly.`);
+      setOpen(false); setAmount('');
+      onDone();
+    } catch (err) { setError(err.message); } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="p-6 rounded-2xl border border-border bg-card mb-6">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">Available to Withdraw</p>
+          <p className="text-3xl font-bold text-emerald-500">${payout.available.toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            ${payout.paid.toFixed(2)} paid{payout.pending > 0 ? ` · $${payout.pending.toFixed(2)} pending` : ''}
+          </p>
+        </div>
+        <Button onClick={() => { setOpen((o) => !o); setError(''); setOk(''); }} disabled={payout.available <= 0} className="h-10 gap-2">
+          <Wallet className="h-4 w-4" /> {open ? 'Cancel' : 'Request payout'}
+        </Button>
+      </div>
+
+      {ok && <p className="text-sm text-emerald-500 mt-4">{ok}</p>}
+
+      {open && (
+        <form onSubmit={submit} className="mt-5 pt-5 border-t border-border space-y-4">
+          <div>
+            <label className="block font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Payout Method</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {Object.entries(methods).map(([k, label]) => (
+                <button type="button" key={k} onClick={() => setMethod(k)}
+                  className={`h-11 rounded-lg border text-xs font-medium px-2 transition-colors ${method === k ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-primary/40'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <Field label={method === 'crypto' ? 'USDT Wallet (Solana)' : 'Send To'} required value={handle}
+            onChange={(e) => setHandle(e.target.value)} placeholder={HANDLE_HINT[method]} />
+          <div>
+            <label className="block font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Amount (optional)</label>
+            <input type="number" step="0.01" min="0" max={payout.available} value={amount} onChange={(e) => setAmount(e.target.value)}
+              placeholder={`Full balance · $${payout.available.toFixed(2)}`}
+              className="w-full h-11 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button type="submit" disabled={busy} className="w-full h-11">{busy ? 'Requesting…' : `Request $${amount ? Number(amount).toFixed(2) : payout.available.toFixed(2)} payout`}</Button>
+        </form>
+      )}
+
+      {payout.history?.length > 0 && (
+        <div className="mt-5 pt-5 border-t border-border">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Payout history</p>
+          <div className="space-y-2">
+            {payout.history.map((h) => (
+              <div key={h.id} className="flex items-center justify-between text-sm">
+                <div>
+                  <span className="font-medium">${Number(h.amount).toFixed(2)}</span>
+                  <span className="text-muted-foreground"> · {methods[h.method] || h.method}</span>
+                </div>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${h.status === 'paid' ? 'text-emerald-500 bg-emerald-500/10' : 'text-amber-500 bg-amber-500/10'}`}>
+                  {h.status === 'paid' ? 'Paid' : 'Requested'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -252,16 +352,13 @@ function Dashboard({ onLogout }) {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    affiliateStats()
-      .then(setData)
-      .catch((e) => (e.message === 'unauthorized' ? onLogout() : setError(e.message)));
-  }, []);
+  const load = () => affiliateStats().then(setData).catch((e) => (e.message === 'unauthorized' ? onLogout() : setError(e.message)));
+  useEffect(() => { load(); }, []);
 
   if (error) return <p className="text-center text-destructive">{error}</p>;
   if (!data) return <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" /></div>;
 
-  const { affiliate, stats, recent, tier, nextTier } = data;
+  const { affiliate, stats, recent, tier, nextTier, payout } = data;
   const link = `https://omenlabs.co/?ref=${affiliate.code}`;
   const copy = () => { navigator.clipboard.writeText(affiliate.code); setCopied(true); setTimeout(() => setCopied(false), 1500); };
 
@@ -300,7 +397,7 @@ function Dashboard({ onLogout }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         {[
           { icon: Package, label: 'Orders', value: stats.orders },
           { icon: TrendingUp, label: 'Total Sales', value: `$${stats.totalSales.toFixed(2)}` },
@@ -313,6 +410,8 @@ function Dashboard({ onLogout }) {
           </div>
         ))}
       </div>
+
+      {payout && <PayoutBox payout={payout} onDone={load} />}
 
       <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-4">Recent Orders</h2>
       {recent.length === 0 ? (
@@ -338,36 +437,31 @@ function Dashboard({ onLogout }) {
 }
 
 export default function Affiliates() {
-  const [authed, setAuthed] = useState(!!affiliateAuth.get());
-  // customer-linked state: null=loading, false=not a customer, object=customer me
+  // null = loading, false = not logged in, object = customer "me"
   const [cust, setCust] = useState(customerAuth.isLoggedIn() ? null : false);
+
+  const reload = () => customerMe()
+    .then((me) => {
+      // mirror the customer session into affiliate auth so the dashboard/payout calls work
+      affiliateAuth.setRaw(customerAuth.token());
+      setCust(me);
+    })
+    .catch(() => setCust(false));
 
   useEffect(() => {
     if (!customerAuth.isLoggedIn()) { setCust(false); return; }
-    customerMe()
-      .then((me) => {
-        // mirror the customer session into affiliate auth so the dashboard works
-        if (!affiliateAuth.get()) affiliateAuth.setRaw(customerAuth.token());
-        setCust(me);
-      })
-      .catch(() => setCust(false));
+    reload();
   }, []);
 
   const content = () => {
-    // Logged-in customer flow (unified login)
+    if (cust === null) return <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" /></div>;
     if (cust && typeof cust === 'object') {
       if (cust.affiliate?.enrolled) {
-        return <Dashboard onLogout={() => { customerAuth.clear(); setCust(false); setAuthed(false); }} />;
+        return <Dashboard onLogout={() => { customerAuth.clear(); setCust(false); }} />;
       }
-      return <EnrollPanel onEnrolled={() => customerMe().then(setCust)} />;
+      return <EnrollPanel email={cust.email} onEnrolled={reload} />;
     }
-    if (cust === null) {
-      return <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" /></div>;
-    }
-    // Not a logged-in customer → legacy affiliate login/signup
-    return authed
-      ? <Dashboard onLogout={() => { affiliateAuth.clear(); setAuthed(false); }} />
-      : <Landing onAuthed={() => setAuthed(true)} />;
+    return <Landing onAuthed={reload} />;
   };
 
   return (
