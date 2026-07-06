@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Check, Copy, DollarSign, Package, TrendingUp, LogOut,
-  UserPlus, Share2, Wallet, Tag, BarChart3, Zap, Megaphone, Users, Lock,
+  UserPlus, Share2, Wallet, Tag, BarChart3, Zap, Megaphone, Users, Lock, Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { affiliateAuth, affiliateStats, affiliateRequestPayout } from '@/lib/affiliateApi';
@@ -17,6 +17,58 @@ const HANDLE_HINT = {
   zelle: 'Zelle email or phone',
   crypto: 'USDT wallet address (Solana)',
 };
+
+const esc = (s = '') => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// Open a clean, print-friendly receipt in a new window and trigger print
+// (the browser's "Save as PDF" produces the downloadable file). No dependencies.
+function openReceipt({ receiptNo, amount, methodLabel, handle, paidDate, code, name }) {
+  const when = paidDate ? new Date(paidDate).toLocaleString(undefined, { dateStyle: 'long', timeStyle: 'short' }) : '';
+  const row = (k, v, mono) => `<tr><td class="k">${esc(k)}</td><td class="v"${mono ? ' style="font-family:ui-monospace,Menlo,monospace"' : ''}>${esc(v)}</td></tr>`;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Receipt ${esc(receiptNo)}</title>
+<style>
+  *{box-sizing:border-box} body{margin:0;background:#f4f5f8;color:#0a0a0b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .wrap{max-width:520px;margin:40px auto;background:#fff;border:1px solid #e4e6ee;border-radius:16px;overflow:hidden}
+  .hd{padding:28px 32px;border-bottom:1px solid #eceef4;display:flex;justify-content:space-between;align-items:center}
+  .brand{font-weight:800;letter-spacing:3px;font-size:14px}
+  .brand span{-webkit-text-stroke:1px #0a0a0b;color:transparent}
+  .paid{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#0f9d58;background:#e7f6ee;border:1px solid #bfe6cf;padding:5px 12px;border-radius:999px}
+  .body{padding:28px 32px}
+  .ttl{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#8b90a0;margin:0 0 6px}
+  .amt{font-size:40px;font-weight:800;margin:0 0 22px;letter-spacing:-1px}
+  table{width:100%;border-collapse:collapse}
+  td{padding:12px 0;border-bottom:1px solid #eff1f6;font-size:14px;vertical-align:top}
+  td.k{color:#8b90a0} td.v{text-align:right;font-weight:600}
+  tr:last-child td{border-bottom:0}
+  .ft{padding:20px 32px 28px;color:#9aa0ae;font-size:12px;line-height:1.6;border-top:1px solid #eceef4}
+  @media print{body{background:#fff}.wrap{border:0;margin:0;max-width:none}.noprint{display:none}}
+  .noprint{text-align:center;margin:18px 0 40px}
+  .btn{font:inherit;font-weight:600;padding:10px 22px;border-radius:10px;border:0;background:#2b6bff;color:#fff;cursor:pointer}
+</style></head><body>
+  <div class="wrap">
+    <div class="hd"><div class="brand">OMEN <span>LABS</span></div><div class="paid">Paid</div></div>
+    <div class="body">
+      <p class="ttl">Affiliate Payout Receipt</p>
+      <p class="amt">$${Number(amount).toFixed(2)}</p>
+      <table>
+        ${row('Method', methodLabel)}
+        ${row('Sent to', handle, true)}
+        ${row('Date & time', when)}
+        ${row('Receipt #', receiptNo, true)}
+        ${row('Affiliate code', code, true)}
+        ${name ? row('Affiliate', name) : ''}
+      </table>
+    </div>
+    <div class="ft">This confirms an affiliate commission payout from Omen Labs · omenlabs.co. Keep for your records. Questions? support@omenlabs.co</div>
+  </div>
+  <div class="noprint"><button class="btn" onclick="window.print()">Print / Save as PDF</button></div>
+  <script>window.onload=function(){setTimeout(function(){window.focus();window.print();},250);};<\/script>
+</body></html>`;
+  const w = window.open('', '_blank');
+  if (!w) { alert('Please allow pop-ups to download your receipt.'); return; }
+  w.document.write(html);
+  w.document.close();
+}
 
 function Field({ label, ...props }) {
   return (
@@ -262,7 +314,7 @@ function Landing({ onAuthed }) {
 }
 
 // Payout card — request a payout of available commission.
-function PayoutBox({ payout, onDone }) {
+function PayoutBox({ payout, affiliate, onDone }) {
   const [open, setOpen] = useState(false);
   const [method, setMethod] = useState(payout.method || 'cashapp');
   const [handle, setHandle] = useState(payout.handle || '');
@@ -354,9 +406,19 @@ function PayoutBox({ payout, onDone }) {
                     <p className="text-[11px] text-muted-foreground mt-0.5">Requested {h.created_date ? new Date(h.created_date).toLocaleDateString() : ''}</p>
                   )}
                 </div>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${h.status === 'paid' ? 'text-emerald-500 bg-emerald-500/10' : 'text-amber-500 bg-amber-500/10'}`}>
-                  {h.status === 'paid' ? 'Paid' : 'Requested'}
-                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  {h.status === 'paid' && h.receipt_no && (
+                    <button
+                      onClick={() => openReceipt({ receiptNo: h.receipt_no, amount: h.amount, methodLabel: methods[h.method] || h.method, handle: h.handle, paidDate: h.paid_date, code: affiliate.code, name: affiliate.name })}
+                      title="Download / print receipt"
+                      className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
+                      <Download className="h-3.5 w-3.5" /> Receipt
+                    </button>
+                  )}
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${h.status === 'paid' ? 'text-emerald-500 bg-emerald-500/10' : 'text-amber-500 bg-amber-500/10'}`}>
+                    {h.status === 'paid' ? 'Paid' : 'Requested'}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
@@ -430,7 +492,7 @@ function Dashboard({ onLogout }) {
         ))}
       </div>
 
-      {payout && <PayoutBox payout={payout} onDone={load} />}
+      {payout && <PayoutBox payout={payout} affiliate={affiliate} onDone={load} />}
 
       <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-4">Recent Orders</h2>
       {recent.length === 0 ? (
