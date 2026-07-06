@@ -2,15 +2,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Flame, TrendingUp, FlaskConical, Crown } from 'lucide-react';
 import ProductVialImage from './ProductVialImage';
-import { getFeaturedProducts, getCategories } from '@/data/products';
-
-const categoryStyles = {
-  'Peptide Research':    { chip: 'text-emerald-600 bg-emerald-500/10 border-emerald-500/30', glow: 'from-emerald-500/25', ring: 'hover:border-emerald-400/40' },
-  'Dermal Research':  { chip: 'text-pink-600 bg-pink-500/10 border-pink-500/30',          glow: 'from-pink-500/25',    ring: 'hover:border-pink-400/40' },
-  'Metabolic Research': { chip: 'text-amber-600 bg-amber-500/10 border-amber-500/30',       glow: 'from-amber-500/25',   ring: 'hover:border-amber-400/40' },
-  'Cellular Research':   { chip: 'text-primary bg-primary/10 border-primary/25',             glow: 'from-blue-500/25',    ring: 'hover:border-primary/40' },
-};
-const fallbackStyle = { chip: 'text-muted-foreground bg-white/5 border-black/10', glow: 'from-white/10', ring: 'hover:border-black/20' };
+import { getFeaturedProducts } from '@/data/products';
 
 const MEDAL = {
   1: {
@@ -155,45 +147,30 @@ export default function FeaturedProducts() {
               Trending in the lab
             </p>
             <div className="flex gap-3 overflow-x-auto snap-x pt-3 pb-4 -mx-4 px-4 sm:mx-0 sm:px-2 sm:-mx-2 scrollbar-none">
-              {rest.map((product) => {
-                const cs = categoryStyles[product.category] || fallbackStyle;
-                return (
-                  <Link
-                    key={product.id}
-                    to={`/product/${product.slug}`}
-                    className={`card-lift group shrink-0 w-36 sm:w-40 snap-start rounded-2xl border border-border bg-card overflow-hidden active:scale-[0.97] ${cs.ring}`}
-                  >
-                    <div className="relative aspect-square overflow-hidden">
-                      <ProductVialImage
-                        image={product.image}
-                        name={product.name}
-                        className="absolute inset-0 h-full w-full"
-                        style={{ objectFit: 'cover' }}
-                      />
-                      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#05070d]/90 to-transparent pointer-events-none" />
-                    </div>
-                    <div className="p-3 flex items-end justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-[13px] font-semibold leading-tight truncate group-hover:text-primary transition-colors">{product.name}</p>
-                        <p className="mt-0.5 text-[13px] font-bold">
-                          {product.has_multiple && <span className="text-[10px] font-normal text-muted-foreground">from </span>}
-                          ${product.price?.toFixed(2)}
-                        </p>
-                      </div>
-                      <div className="flex flex-col items-end gap-0.5 shrink-0">
-                        {getCategories(product).map((cat) => {
-                          const ccs = categoryStyles[cat] || fallbackStyle;
-                          return (
-                            <span key={cat} className={`font-mono text-[7px] uppercase tracking-wider px-1.5 py-0.5 rounded-full border ${ccs.chip}`}>
-                              {cat}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+              {rest.map((product) => (
+                <Link
+                  key={product.id}
+                  to={`/product/${product.slug}`}
+                  className="card-lift group shrink-0 w-44 sm:w-48 snap-start rounded-2xl border border-border bg-card overflow-hidden active:scale-[0.97] hover:border-primary/30"
+                >
+                  <div className="relative aspect-square overflow-hidden">
+                    <ProductVialImage
+                      image={product.image}
+                      name={product.name}
+                      className="absolute inset-0 h-full w-full"
+                      style={{ objectFit: 'cover' }}
+                    />
+                    <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#05070d]/90 to-transparent pointer-events-none" />
+                  </div>
+                  <div className="p-3.5">
+                    <p className="text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5rem] group-hover:text-primary transition-colors">{product.name}</p>
+                    <p className="mt-1 text-sm font-bold">
+                      {product.has_multiple && <span className="text-[11px] font-normal text-muted-foreground">from </span>}
+                      ${product.price?.toFixed(2)}
+                    </p>
+                  </div>
+                </Link>
+              ))}
             </div>
 
           </motion.div>
