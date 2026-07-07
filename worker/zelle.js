@@ -1,7 +1,11 @@
-// Zelle payment reconciliation.
-// A phone Shortcut forwards the Bank of America "you received $X" SMS to
-// POST /api/zelle/notify with the shared secret header. We parse the order
-// number from the memo + the amount, match an awaiting order, and mark it paid.
+// Zelle + Cash App payment reconciliation.
+// Two entry points feed the same core reconciler:
+//   1) POST /api/zelle/notify — a phone Shortcut forwards the bank "you received
+//      $X" SMS (shared secret required).
+//   2) email() handler — a Cloudflare Email Worker receives Cash App receipt
+//      emails (DKIM-verified) and reconciles them hands-off.
+// We parse the OMEN order number + amount from the text, match an awaiting
+// order, and mark it confirmed.
 import { renderImageEmail, sendEmail } from './email.js';
 import { signOrder } from './token.js';
 import { safeEqual, zelleSecret } from './security.js';
@@ -12,6 +16,73 @@ const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 
 function safeParse(s) { try { return JSON.parse(s || '[]'); } catch { return []; } }
+
+// Core reconciler — shared by the SMS endpoint and the Cash App email worker.
+// opts.methodPrefix ('Cash App' | 'Zelle') scopes the amount-only fallback so a
+// payment can only auto-confirm an order of the SAME method.
+export async function reconcilePayment(env, text, opts = {}) {
+  if (!env.DB) return { ok: false, reason: 'no_db' };
+
+  const orderMatch = text.match(/OMEN-?\s*([XIVLCDM]{6})/i);
+  const amountMatch = text.match(/\$?\s*([0-9][0-9,]*\.\d{2})/);
+  const paidAmount = amountMatch ? Number(amountMatch[1].replace(/,/g, '')) : null;
+  const prefix = opts.methodPrefix || (/cash\s*app/i.test(text) ? 'Cash App' : 'Zelle');
+
+  let order = null;
+  if (orderMatch) {
+    const orderNumber = `OMEN-${orderMatch[1].toUpperCase()}`;
+    order = await env.DB.prepare('SELECT * FROM orders WHERE order_number = ?').bind(orderNumber).first();
+    if (!order) return { ok: false, reason: 'order_not_found', orderNumber };
+  }
+
+  // Fallback: no order number in the text (e.g. Cash App email without the note)
+  // → match a SINGLE awaiting order of this method by its unique amount.
+  if (!order && paidAmount != null) {
+    const { results } = await env.DB.prepare(
+      "SELECT * FROM orders WHERE status = 'awaiting_payment' AND payment_method LIKE ? AND ABS(total - ?) < 0.02"
+    ).bind(prefix + '%', paidAmount).all();
+    const rows = results || [];
+    if (rows.length === 1) order = rows[0];
+    else if (rows.length > 1) return { ok: false, reason: 'ambiguous_amount', paidAmount };
+  }
+
+  if (!order) return { ok: false, reason: 'no_match', paidAmount };
+  if (order.status !== 'awaiting_payment') {
+    return { ok: true, alreadyHandled: true, orderNumber: order.order_number, status: order.status };
+  }
+
+  // Verify amount covers the order total (allow a tiny rounding tolerance)
+  const expectedTotal = Number(order.total || 0);
+  if (paidAmount != null && paidAmount + 0.01 < expectedTotal) {
+    return { ok: false, reason: 'amount_mismatch', orderNumber: order.order_number, paidAmount, expectedTotal };
+  }
+
+  // Keep the label accurate to how they paid.
+  const method = (order.payment_method || '').startsWith('Cash App') ? 'Cash App' : 'Zelle';
+  const confirmedLabel = `${method} — payment confirmed`;
+
+  await env.DB.prepare("UPDATE orders SET status = 'confirmed', payment_method = ? WHERE order_number = ?")
+    .bind(confirmedLabel, order.order_number).run();
+
+  // Hand the paid order to ShipStation (no-op if not configured)
+  await pushToShipStation(env, { ...order, status: 'confirmed', payment_method: confirmedLabel });
+
+  // Send the customer their confirmation (best effort)
+  if (env.RESEND_API_KEY && order.customer_email) {
+    try {
+      const token = await signOrder(order.order_number, env.ADMIN_PASSWORD);
+      const imageUrl = `${SITE}/api/receipt-image?o=${encodeURIComponent(order.order_number)}&t=${token}&type=confirmation`;
+      const orderObj = { ...order, status: 'confirmed', payment_method: confirmedLabel, items: safeParse(order.items), billing: order.billing ? safeParse(order.billing) : null };
+      await sendEmail(env, {
+        to: order.customer_email,
+        subject: `Payment Received — Order Confirmed ${order.order_number}`,
+        html: renderImageEmail({ imageUrl, order: orderObj }),
+      });
+    } catch {}
+  }
+
+  return { ok: true, marked_paid: true, orderNumber: order.order_number, paidAmount, expectedTotal, method };
+}
 
 export async function handleZelleNotify(request, env) {
   if (!env.DB) return json({ error: 'Service unavailable.' }, 500);
@@ -27,50 +98,7 @@ export async function handleZelleNotify(request, env) {
   const text = String(body.text || body.message || '');
   if (!text) return json({ error: 'No message text.' }, 400);
 
-  // Parse order number (OMEN- followed by 6 roman-numeral letters) and amount
-  const orderMatch = text.match(/OMEN-?\s*([XIVLCDM]{6})/i);
-  const amountMatch = text.match(/\$?\s*([0-9][0-9,]*\.\d{2})/);
-  if (!orderMatch) return json({ ok: false, reason: 'no_order_number', note: 'No OMEN order number found in message.' });
-
-  const orderNumber = `OMEN-${orderMatch[1].toUpperCase()}`;
-  const paidAmount = amountMatch ? Number(amountMatch[1].replace(/,/g, '')) : null;
-
-  const order = await env.DB.prepare('SELECT * FROM orders WHERE order_number = ?').bind(orderNumber).first();
-  if (!order) return json({ ok: false, reason: 'order_not_found', orderNumber });
-  if (order.status !== 'awaiting_payment') {
-    return json({ ok: true, alreadyHandled: true, orderNumber, status: order.status });
-  }
-
-  // Verify amount covers the order total (allow a tiny rounding tolerance)
-  const expectedTotal = Number(order.total || 0);
-  if (paidAmount != null && paidAmount + 0.01 < expectedTotal) {
-    return json({ ok: false, reason: 'amount_mismatch', orderNumber, paidAmount, expectedTotal });
-  }
-
-  // Keep the payment method accurate (this same endpoint reconciles both Zelle
-  // and Cash App — a forwarded Cash App notification confirms a Cash App order).
-  const method = (order.payment_method || '').startsWith('Cash App') ? 'Cash App' : 'Zelle';
-  const confirmedLabel = `${method} — payment confirmed`;
-
-  // Mark paid → confirmed (and update the payment label so the receipt reads "confirmed")
-  await env.DB.prepare("UPDATE orders SET status = 'confirmed', payment_method = ? WHERE order_number = ?").bind(confirmedLabel, orderNumber).run();
-
-  // Hand the paid order to ShipStation for fulfillment (no-op if not configured)
-  await pushToShipStation(env, { ...order, status: 'confirmed', payment_method: confirmedLabel });
-
-  // Send the customer their confirmation (best effort)
-  if (env.RESEND_API_KEY && order.customer_email) {
-    try {
-      const token = await signOrder(orderNumber, env.ADMIN_PASSWORD);
-      const imageUrl = `${SITE}/api/receipt-image?o=${encodeURIComponent(orderNumber)}&t=${token}&type=confirmation`;
-      const orderObj = { ...order, status: 'confirmed', payment_method: confirmedLabel, items: safeParse(order.items), billing: order.billing ? safeParse(order.billing) : null };
-      await sendEmail(env, {
-        to: order.customer_email,
-        subject: `Payment Received — Order Confirmed ${orderNumber}`,
-        html: renderImageEmail({ imageUrl, order: orderObj }),
-      });
-    } catch {}
-  }
-
-  return json({ ok: true, marked_paid: true, orderNumber, paidAmount, expectedTotal });
+  const result = await reconcilePayment(env, text);
+  const status = result.ok ? 200 : (result.reason === 'order_not_found' || result.reason === 'no_match') ? 200 : 200;
+  return json(result, status);
 }

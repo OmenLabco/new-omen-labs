@@ -230,6 +230,20 @@ export async function handleOrder(request, env) {
       }
     } catch {}
   }
+  // Cash App: nudge the total by a few cents so it's UNIQUE among open awaiting
+  // Cash App orders — lets the email watcher confirm by amount even if the
+  // customer forgot to include the order number in the "For" note.
+  if (isCashapp && env.DB) {
+    try {
+      for (let i = 0; i < 100; i++) {
+        const clash = await env.DB.prepare(
+          "SELECT 1 FROM orders WHERE status = 'awaiting_payment' AND payment_method LIKE 'Cash App%' AND ABS(total - ?) < 0.005"
+        ).bind(total).first();
+        if (!clash) break;
+        total = +(total + 0.01).toFixed(2);
+      }
+    } catch {}
+  }
   const paymentLabel = isZelle ? 'Zelle — awaiting payment' : isCashapp ? 'Cash App — awaiting payment' : isCrypto ? 'Crypto — awaiting payment' : 'Manual — invoice to follow';
   // Zelle + Cash App + crypto orders wait for payment confirmation (auto-reconciled via SMS / IPN webhook).
   const orderStatus = (isZelle || isCashapp || isCrypto) ? 'awaiting_payment' : 'processing';

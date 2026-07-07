@@ -11,6 +11,7 @@ import { handleShipstationWebhook, runShipstationSync } from './shipstation.js';
 import { runTrackingWatch } from './tracking.js';
 import { recordPresence, liveStats } from './presence.js';
 import { createPaymentSession, paymentCallback, paymentStatus } from './payment.js';
+import { handleIncomingEmail } from './emailIn.js';
 
 // Per-endpoint rate limits (max attempts / window). Keyed by client IP.
 const LIMITS = {
@@ -63,6 +64,11 @@ export default {
   // Cron trigger: auto-confirm crypto payments + advance shipped orders via USPS tracking.
   async scheduled(event, env, ctx) {
     ctx.waitUntil(Promise.all([runCryptoWatch(env), runShipstationSync(env), runTrackingWatch(env)]));
+  },
+
+  // Email Routing: Cash App receipt emails → auto-confirm the matching order.
+  async email(message, env, ctx) {
+    ctx.waitUntil(handleIncomingEmail(message, env));
   },
 };
 
