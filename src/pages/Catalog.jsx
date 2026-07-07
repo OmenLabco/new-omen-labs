@@ -10,10 +10,11 @@ import ProductVialImage from '../components/ProductVialImage';
 // Soft pastel image backdrops, picked by the product's primary category —
 // mirrors the per-product tinted cards on the reference store.
 const CARD_BG = {
-  'Peptide Research': 'linear-gradient(160deg,#f3f8f5 0%,#eaf2ee 100%)',
-  'Dermal Research': 'linear-gradient(160deg,#faf2f6 0%,#f4e9f0 100%)',
   'Metabolic Research': 'linear-gradient(160deg,#f8f5ee 0%,#f1ebdf 100%)',
-  'Cellular Research': 'linear-gradient(160deg,#f4f6fa 0%,#edf0f6 100%)',
+  'Regenerative Research': 'linear-gradient(160deg,#f3f8f5 0%,#eaf2ee 100%)',
+  'Neuro Research': 'linear-gradient(160deg,#f4f6fa 0%,#edf0f6 100%)',
+  'Dermal Research': 'linear-gradient(160deg,#faf2f6 0%,#f4e9f0 100%)',
+  'Lab Supplies': 'linear-gradient(160deg,#f6f7fa 0%,#eef0f4 100%)',
 };
 const FALLBACK_BG = 'linear-gradient(160deg,#f6f7fa 0%,#eef0f4 100%)';
 

@@ -11,7 +11,7 @@ export const PRODUCTS = [
     id: "test-item",
     name: "Test Item (Do Not Order)",
     slug: "test-item",
-    category: "Peptide Research",
+    category: "Lab Supplies",
     short_description: "Internal $1 test product for payment testing only.",
     description: "Internal test product used to verify checkout and payment flow. Not a real product — please do not order.",
     purity: 99,
@@ -25,7 +25,6 @@ export const PRODUCTS = [
     name: "GLP-3 RT",
     slug: "glp-rt",
     category: "Metabolic Research",
-    categories: ["Metabolic Research", "Cellular Research"],
     short_description: "GLP-3 receptor targeting peptide for metabolic research.",
     description:
       "GLP RT (Glucagon-Like Peptide Receptor Targeted) is a research-grade peptide compound designed for in-vitro study of metabolic pathways and receptor binding affinity. This compound has shown significant promise in preclinical research for understanding glucose homeostasis and appetite regulation mechanisms.",
@@ -69,7 +68,7 @@ export const PRODUCTS = [
     id: "69f9871d9cc1fe91aec19c93",
     name: "BPC-157",
     slug: "bpc-157",
-    category: "Peptide Research",
+    category: "Regenerative Research",
     short_description: "Body Protection Compound peptide for laboratory research.",
     description:
       "BPC-157 (Body Protection Compound-157) is a pentadecapeptide derived from human gastric juice, extensively studied for its cytoprotective and regenerative properties. Research applications include wound healing, tendon repair, and gastrointestinal protection pathways. Over 100 peer-reviewed studies support its research applications.",
@@ -90,8 +89,7 @@ export const PRODUCTS = [
     id: "69f9871d9cc1fe91aec19c94",
     name: "GHK-Cu",
     slug: "ghk-cu",
-    category: "Cellular Research",
-    categories: ["Cellular Research", "Dermal Research"],
+    category: "Dermal Research",
     short_description: "Copper-peptide complex for dermatological and cellular research.",
     description:
       "GHK-Cu (Glycyl-L-Histidyl-L-Lysine Copper Complex) is a naturally occurring copper peptide with extensive research documentation in skin remodeling, wound contraction, and anti-inflammatory pathways. Studies indicate GHK-Cu stimulates collagen and glycosaminoglycan synthesis in dermal fibroblasts.",
@@ -112,8 +110,7 @@ export const PRODUCTS = [
     id: "semax",
     name: "Semax",
     slug: "semax",
-    category: "Cellular Research",
-    categories: ["Cellular Research", "Metabolic Research"],
+    category: "Neuro Research",
     short_description: "Heptapeptide for neuroscience research.",
     description:
       "Semax is a synthetic heptapeptide derived from ACTH(4-10), studied for its nootropic and neuroprotective properties. Research focuses on BDNF expression, attention and memory pathways, and recovery models in neuroscience research.",
@@ -134,7 +131,7 @@ export const PRODUCTS = [
     id: "selank",
     name: "Selank",
     slug: "selank",
-    category: "Cellular Research",
+    category: "Neuro Research",
     short_description: "Heptapeptide for neuroscience research.",
     description:
       "Selank is a synthetic analog of the immunomodulatory peptide tuftsin, studied for anxiolytic and nootropic properties. Research applications include stress response modulation, GABAergic signaling, and cognitive performance models.",
@@ -155,8 +152,7 @@ export const PRODUCTS = [
     id: "69f9871d9cc1fe91aec19c92",
     name: "KLOW",
     slug: "klow",
-    category: "Metabolic Research",
-    categories: ["Peptide Research", "Dermal Research"],
+    category: "Neuro Research",
     short_description: "Peptide for neuroscience research.",
     description:
       "KLOW is a research peptide compound developed for studying nootropic pathways and cognitive function. It targets BDNF (Brain-Derived Neurotrophic Factor) signaling cascades and has shown potential in neuroscience research focusing on synaptic plasticity and neuroprotection.",
@@ -175,7 +171,6 @@ export const PRODUCTS = [
     name: "GLOW",
     slug: "glow",
     category: "Dermal Research",
-    categories: ["Dermal Research", "Peptide Research"],
     short_description: "Proprietary peptide blend for dermatological research.",
     description:
       "GLOW is Omen Labs' proprietary formulation designed for research into dermal regeneration and collagen synthesis pathways. This compound targets fibroblast growth factor receptors and has demonstrated promising results in in-vitro skin cell proliferation studies.",
@@ -193,7 +188,7 @@ export const PRODUCTS = [
     id: "nad",
     name: "NAD+",
     slug: "nad",
-    category: "Cellular Research",
+    category: "Metabolic Research",
     short_description: "Nicotinamide adenine dinucleotide for cellular metabolism research.",
     description:
       "NAD+ (nicotinamide adenine dinucleotide) is a critical coenzyme central to cellular energy metabolism and DNA repair. Research applications include mitochondrial function, sirtuin activation, and cellular senescence studies in longevity research.",
@@ -214,8 +209,7 @@ export const PRODUCTS = [
     id: "mots-c",
     name: "MOTS-c",
     slug: "mots-c",
-    category: "Cellular Research",
-    categories: ["Cellular Research", "Metabolic Research"],
+    category: "Metabolic Research",
     short_description: "Mitochondrial-derived peptide for metabolic research.",
     description:
       "MOTS-c is a mitochondrial-derived peptide encoded within the 12S rRNA region of mitochondrial DNA. Research focuses on metabolic homeostasis, AMPK signaling, insulin sensitivity, and exercise-mimetic pathways.",
@@ -236,7 +230,7 @@ export const PRODUCTS = [
     id: "tb-500",
     name: "TB-500",
     slug: "tb-500",
-    category: "Peptide Research",
+    category: "Regenerative Research",
     short_description: "Thymosin Beta-4 fragment for laboratory research.",
     description:
       "TB-500 is a synthetic fragment of Thymosin Beta-4, a naturally occurring peptide present in nearly all human and animal cells. Research applications include actin regulation, cell migration, wound repair, and inflammation modulation studies.",
@@ -276,7 +270,6 @@ export const PRODUCTS = [
     name: "Ipamorelin",
     slug: "ipamorelin",
     category: "Metabolic Research",
-    categories: ["Metabolic Research", "Cellular Research"],
     short_description: "Selective growth hormone secretagogue for endocrine research.",
     description:
       "Ipamorelin is a pentapeptide growth hormone secretagogue with high selectivity for the ghrelin receptor (GHS-R). Research applications include pulsatile GH release studies, endocrine signaling, and body composition models.",
@@ -314,7 +307,7 @@ export const PRODUCTS = [
     id: "kpv",
     name: "KPV",
     slug: "kpv",
-    category: "Peptide Research",
+    category: "Regenerative Research",
     short_description: "Tripeptide for immune-pathway research.",
     description:
       "KPV is the C-terminal tripeptide fragment of α-MSH studied for potent anti-inflammatory properties. Research applications include inflammatory bowel models, mast cell modulation, and epithelial barrier studies.",
@@ -333,7 +326,6 @@ export const PRODUCTS = [
     name: "IGF-1 LR3",
     slug: "igf1-lr3",
     category: "Metabolic Research",
-    categories: ["Metabolic Research", "Peptide Research"],
     short_description: "Long-arginine IGF-1 analog for growth factor signaling research.",
     description:
       "IGF-1 LR3 is a long-acting analog of insulin-like growth factor 1 with an arginine substitution and 13-residue N-terminal extension, reducing binding-protein affinity. Research applications include cellular growth, proliferation, and anabolic signaling studies.",
@@ -351,7 +343,7 @@ export const PRODUCTS = [
     id: "69fc30ecf179623737bd64e9",
     name: "Bacteriostatic Water",
     slug: "bacteriostatic-water",
-    category: "Peptide Research",
+    category: "Lab Supplies",
     short_description: "Sterile bacteriostatic water for peptide reconstitution.",
     description:
       "Pharmaceutical-grade bacteriostatic water (0.9% benzyl alcohol) for safe multi-dose reconstitution of lyophilized peptide compounds. Essential for any peptide research protocol.",
@@ -371,7 +363,7 @@ export const PRODUCTS = [
     id: "adamax",
     name: "Adamax",
     slug: "adamax",
-    category: "Cellular Research",
+    category: "Neuro Research",
     short_description: "Next-generation Semax analog for neuroscience research.",
     description:
       "Adamax is a synthetic Semax analog engineered for enhanced potency in neurotrophic research. Studies focus on BDNF and NGF expression, neuroplasticity, and cognitive performance models.",
@@ -407,8 +399,7 @@ export const PRODUCTS = [
     id: "69fc30ecf179623737bd64ea",
     name: "WOLVERINE",
     slug: "wolverine",
-    category: "Peptide Research",
-    categories: ["Peptide Research", "Metabolic Research"],
+    category: "Regenerative Research",
     short_description: "Proprietary peptide blend for laboratory research.",
     description:
       "WOLVERINE is Omen Labs' high-potency proprietary peptide blend targeting rapid tissue regeneration and recovery pathways. Formulated for research into accelerated healing mechanisms, inflammation reduction, and musculoskeletal repair.",
@@ -444,8 +435,7 @@ export const PRODUCTS = [
     id: "semax-selank",
     name: "Semax + Selank",
     slug: "semax-selank",
-    category: "Cellular Research",
-    categories: ["Cellular Research", "Peptide Research"],
+    category: "Neuro Research",
     short_description: "Combined peptide blend for CNS research.",
     description:
       "A combined preparation of Semax and Selank for research into synergistic nootropic and anxiolytic pathways — BDNF expression, GABAergic modulation, and stress-cognition interaction models.",

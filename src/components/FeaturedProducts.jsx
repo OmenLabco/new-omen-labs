@@ -164,10 +164,16 @@ export default function FeaturedProducts() {
                   </div>
                   <div className="p-3.5">
                     <p className="text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5rem] group-hover:text-primary transition-colors">{product.name}</p>
-                    <p className="mt-1 text-sm font-bold">
-                      {product.has_multiple && <span className="text-[11px] font-normal text-muted-foreground">from </span>}
-                      ${product.price?.toFixed(2)}
-                    </p>
+                    <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground truncate">{product.category}</p>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <p className="text-sm font-bold">
+                        {product.has_multiple && <span className="text-[11px] font-normal text-muted-foreground">from </span>}
+                        ${product.price?.toFixed(2)}
+                      </p>
+                    </div>
+                    <span className="mt-2.5 inline-flex w-full items-center justify-center gap-1.5 h-8 rounded-lg bg-secondary text-foreground text-xs font-semibold group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                      View <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </span>
                   </div>
                 </Link>
               ))}
