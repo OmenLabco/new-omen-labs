@@ -38,18 +38,24 @@ function toText(raw) {
 }
 
 export async function handleIncomingEmail(message, env) {
-  const from = String(message.from || message.headers.get('from') || '').toLowerCase();
+  const raw = await readRaw(message);
+  const rawLower = raw.toLowerCase();
+  const fromHeader = String(message.headers.get('from') || message.from || '').toLowerCase();
   const auth = String(message.headers.get('authentication-results') || '').toLowerCase();
   const senders = String(env.CASHAPP_SENDERS || DEFAULT_SENDERS).split(',').map((s) => s.trim()).filter(Boolean);
 
-  const senderOk = senders.some((d) => from.includes(d));
+  // Origin check that survives forwarding: the From header OR the DKIM-Signature
+  // domain (d=square.com) must be an allowlisted Cash App sender.
+  const senderOk = senders.some((d) => fromHeader.includes(d) || rawLower.includes(`d=${d}`));
+  if (!senderOk) return;
+
+  // Fully trust only if Cloudflare says DKIM passed. Otherwise (e.g. a forward
+  // that broke the signature) still process, but require the order number so a
+  // spoofed amount can't confirm an unpaid order.
   const dkimOk = auth.includes('dkim=pass');
-  // Only trust genuinely-authenticated Cash App mail.
-  if (!senderOk || !dkimOk) return;
 
   const subject = message.headers.get('subject') || '';
-  const text = subject + '\n' + toText(await readRaw(message));
+  const text = subject + '\n' + toText(raw);
 
-  // Scope amount-only matching to Cash App orders.
-  await reconcilePayment(env, text, { methodPrefix: 'Cash App' });
+  await reconcilePayment(env, text, { methodPrefix: 'Cash App', requireOrderNumber: !dkimOk });
 }

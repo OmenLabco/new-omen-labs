@@ -35,6 +35,10 @@ export async function reconcilePayment(env, text, opts = {}) {
     if (!order) return { ok: false, reason: 'order_not_found', orderNumber };
   }
 
+  // When we can't fully authenticate the source (e.g. a forwarded email that lost
+  // its DKIM), require the order number — never auto-confirm on amount alone.
+  if (!order && opts.requireOrderNumber) return { ok: false, reason: 'order_number_required' };
+
   // Fallback: no order number in the text (e.g. Cash App email without the note)
   // → match a SINGLE awaiting order of this method by its unique amount.
   if (!order && paidAmount != null) {
