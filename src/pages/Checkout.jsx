@@ -44,6 +44,8 @@ const inputClass =
 const labelClass = 'block font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5';
 // Zelle recipient shown to customers (keep in sync with worker/order.js ZELLE_HANDLE)
 const ZELLE_HANDLE = '“omenlabs” — Zelle to (509) 842-7930';
+// Cash App $cashtag shown to customers (keep in sync with worker/order.js CASHAPP_HANDLE)
+const CASHAPP_HANDLE = '$omenlabs';
 
 export default function Checkout() {
   const { cartItems, loadCart } = useOutletContext();
@@ -198,11 +200,13 @@ export default function Checkout() {
       loadCart();
       const confirmState = {
         zelle: payment === 'zelle',
+        cashapp: payment === 'cashapp',
         crypto: payment === 'crypto',
         orderNumber: data.order_number || '',
         statusToken: data.status_token || '',
         total: Number(total.toFixed(2)),
         handle: ZELLE_HANDLE,
+        cashappHandle: CASHAPP_HANDLE,
       };
       // Persist so the payment-instructions page survives a refresh / revisit.
       try { sessionStorage.setItem('omenlabs_last_order', JSON.stringify(confirmState)); } catch {}
@@ -344,6 +348,7 @@ export default function Checkout() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
               { id: 'zelle', title: 'Zelle', desc: 'Pay by Zelle — auto-confirmed' },
+              { id: 'cashapp', title: 'Cash App', desc: 'Pay to $omenlabs — auto-confirmed' },
               { id: 'manual', title: 'Manual / Invoice', desc: 'Invoice to follow after order' },
               { id: 'crypto', title: 'Crypto — 10% off', desc: 'Pay with crypto and save 10%' },
             ].map((opt) => (
@@ -371,6 +376,17 @@ export default function Checkout() {
                 <li>Place your order — you'll get an email with the exact amount and your order number.</li>
                 <li>In your bank's Zelle, send the total to <span className="font-semibold text-foreground">{ZELLE_HANDLE}</span>.</li>
                 <li><span className="font-semibold text-foreground">Put your order number in the Zelle memo/note</span> — this is required so we can match and confirm your payment automatically.</li>
+              </ol>
+            </div>
+          )}
+
+          {payment === 'cashapp' && (
+            <div className="mt-4 rounded-xl border border-primary/20 bg-primary/[0.04] p-4 text-sm leading-relaxed">
+              <p className="font-semibold mb-1">How to pay with Cash App</p>
+              <ol className="list-decimal pl-5 space-y-1 text-muted-foreground">
+                <li>Place your order — you'll get an email with the exact amount and your order number.</li>
+                <li>In Cash App, send the total to <span className="font-semibold text-foreground">{CASHAPP_HANDLE}</span>.</li>
+                <li><span className="font-semibold text-foreground">Put your order number in the Cash App "For" note</span> — this is required so we can match and confirm your payment automatically.</li>
               </ol>
             </div>
           )}

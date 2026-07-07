@@ -13,12 +13,14 @@ export default function OrderConfirmed() {
   const loc = useLocation();
   const state = loc.state || readLastOrder() || {};
   const isZelle = state?.zelle;
+  const isCashapp = state?.cashapp;
   const isCrypto = state?.crypto;
   const orderNumber = state?.orderNumber || '';
   const statusToken = state?.statusToken || '';
   const total = typeof state?.total === 'number' ? state.total : null;
   const handle = state?.handle || '“omenlabs” — Zelle to (509) 842-7930';
-  const awaitingFlow = isCrypto || isZelle;
+  const cashappHandle = state?.cashappHandle || '$omenlabs';
+  const awaitingFlow = isCrypto || isZelle || isCashapp;
 
   const [copied, setCopied] = useState('');
   const copy = (key, text) => {
@@ -199,6 +201,55 @@ export default function OrderConfirmed() {
           <ol className="space-y-2 text-sm text-muted-foreground list-decimal pl-5">
             <li>Send the amount above via Zelle to <span className="font-semibold text-foreground">{handle}</span>.</li>
             <li><span className="font-semibold text-foreground">Put your order number ({orderNumber || 'OMEN-XXXXXX'}) in the memo</span> — required to match your payment.</li>
+            <li>Once received, your order confirms <span className="font-semibold text-foreground">automatically</span>.</li>
+          </ol>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 justify-center mt-7">
+          <Button asChild variant="outline"><Link to="/account">View My Orders</Link></Button>
+          <Button asChild><Link to="/catalog">Continue Shopping</Link></Button>
+        </div>
+      </Wrap>
+    );
+  }
+
+  // ---- Cash App awaiting ----
+  if (isCashapp) {
+    return (
+      <Wrap>
+        {topWatcher}
+        <div className="h-20 w-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-6">
+          <Clock className="h-10 w-10 text-emerald-500" />
+        </div>
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <div className="h-px w-6 bg-emerald-500" />
+          <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-emerald-600">Awaiting Payment</span>
+          <div className="h-px w-6 bg-emerald-500" />
+        </div>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">Almost done — send your Cash App payment</h1>
+        <p className="text-muted-foreground leading-relaxed mb-6">Your order is reserved but <span className="font-semibold text-foreground">not yet paid</span>. Complete these steps to confirm it.</p>
+
+        <div className="p-5 rounded-2xl border border-primary/25 bg-primary/[0.04] mb-5 text-left">
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-border">
+            <span className="text-sm text-muted-foreground">Amount to send</span>
+            <span className="text-2xl font-bold">{total != null ? `$${total.toFixed(2)}` : '—'}</span>
+          </div>
+          <p className="text-sm text-muted-foreground mb-1">Send on Cash App to:</p>
+          <div className="flex items-center gap-2 mb-3">
+            <p className="text-xl font-bold text-foreground">{cashappHandle}</p>
+            <button onClick={() => copy('cashtag', cashappHandle)} className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-[11px] font-medium hover:bg-accent transition-colors">
+              {copied === 'cashtag' ? <><Check className="h-3 w-3 text-emerald-500" /> Copied</> : <><Copy className="h-3 w-3" /> Copy</>}
+            </button>
+          </div>
+          <p className="text-sm text-muted-foreground mb-1">In the Cash App <span className="font-semibold text-foreground">"For" note</span>, enter your order number:</p>
+          <p className="text-xl font-bold tracking-wide">{orderNumber || '—'}</p>
+        </div>
+
+        <div className="p-4 rounded-xl border border-border bg-card text-left">
+          <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-2">How it works</p>
+          <ol className="space-y-2 text-sm text-muted-foreground list-decimal pl-5">
+            <li>Send the amount above to <span className="font-semibold text-foreground">{cashappHandle}</span> on Cash App.</li>
+            <li><span className="font-semibold text-foreground">Put your order number ({orderNumber || 'OMEN-XXXXXX'}) in the "For" note</span> — required to match your payment.</li>
             <li>Once received, your order confirms <span className="font-semibold text-foreground">automatically</span>.</li>
           </ol>
         </div>

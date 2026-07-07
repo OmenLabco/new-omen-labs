@@ -47,18 +47,23 @@ export async function handleZelleNotify(request, env) {
     return json({ ok: false, reason: 'amount_mismatch', orderNumber, paidAmount, expectedTotal });
   }
 
+  // Keep the payment method accurate (this same endpoint reconciles both Zelle
+  // and Cash App — a forwarded Cash App notification confirms a Cash App order).
+  const method = (order.payment_method || '').startsWith('Cash App') ? 'Cash App' : 'Zelle';
+  const confirmedLabel = `${method} — payment confirmed`;
+
   // Mark paid → confirmed (and update the payment label so the receipt reads "confirmed")
-  await env.DB.prepare("UPDATE orders SET status = 'confirmed', payment_method = 'Zelle — payment confirmed' WHERE order_number = ?").bind(orderNumber).run();
+  await env.DB.prepare("UPDATE orders SET status = 'confirmed', payment_method = ? WHERE order_number = ?").bind(confirmedLabel, orderNumber).run();
 
   // Hand the paid order to ShipStation for fulfillment (no-op if not configured)
-  await pushToShipStation(env, { ...order, status: 'confirmed', payment_method: 'Zelle — payment confirmed' });
+  await pushToShipStation(env, { ...order, status: 'confirmed', payment_method: confirmedLabel });
 
   // Send the customer their confirmation (best effort)
   if (env.RESEND_API_KEY && order.customer_email) {
     try {
       const token = await signOrder(orderNumber, env.ADMIN_PASSWORD);
       const imageUrl = `${SITE}/api/receipt-image?o=${encodeURIComponent(orderNumber)}&t=${token}&type=confirmation`;
-      const orderObj = { ...order, status: 'confirmed', payment_method: 'Zelle — payment confirmed', items: safeParse(order.items), billing: order.billing ? safeParse(order.billing) : null };
+      const orderObj = { ...order, status: 'confirmed', payment_method: confirmedLabel, items: safeParse(order.items), billing: order.billing ? safeParse(order.billing) : null };
       await sendEmail(env, {
         to: order.customer_email,
         subject: `Payment Received — Order Confirmed ${orderNumber}`,

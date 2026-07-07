@@ -42,6 +42,7 @@ const SITE = 'https://omenlabs.co';
 // Zelle recipient shown in the payment-instructions email (must be the email/phone
 // enrolled with your Zelle). Keep in sync with the value shown at checkout.
 const ZELLE_HANDLE = '“omenlabs” — Zelle to (509) 842-7930';
+const CASHAPP_HANDLE = '$omenlabs'; // Cash App $cashtag shown to customers
 const CRYPTO_DISCOUNT_RATE = 0.10; // 10% off when paying with crypto
 const SHIPPING_OPTIONS = {
   ground: { label: '3–5 Day Ground', price: 9.99 },
@@ -95,6 +96,25 @@ function renderZelleInstructions(order, handle) {
       <p style="margin:6px 0 0;font-size:18px;color:#fff;font-weight:bold;letter-spacing:.05em;">${order.order_number}</p>
     </div>
     <p style="font-size:13px;line-height:1.6;color:#a9abb3;margin:0 0 8px;">Once we receive your payment, your order is confirmed automatically and you'll get a confirmation email. Including the order number in the memo is required so we can match your payment.</p>
+    <p style="font-size:11px;color:#6b6d77;margin:22px 0 0;">Research Use Only — Not for Human Consumption · support@omenlabs.co</p>
+  </div></body></html>`;
+}
+
+// Cash App instructions — customer sends the total to our $cashtag with the
+// order number in the "For" note so the payment auto-reconciles.
+function renderCashappInstructions(order, handle) {
+  return `<!doctype html><html><body style="margin:0;background:#0a0a0b;font-family:Arial,Helvetica,sans-serif;color:#e8e8ea;">
+  <div style="max-width:560px;margin:0 auto;padding:32px 24px;">
+    <p style="font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:#7c83ff;margin:0 0 18px;">Omen Labs</p>
+    <h1 style="font-size:22px;margin:0 0 8px;color:#fff;">Complete your Cash App payment</h1>
+    <p style="font-size:14px;line-height:1.6;color:#a9abb3;margin:0 0 22px;">Your order <b style="color:#fff;">${order.order_number}</b> is reserved. To finish, send your payment on Cash App:</p>
+    <div style="background:#15151a;border:1px solid #2a2b2f;border-radius:12px;padding:20px;margin-bottom:22px;">
+      <p style="margin:0 0 10px;font-size:13px;color:#a9abb3;">Send <b style="color:#fff;font-size:18px;">$${Number(order.total).toFixed(2)}</b> to:</p>
+      <p style="margin:0 0 14px;font-size:20px;color:#00d54b;font-weight:bold;">${handle}</p>
+      <p style="margin:0;font-size:13px;color:#a9abb3;">In the Cash App <b style="color:#fff;">"For" note</b>, enter your order number:</p>
+      <p style="margin:6px 0 0;font-size:18px;color:#fff;font-weight:bold;letter-spacing:.05em;">${order.order_number}</p>
+    </div>
+    <p style="font-size:13px;line-height:1.6;color:#a9abb3;margin:0 0 8px;">Once we receive your payment, your order is confirmed automatically and you'll get a confirmation email. Including the order number in the note is required so we can match your payment.</p>
     <p style="font-size:11px;color:#6b6d77;margin:22px 0 0;">Research Use Only — Not for Human Consumption · support@omenlabs.co</p>
   </div></body></html>`;
 }
@@ -196,6 +216,7 @@ export async function handleOrder(request, env) {
   const shippingLabel = freeShip ? `${shipOpt.label} (Free — ${acctTier.name})` : shipOpt.label;
   let total = +(subtotal - discount + shipping_cost).toFixed(2);
   const isZelle = payment_method === 'zelle';
+  const isCashapp = payment_method === 'cashapp';
   // Crypto: nudge the total by a few cents so it's UNIQUE among open awaiting
   // crypto orders — lets the on-chain watcher map a payment to exactly one order.
   if (isCrypto && env.DB) {
@@ -209,9 +230,9 @@ export async function handleOrder(request, env) {
       }
     } catch {}
   }
-  const paymentLabel = isZelle ? 'Zelle — awaiting payment' : isCrypto ? 'Crypto — awaiting payment' : 'Manual — invoice to follow';
-  // Zelle + crypto orders wait for payment confirmation (auto-reconciled via SMS / IPN webhook).
-  const orderStatus = (isZelle || isCrypto) ? 'awaiting_payment' : 'processing';
+  const paymentLabel = isZelle ? 'Zelle — awaiting payment' : isCashapp ? 'Cash App — awaiting payment' : isCrypto ? 'Crypto — awaiting payment' : 'Manual — invoice to follow';
+  // Zelle + Cash App + crypto orders wait for payment confirmation (auto-reconciled via SMS / IPN webhook).
+  const orderStatus = (isZelle || isCashapp || isCrypto) ? 'awaiting_payment' : 'processing';
 
   // Points earned (on subtotal, multiplied by tier)
   const pointsEarned = account ? Math.floor(subtotal * POINTS_PER_DOLLAR * acctTier.multiplier) : 0;
@@ -316,6 +337,12 @@ export async function handleOrder(request, env) {
         to: customer.email,
         subject: `Complete your Zelle payment — ${order_number}`,
         html: renderZelleInstructions(order, ZELLE_HANDLE),
+      });
+    } else if (isCashapp) {
+      await sendEmail(env, {
+        to: customer.email,
+        subject: `Complete your Cash App payment — ${order_number}`,
+        html: renderCashappInstructions(order, CASHAPP_HANDLE),
       });
     } else if (isCrypto) {
       await sendEmail(env, {
