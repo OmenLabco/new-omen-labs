@@ -47,6 +47,7 @@ const CRYPTO_DISCOUNT_RATE = 0.10; // 10% off when paying with crypto
 const SHIPPING_OPTIONS = {
   ground: { label: '3–5 Day Ground', price: 9.99 },
   first: { label: '2-Day First Class', price: 14.99 },
+  pickup: { label: 'Local Pickup — Spokane, WA', price: 0 },
 };
 
 const json = (data, status = 200) =>

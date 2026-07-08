@@ -13,6 +13,7 @@ const CRYPTO_DISCOUNT_RATE = 0.10;
 const SHIPPING_OPTIONS = [
   { id: 'ground', title: '3–5 Day Ground', desc: 'Standard shipping', price: 9.99 },
   { id: 'first', title: '2-Day First Class', desc: 'Faster delivery', price: 14.99 },
+  { id: 'pickup', title: 'Local Pickup (Spokane, WA)', desc: 'Free — pick up locally', price: 0 },
 ];
 
 const SHIPPING_FIELDS = [
@@ -254,7 +255,7 @@ export default function Checkout() {
               <span>Subtotal</span><span>${subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>Shipping{freeShipping ? ' (Free — ' + account.membership.name + ')' : ''}</span><span>${shipping.toFixed(2)}</span>
+              <span>{shipMethod === 'pickup' ? 'Local Pickup' : 'Shipping'}{freeShipping ? ' (Free — ' + account.membership.name + ')' : ''}</span><span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
             </div>
             {pointsValue > 0 && (
               <div className="flex justify-between text-emerald-500">
@@ -334,7 +335,7 @@ export default function Checkout() {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{opt.title}</span>
-                  <span className="text-sm font-semibold">${opt.price.toFixed(2)}</span>
+                  <span className="text-sm font-semibold">{opt.price === 0 ? 'Free' : `$${opt.price.toFixed(2)}`}</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
               </button>
