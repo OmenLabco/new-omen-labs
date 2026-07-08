@@ -102,7 +102,10 @@ export async function handleZelleNotify(request, env) {
   const text = String(body.text || body.message || '');
   if (!text) return json({ error: 'No message text.' }, 400);
 
-  const result = await reconcilePayment(env, text);
+  // Optional explicit method hint ('Cash App' | 'Zelle') from the forwarder;
+  // otherwise reconcilePayment auto-detects it from the text.
+  const opts = body.source ? { methodPrefix: String(body.source) } : {};
+  const result = await reconcilePayment(env, text, opts);
   const status = result.ok ? 200 : (result.reason === 'order_not_found' || result.reason === 'no_match') ? 200 : 200;
   return json(result, status);
 }
