@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Package, Loader2, Check } from 'lucide-react';
+import { ArrowLeft, Package, Loader2, Check, Bitcoin, Receipt, Truck, Zap, Store, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cart } from '@/lib/cart';
 import { validateAffiliateCode } from '@/lib/affiliateApi';
@@ -15,6 +15,15 @@ const SHIPPING_OPTIONS = [
   { id: 'first', title: '2-Day First Class', desc: 'Faster delivery', price: 14.99 },
   { id: 'pickup', title: 'Local Pickup (Spokane, WA)', desc: 'Free — pick up locally', price: 0 },
 ];
+
+// Brand look for each payment method (colored tile + selected-state accent).
+const PAY_META = {
+  zelle:   { glyph: 'Z', tile: 'bg-gradient-to-br from-fuchsia-500 to-violet-700', sel: 'border-violet-400 bg-violet-500/[0.06] ring-1 ring-violet-400/40' },
+  cashapp: { glyph: '$', tile: 'bg-[#00D54B]',                                      sel: 'border-emerald-400 bg-emerald-500/[0.06] ring-1 ring-emerald-400/40' },
+  crypto:  { Icon: Bitcoin, tile: 'bg-gradient-to-br from-amber-400 to-orange-600', sel: 'border-amber-400 bg-amber-500/[0.06] ring-1 ring-amber-400/40' },
+  manual:  { Icon: Receipt, tile: 'bg-gradient-to-br from-slate-400 to-slate-600',  sel: 'border-primary bg-primary/[0.05] ring-1 ring-primary/40' },
+};
+const SHIP_META = { ground: Truck, first: Zap, pickup: Store };
 
 const SHIPPING_FIELDS = [
   { name: 'name', label: 'Full Name', required: true, half: true },
@@ -332,22 +341,32 @@ export default function Checkout() {
         <div className="p-6 rounded-2xl border border-border bg-card mb-6">
           <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-5">Shipping Method</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {SHIPPING_OPTIONS.map((opt) => (
-              <button
-                type="button"
-                key={opt.id}
-                onClick={() => setShipMethod(opt.id)}
-                className={`text-left p-4 rounded-xl border transition-colors ${
-                  shipMethod === opt.id ? 'border-primary bg-primary/5' : 'border-border hover:bg-accent/40'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{opt.title}</span>
-                  <span className="text-sm font-semibold">{opt.price === 0 ? 'Free' : `$${opt.price.toFixed(2)}`}</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
-              </button>
-            ))}
+            {SHIPPING_OPTIONS.map((opt) => {
+              const Icon = SHIP_META[opt.id] || Truck;
+              const selected = shipMethod === opt.id;
+              const free = opt.price === 0;
+              return (
+                <button
+                  type="button"
+                  key={opt.id}
+                  onClick={() => setShipMethod(opt.id)}
+                  className={`text-left p-4 rounded-xl border transition-all ${selected ? 'border-primary bg-primary/[0.06] ring-1 ring-primary/30' : 'border-border hover:bg-accent/40'}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${selected ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold truncate">{opt.title}</span>
+                        <span className={`text-sm font-bold shrink-0 ${free ? 'text-emerald-600' : ''}`}>{free ? 'Free' : `$${opt.price.toFixed(2)}`}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">{opt.desc}</p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -356,26 +375,40 @@ export default function Checkout() {
           <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-5">Payment Method</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
-              { id: 'zelle', title: 'Zelle', desc: 'Pay by Zelle — auto-confirmed' },
-              { id: 'cashapp', title: 'Cash App', desc: 'Pay to $omenlabs — auto-confirmed' },
-              { id: 'manual', title: 'Manual / Invoice', desc: 'Invoice to follow after order' },
-              { id: 'crypto', title: 'Crypto — 10% off', desc: 'Pay with crypto and save 10%' },
-            ].map((opt) => (
-              <button
-                type="button"
-                key={opt.id}
-                onClick={() => setPayment(opt.id)}
-                className={`text-left p-4 rounded-xl border transition-colors ${
-                  payment === opt.id ? 'border-primary bg-primary/5' : 'border-border hover:bg-accent/40'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{opt.title}</span>
-                  {payment === opt.id && <Check className="h-4 w-4 text-primary" />}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
-              </button>
-            ))}
+              { id: 'zelle', title: 'Zelle', desc: 'Pay from your bank', badge: 'Auto-confirm' },
+              { id: 'cashapp', title: 'Cash App', desc: 'Pay to $omenlabs', badge: 'Auto-confirm' },
+              { id: 'crypto', title: 'Crypto', desc: 'USDC · USDT · BTC', badge: '10% off', badgeTone: 'save' },
+              { id: 'manual', title: 'Manual / Invoice', desc: 'Invoice to follow' },
+            ].map((opt) => {
+              const m = PAY_META[opt.id];
+              const selected = payment === opt.id;
+              return (
+                <button
+                  type="button"
+                  key={opt.id}
+                  onClick={() => setPayment(opt.id)}
+                  className={`text-left p-4 rounded-xl border transition-all ${selected ? m.sel : 'border-border hover:bg-accent/40'}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={`h-10 w-10 rounded-lg flex items-center justify-center text-white shrink-0 shadow-sm ${m.tile}`}>
+                      {m.Icon ? <m.Icon className="h-5 w-5" /> : <span className="text-lg font-black leading-none">{m.glyph}</span>}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-sm font-semibold">{opt.title}</span>
+                        {opt.badge && (
+                          <span className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full ${opt.badgeTone === 'save' ? 'bg-amber-500/15 text-amber-600' : 'bg-emerald-500/15 text-emerald-600'}`}>
+                            {opt.badge}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">{opt.desc}</p>
+                    </div>
+                    {selected && <Check className="h-4 w-4 text-foreground shrink-0" />}
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           {payment === 'zelle' && (
@@ -455,7 +488,11 @@ export default function Checkout() {
             )}
           </Button>
 
-          <p className="mt-4 text-[12px] text-muted-foreground text-center">
+          <div className="mt-4 flex items-center justify-center gap-2 text-[12px] text-emerald-600">
+            <ShieldCheck className="h-4 w-4" />
+            <span className="font-medium">Secure checkout · encrypted &amp; discreet</span>
+          </div>
+          <p className="mt-2 text-[12px] text-muted-foreground text-center">
             We'll email you to confirm payment and shipping. No card is charged on this page.
           </p>
           <p className="mt-2 font-mono text-[10px] text-destructive text-center uppercase tracking-wider">
