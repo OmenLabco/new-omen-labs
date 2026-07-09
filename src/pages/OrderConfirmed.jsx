@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Check, Clock, Copy, Loader2 } from 'lucide-react';
+import { Check, Clock, Copy, Loader2, LifeBuoy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import OmenLogo from '../components/OmenLogo';
 import { CRYPTO_WALLETS } from '@/data/cryptoWallets';
@@ -61,6 +61,25 @@ export default function OrderConfirmed() {
   }, [canPoll, orderNumber, statusToken]);
 
   const paid = liveStatus && liveStatus !== 'awaiting_payment';
+
+  const noteWord = isZelle ? 'memo' : isCrypto ? 'transaction' : 'note';
+  const supportHref = `mailto:support@omenlabs.co?subject=${encodeURIComponent(`Payment help — ${orderNumber || 'my order'}`)}`;
+  const paymentHelp = (
+    <div className="mt-6 p-4 rounded-xl border border-border bg-card text-left">
+      <div className="flex items-center gap-2 mb-3">
+        <LifeBuoy className="h-4 w-4 text-primary" />
+        <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Questions about your payment?</p>
+      </div>
+      <ul className="space-y-2.5 text-sm text-muted-foreground">
+        <li><span className="font-medium text-foreground">Sent it but still says awaiting?</span> Give it 1–5 minutes{isCrypto ? ' (10–60 for Bitcoin)' : ''} — this page updates on its own once we receive it.</li>
+        <li><span className="font-medium text-foreground">Forgot your order number{orderNumber ? ` (${orderNumber})` : ''} in the {noteWord}, or sent the wrong amount?</span> Don't resend — email us and we'll match it up for you.</li>
+      </ul>
+      <a href={supportHref} className="mt-3.5 inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
+        <LifeBuoy className="h-4 w-4" /> Contact support
+      </a>
+      <p className="mt-2 text-[11px] text-muted-foreground">support@omenlabs.co — please include your order number.</p>
+    </div>
+  );
 
   const Wrap = ({ children }) => (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-20">
@@ -161,6 +180,8 @@ export default function OrderConfirmed() {
           </p>
         </div>
 
+        {paymentHelp}
+
         <div className="flex flex-col sm:flex-row gap-3 justify-center mt-7">
           <Button asChild variant="outline"><Link to="/account">View My Orders</Link></Button>
           <Button asChild><Link to="/catalog">Continue Shopping</Link></Button>
@@ -204,6 +225,8 @@ export default function OrderConfirmed() {
             <li>Once received, your order confirms <span className="font-semibold text-foreground">automatically</span>.</li>
           </ol>
         </div>
+
+        {paymentHelp}
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center mt-7">
           <Button asChild variant="outline"><Link to="/account">View My Orders</Link></Button>
@@ -253,6 +276,8 @@ export default function OrderConfirmed() {
             <li>Once received, your order confirms <span className="font-semibold text-foreground">automatically</span>.</li>
           </ol>
         </div>
+
+        {paymentHelp}
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center mt-7">
           <Button asChild variant="outline"><Link to="/account">View My Orders</Link></Button>

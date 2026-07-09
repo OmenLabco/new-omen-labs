@@ -6,6 +6,7 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 import ScrollProgress from './ScrollProgress';
 import CartDock from './CartDock';
+import SupportWidget from './SupportWidget';
 
 export default function Layout() {
   const location = useLocation();
@@ -98,6 +99,7 @@ export default function Layout() {
         onUpdateQuantity={handleUpdateQuantity}
         onRemove={handleRemove}
       />
+      <SupportWidget />
     </div>
   );
 }
