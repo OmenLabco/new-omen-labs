@@ -26,31 +26,13 @@ export async function reconcilePayment(env, text, opts = {}) {
   const orderMatch = text.match(/OMEN-?\s*([XIVLCDM]{6})/i);
   const amountMatch = text.match(/\$?\s*([0-9][0-9,]*\.\d{2})/);
   const paidAmount = amountMatch ? Number(amountMatch[1].replace(/,/g, '')) : null;
-  const prefix = opts.methodPrefix || (/cash\s*app/i.test(text) ? 'Cash App' : 'Zelle');
-
-  let order = null;
-  if (orderMatch) {
-    const orderNumber = `OMEN-${orderMatch[1].toUpperCase()}`;
-    order = await env.DB.prepare('SELECT * FROM orders WHERE order_number = ?').bind(orderNumber).first();
-    if (!order) return { ok: false, reason: 'order_not_found', orderNumber };
-  }
-
-  // When we can't fully authenticate the source (e.g. a forwarded email that lost
-  // its DKIM), require the order number — never auto-confirm on amount alone.
-  if (!order && opts.requireOrderNumber) return { ok: false, reason: 'order_number_required' };
-
-  // Fallback: no order number in the text (e.g. Cash App email without the note)
-  // → match a SINGLE awaiting order of this method by its unique amount.
-  if (!order && paidAmount != null) {
-    const { results } = await env.DB.prepare(
-      "SELECT * FROM orders WHERE status = 'awaiting_payment' AND payment_method LIKE ? AND ABS(total - ?) < 0.02"
-    ).bind(prefix + '%', paidAmount).all();
-    const rows = results || [];
-    if (rows.length === 1) order = rows[0];
-    else if (rows.length > 1) return { ok: false, reason: 'ambiguous_amount', paidAmount };
-  }
-
-  if (!order) return { ok: false, reason: 'no_match', paidAmount };
+  // Require the order number from the payment note — it's the only safe key.
+  // Matching on amount alone can confirm the WRONG order (a coincidental total,
+  // or an older/unrelated receipt still in the inbox), so we never do that.
+  if (!orderMatch) return { ok: false, reason: 'no_order_number', paidAmount };
+  const orderNumber = `OMEN-${orderMatch[1].toUpperCase()}`;
+  const order = await env.DB.prepare('SELECT * FROM orders WHERE order_number = ?').bind(orderNumber).first();
+  if (!order) return { ok: false, reason: 'order_not_found', orderNumber };
   if (order.status !== 'awaiting_payment') {
     return { ok: true, alreadyHandled: true, orderNumber: order.order_number, status: order.status };
   }

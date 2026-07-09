@@ -19,7 +19,15 @@ const SHIPPING_OPTIONS = [
 const SHIPPING_FIELDS = [
   { name: 'name', label: 'Full Name', required: true, half: true },
   { name: 'email', label: 'Email', required: true, half: true, type: 'email' },
-  { name: 'company', label: 'Company', required: true },
+  { name: 'company', label: 'Research Use / Institution Type', required: true, options: [
+    'University / Academic Research',
+    'Research Laboratory',
+    'Biotech / Pharmaceutical Company',
+    'Medical / Clinical Research',
+    'Analytical / Testing Lab',
+    'Independent Researcher',
+    'Other Research Use',
+  ] },
   { name: 'phone', label: 'Phone (optional)', half: true },
   { name: 'country', label: 'Country', half: true },
   { name: 'address', label: 'Address', required: true },
