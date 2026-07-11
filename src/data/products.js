@@ -97,7 +97,7 @@ export const PRODUCTS = [
     sequence: "Gly-His-Lys-Cu",
     purity: 99.6,
     variants: [
-      { dose: "50mg", price: 35 },
+      { dose: "50mg", price: 35, coa: "/coa/ghk-cu-50mg.jpg" },
       { dose: "100mg", price: 50 },
     ],
     storage: "Store at -20°C. Protect from moisture. Reconstituted: 2-8°C.",
@@ -239,7 +239,7 @@ export const PRODUCTS = [
     purity: 99.0,
     variants: [
       { dose: "5mg", price: 65 },
-      { dose: "10mg", price: 110 },
+      { dose: "10mg", price: 110, coa: "/coa/tb-500-10mg.jpg" },
     ],
     storage: GENERIC_STORAGE,
     image: "/products/tb-500.jpg",
