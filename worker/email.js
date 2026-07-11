@@ -192,6 +192,33 @@ export function renderPayoutReceipt({ name, code, amount, methodLabel, handle, r
   `);
 }
 
+// Abandoned-cart reminder for a logged-in shopper.
+export function renderAbandonedCart({ name, items, subtotal }) {
+  const rows = (Array.isArray(items) ? items : []).map((i) => `<tr>
+    <td style="padding:14px 20px;border-bottom:1px solid ${ROW_BORDER};font-size:15px;color:#e5e8ef">${esc(i.product_name)}</td>
+    <td style="padding:14px 20px;border-bottom:1px solid ${ROW_BORDER};font-size:15px;color:#c2c8d4;text-align:center">×${esc(i.quantity)}</td>
+    <td style="padding:14px 20px;border-bottom:1px solid ${ROW_BORDER};font-size:15px;color:#e5e8ef;text-align:right">$${(Number(i.price) * Number(i.quantity)).toFixed(2)}</td>
+  </tr>`).join('');
+  return layout(`
+    ${heading('You left something behind')}
+    ${divider()}
+    ${para(`Hi ${esc(name || 'there')},`)}
+    ${para('Your cart is still saved — pick up right where you left off whenever you’re ready.')}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 6px;background:${PANEL};border:1px solid ${BORDER};border-radius:12px;border-collapse:separate;overflow:hidden">
+      ${rows}
+      <tr>
+        <td style="padding:16px 20px;font-family:${MONO};font-size:11px;letter-spacing:1px;text-transform:uppercase;color:${BLUE}">Subtotal</td>
+        <td></td>
+        <td style="padding:16px 20px;font-size:17px;font-weight:700;color:${WHITE};text-align:right">$${Number(subtotal || 0).toFixed(2)}</td>
+      </tr>
+    </table>
+    <div style="margin:26px 0 6px">
+      <a href="https://omenlabs.co/checkout" style="display:inline-block;background:${BLUE};color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:13px 26px;border-radius:10px">Return to checkout →</a>
+    </div>
+    ${para('<span style="font-size:13px;color:#8a90a0">Prices and availability may change. Questions? Just reply to this email.</span>')}
+  `);
+}
+
 // Helper to send via Resend
 export async function sendEmail(env, { to, subject, html, replyTo }) {
   if (!env.RESEND_API_KEY) return;

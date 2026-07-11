@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { cart } from '@/lib/cart';
+import { syncCart } from '@/lib/cartSync';
 import { getProductBySlug } from '@/data/products';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -70,6 +71,12 @@ export default function Layout() {
     window.addEventListener('storage', loadCart);
     return () => window.removeEventListener('storage', loadCart);
   }, []);
+
+  // Mirror a logged-in shopper's cart to the server (abandoned-cart recovery).
+  useEffect(() => {
+    const t = setTimeout(() => syncCart(cartItems), 900);
+    return () => clearTimeout(t);
+  }, [cartItems]);
 
   const handleUpdateQuantity = (id, quantity) => {
     if (quantity <= 0) {

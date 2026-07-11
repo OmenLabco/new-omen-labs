@@ -8,6 +8,7 @@ import { withSecurity, rateLimit, tooMany, clientIp } from './security.js';
 import { handleZelleNotify } from './zelle.js';
 import { listStock, updateStock, publicStock } from './stock.js';
 import { handleSubscribe, listSubscribers } from './subscribe.js';
+import { syncCart, runAbandonedCartWatch } from './cart.js';
 import { runCryptoWatch } from './cryptoWatch.js';
 import { handleShipstationWebhook, runShipstationSync } from './shipstation.js';
 import { runTrackingWatch } from './tracking.js';
@@ -66,7 +67,7 @@ export default {
 
   // Cron trigger: auto-confirm crypto payments + advance shipped orders via USPS tracking.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(Promise.all([runCryptoWatch(env), runShipstationSync(env), runTrackingWatch(env)]));
+    ctx.waitUntil(Promise.all([runCryptoWatch(env), runShipstationSync(env), runTrackingWatch(env), runAbandonedCartWatch(env)]));
   },
 
   // Email Routing: Cash App receipt emails → auto-confirm the matching order.
@@ -195,6 +196,10 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/subscribe') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return handleSubscribe(request, env);
+    }
+    if (pathname === '/api/cart/sync') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return syncCart(request, env);
     }
     if (pathname === '/api/admin/subscribers') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
