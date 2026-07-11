@@ -18,6 +18,35 @@ const json = (data, status = 200) =>
 
 function safeParse(s) { try { return JSON.parse(s || '[]'); } catch { return []; } }
 
+// Email the owner when a payment can't be auto-matched so it never slips by.
+async function alertOwner(env, kind, info = {}) {
+  if (!env.RESEND_API_KEY) return;
+  const to = env.ORDER_TO_EMAIL || 'support@omenlabs.co';
+  const amt = info.paidAmount != null ? `$${Number(info.paidAmount).toFixed(2)}` : 'an unknown amount';
+  const map = {
+    no_order_number: {
+      subject: `⚠️ Payment received with no order number — ${amt}`,
+      body: `A payment of <b>${amt}</b> came in, but the note had <b>no OMEN order number</b>, so it couldn't be matched automatically. Check it against your awaiting-payment orders and mark the right one paid.`,
+    },
+    order_not_found: {
+      subject: `⚠️ Payment for ${info.orderNumber} — no matching order`,
+      body: `A payment (${amt}) referenced <b>${info.orderNumber}</b>, but no order with that number exists. Likely a typo or a very old order.`,
+    },
+    amount_mismatch: {
+      subject: `⚠️ Underpaid — ${info.orderNumber}`,
+      body: `<b>${info.orderNumber}</b> expected <b>$${Number(info.expectedTotal).toFixed(2)}</b> but only <b>${amt}</b> was received. It was <b>not</b> auto-confirmed.`,
+    },
+  };
+  const m = map[kind]; if (!m) return;
+  try {
+    await sendEmail(env, {
+      to,
+      subject: m.subject,
+      html: `<div style="font-family:Arial,Helvetica,sans-serif;background:#0a0e1a;color:#e8e8ea;padding:28px 22px"><div style="max-width:520px;margin:0 auto;background:#0c1222;border:1px solid #1b2438;border-radius:14px;padding:26px 28px"><p style="color:#5b8bf7;font-size:12px;letter-spacing:4px;text-transform:uppercase;margin:0 0 12px">Omen Labs · Admin</p><h2 style="color:#fff;margin:0 0 12px;font-size:20px">Payment needs a look</h2><p style="color:#a9abb3;line-height:1.6;margin:0">${m.body}</p></div></div>`,
+    });
+  } catch {}
+}
+
 // Core reconciler — shared by the SMS endpoint and the Cash App email worker.
 // opts.methodPrefix ('Cash App' | 'Zelle') scopes the amount-only fallback so a
 // payment can only auto-confirm an order of the SAME method.
@@ -30,10 +59,18 @@ export async function reconcilePayment(env, text, opts = {}) {
   // Require the order number from the payment note — it's the only safe key.
   // Matching on amount alone can confirm the WRONG order (a coincidental total,
   // or an older/unrelated receipt still in the inbox), so we never do that.
-  if (!orderMatch) return { ok: false, reason: 'no_order_number', paidAmount };
+  if (!orderMatch) {
+    // Alert only when it looks like money actually came IN (avoids flagging
+    // receipts for payments the owner SENT, e.g. affiliate payouts).
+    if (paidAmount != null && /receiv|paid you|got \$|from /i.test(text)) await alertOwner(env, 'no_order_number', { paidAmount });
+    return { ok: false, reason: 'no_order_number', paidAmount };
+  }
   const orderNumber = `OMEN-${orderMatch[1].toUpperCase()}`;
   const order = await env.DB.prepare('SELECT * FROM orders WHERE order_number = ?').bind(orderNumber).first();
-  if (!order) return { ok: false, reason: 'order_not_found', orderNumber };
+  if (!order) {
+    await alertOwner(env, 'order_not_found', { orderNumber, paidAmount });
+    return { ok: false, reason: 'order_not_found', orderNumber };
+  }
   if (order.status !== 'awaiting_payment') {
     return { ok: true, alreadyHandled: true, orderNumber: order.order_number, status: order.status };
   }
@@ -41,6 +78,7 @@ export async function reconcilePayment(env, text, opts = {}) {
   // Verify amount covers the order total (allow a tiny rounding tolerance)
   const expectedTotal = Number(order.total || 0);
   if (paidAmount != null && paidAmount + 0.01 < expectedTotal) {
+    await alertOwner(env, 'amount_mismatch', { orderNumber: order.order_number, paidAmount, expectedTotal });
     return { ok: false, reason: 'amount_mismatch', orderNumber: order.order_number, paidAmount, expectedTotal };
   }
 

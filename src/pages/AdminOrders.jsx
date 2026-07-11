@@ -1,14 +1,61 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut, Trash2, Eye, EyeOff, Check, Copy, Download } from 'lucide-react';
+import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut, Trash2, Eye, EyeOff, Check, Copy, Download, DollarSign, Clock, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import OrderEditForm from '@/components/admin/OrderEditForm';
 import SalesDashboard from '@/components/admin/SalesDashboard';
 import ProfitView from '@/components/admin/ProfitView';
 import LiveView from '@/components/admin/LiveView';
 import StockView from '@/components/admin/StockView';
-import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout, fetchSubscribers } from '@/lib/adminApi';
+import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout, fetchSubscribers, fetchStock } from '@/lib/adminApi';
 import { CRYPTO_WALLETS } from '@/data/cryptoWallets';
+
+// Build a CSV and trigger a client-side download.
+function downloadCsv(filename, header, rows) {
+  const esc = (v) => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const csv = [header.join(','), ...rows.map((r) => r.map(esc).join(','))].join('\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// At-a-glance Overview cards.
+function OverviewWidgets({ orders }) {
+  const [stock, setStock] = useState(null);
+  const [payouts, setPayouts] = useState([]);
+  useEffect(() => {
+    fetchStock().then((d) => setStock(d.stock || {})).catch(() => setStock({}));
+    fetchPayouts().then(setPayouts).catch(() => {});
+  }, []);
+
+  const today = new Date().toDateString();
+  const paidToday = orders.filter((o) => o.status !== 'awaiting_payment' && o.created_date && new Date(o.created_date).toDateString() === today);
+  const revenueToday = paidToday.reduce((s, o) => s + Number(o.total || 0), 0);
+  const awaiting = orders.filter((o) => o.status === 'awaiting_payment').length;
+  const lowStock = stock ? Object.values(stock).filter((c) => Number(c) < 9).length : 0;
+  const pending = payouts.filter((p) => p.status === 'requested');
+  const pendingAmt = pending.reduce((s, p) => s + Number(p.amount || 0), 0);
+
+  const cards = [
+    { label: "Today's Revenue", value: `$${revenueToday.toFixed(2)}`, sub: `${paidToday.length} paid order${paidToday.length === 1 ? '' : 's'}`, Icon: DollarSign, tint: 'text-emerald-500 bg-emerald-500/10' },
+    { label: 'Awaiting Payment', value: awaiting, sub: 'unpaid orders', Icon: Clock, tint: 'text-amber-500 bg-amber-500/10' },
+    { label: 'Low / Out of Stock', value: lowStock, sub: 'SKUs under 9', Icon: Package, tint: 'text-rose-500 bg-rose-500/10' },
+    { label: 'Payout Requests', value: pending.length, sub: pending.length ? `$${pendingAmt.toFixed(2)} owed` : 'none pending', Icon: Wallet, tint: 'text-primary bg-primary/10' },
+  ];
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      {cards.map((c) => (
+        <div key={c.label} className="rounded-2xl border border-border bg-card p-4">
+          <div className={`h-9 w-9 rounded-lg flex items-center justify-center mb-3 ${c.tint}`}><c.Icon className="h-4 w-4" /></div>
+          <p className="text-2xl font-bold tabular-nums leading-none">{c.value}</p>
+          <p className="text-[11px] text-muted-foreground mt-1.5">{c.label}</p>
+          <p className="text-[11px] text-muted-foreground/70">{c.sub}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function CryptoCheckButton() {
   const [busy, setBusy] = useState(false);
@@ -336,6 +383,16 @@ function CustomersView({ onLogout, privacy }) {
 
   return (
     <div className="space-y-2">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs text-muted-foreground">{customers.length} customer{customers.length === 1 ? '' : 's'}</span>
+        <Button variant="outline" onClick={() => downloadCsv(
+          `omen-customers-${new Date().toISOString().slice(0, 10)}.csv`,
+          ['Name', 'Email', 'Points', 'Lifetime Spend', 'Orders', 'VIP', 'Joined'],
+          customers.map((c) => [c.name, c.email, c.points, c.lifetime_spend, c.order_count, c.isVip ? 'yes' : 'no', c.created_date ? new Date(c.created_date).toLocaleDateString() : ''])
+        )} className="h-8 px-3 gap-1.5 text-xs">
+          <Download className="h-3.5 w-3.5" /> Export CSV
+        </Button>
+      </div>
       {customers.map((c) => (
         <div key={c.email} className="flex items-center justify-between gap-4 p-4 rounded-2xl border border-border">
           <div className="min-w-0">
@@ -514,6 +571,8 @@ export default function AdminOrders() {
           <LiveView onLogout={logout} />
         ) : tab === 'overview' ? (
           <>
+            {/* At-a-glance widgets */}
+            {!loading && <OverviewWidgets orders={orders} />}
             {/* Sales dashboard */}
             {!loading && orders.length > 0 && <SalesDashboard orders={orders} />}
             {/* Payment automation reference */}
@@ -557,16 +616,25 @@ export default function AdminOrders() {
           ))}
         </div>
 
-        {/* Search */}
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by order number, name, or email..."
-            className="w-full h-11 pl-10 pr-4 rounded-xl border border-border bg-background font-mono text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
+        {/* Search + export */}
+        <div className="flex gap-2 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by order number, name, or email..."
+              className="w-full h-11 pl-10 pr-4 rounded-xl border border-border bg-background font-mono text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <Button variant="outline" onClick={() => downloadCsv(
+            `omen-orders-${new Date().toISOString().slice(0, 10)}.csv`,
+            ['Order', 'Date', 'Status', 'Customer', 'Email', 'Company', 'Subtotal', 'Total', 'Payment', 'Tracking', 'Items'],
+            orders.map((o) => [o.order_number, o.created_date ? new Date(o.created_date).toLocaleString() : '', o.status, o.customer_name, o.customer_email, o.company, o.subtotal, o.total, o.payment_method, o.tracking_number, (Array.isArray(o.items) ? o.items : []).map((i) => `${i.product_name} x${i.quantity}`).join('; ')])
+          )} disabled={!orders.length} className="h-11 px-4 gap-2 shrink-0">
+            <Download className="h-4 w-4" /> <span className="hidden sm:inline">Export CSV</span>
+          </Button>
         </div>
 
         {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
