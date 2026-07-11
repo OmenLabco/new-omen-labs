@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut, Trash2, Eye, EyeOff, Check, Copy } from 'lucide-react';
+import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut, Trash2, Eye, EyeOff, Check, Copy, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import OrderEditForm from '@/components/admin/OrderEditForm';
 import SalesDashboard from '@/components/admin/SalesDashboard';
 import ProfitView from '@/components/admin/ProfitView';
 import LiveView from '@/components/admin/LiveView';
 import StockView from '@/components/admin/StockView';
-import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout } from '@/lib/adminApi';
+import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout, fetchSubscribers } from '@/lib/adminApi';
 import { CRYPTO_WALLETS } from '@/data/cryptoWallets';
 
 function CryptoCheckButton() {
@@ -370,6 +370,47 @@ function CustomersView({ onLogout, privacy }) {
   );
 }
 
+function SubscribersCard() {
+  const [subs, setSubs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
+  useEffect(() => { fetchSubscribers().then(setSubs).catch((e) => setError(e.message)).finally(() => setLoading(false)); }, []);
+  const copyAll = () => { navigator.clipboard?.writeText(subs.map((s) => s.email).join(', ')); setCopied(true); setTimeout(() => setCopied(false), 1500); };
+  const exportCsv = () => {
+    const rows = [['email', 'source', 'date'], ...subs.map((s) => [s.email, s.source || '', s.created_at ? new Date(s.created_at).toISOString() : ''])];
+    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    const a = document.createElement('a'); a.href = url; a.download = 'omen-subscribers.csv'; a.click(); URL.revokeObjectURL(url);
+  };
+  return (
+    <div className="mt-6 p-6 rounded-2xl border border-border bg-card">
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <div>
+          <h3 className="font-semibold">Email subscribers</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">{loading ? 'Loading…' : `${subs.length} sign-up${subs.length === 1 ? '' : 's'} · first-order discount list`}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={copyAll} disabled={!subs.length} className="h-8 px-3 text-xs gap-1.5">{copied ? <><Check className="h-3.5 w-3.5 text-emerald-500" /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy emails</>}</Button>
+          <Button variant="outline" onClick={exportCsv} disabled={!subs.length} className="h-8 px-3 text-xs gap-1.5"><Download className="h-3.5 w-3.5" /> CSV</Button>
+        </div>
+      </div>
+      {error ? <p className="text-destructive text-sm">{error}</p> : (!subs.length && !loading) ? (
+        <p className="text-sm text-muted-foreground py-6 text-center">No sign-ups yet — the popup starts collecting once it's live.</p>
+      ) : (
+        <div className="max-h-56 overflow-auto scrollbar-none divide-y divide-border/50">
+          {subs.slice(0, 60).map((s) => (
+            <div key={s.email} className="flex items-center justify-between py-2 text-sm">
+              <span className="truncate">{s.email}</span>
+              <span className="text-[11px] text-muted-foreground shrink-0 ml-3">{s.created_at ? new Date(s.created_at).toLocaleDateString() : ''}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminOrders() {
   const [authed, setAuthed] = useState(!!adminAuth.get());
   const [tab, setTab] = useState('overview');
@@ -476,6 +517,7 @@ export default function AdminOrders() {
             {/* Sales dashboard */}
             {!loading && orders.length > 0 && <SalesDashboard orders={orders} />}
             {/* Payment automation reference */}
+            <SubscribersCard />
             <ZelleSetup />
             <CryptoWallets />
           </>

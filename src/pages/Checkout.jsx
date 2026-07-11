@@ -284,7 +284,7 @@ export default function Checkout() {
             )}
             {affiliateDiscount > 0 && (
               <div className="flex justify-between text-emerald-500">
-                <span>Affiliate discount ({affiliate?.discountPct || 10}%)</span><span>-${affiliateDiscount.toFixed(2)}</span>
+                <span>{affiliate?.code ? `${affiliate.code} ` : ''}discount ({affiliate?.discountPct || 10}%)</span><span>-${affiliateDiscount.toFixed(2)}</span>
               </div>
             )}
             {cryptoDiscount > 0 && (
@@ -325,12 +325,12 @@ export default function Checkout() {
 
         {/* Affiliate / referral code */}
         <div className="p-6 rounded-2xl border border-border bg-card mb-6">
-          <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-5">Referral Code</h2>
+          <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-5">Promo or Referral Code</h2>
           <div className="flex gap-2">
             <input
               value={affInput}
               onChange={(e) => setAffInput(e.target.value)}
-              placeholder="Enter a code for 10% off"
+              placeholder="e.g. WELCOME10"
               className="flex-1 h-11 px-3 rounded-lg border border-border bg-background text-sm uppercase focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
             <Button type="button" variant="outline" onClick={() => applyCode()} disabled={affChecking} className="h-11 px-5">

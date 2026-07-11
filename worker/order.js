@@ -10,6 +10,7 @@ import { renderImageEmail, renderOwnerNotification, sendEmail } from './email.js
 import { signOrder, verifyOrder } from './token.js';
 import { priceFor } from './prices.js';
 import { getStockMap } from './stock.js';
+import { resolvePromo } from './promos.js';
 
 // GET /api/order/status?o=ORDER&t=TOKEN — public status poll for the awaiting page.
 // Token-gated (HMAC) so order numbers can't be enumerated. Returns only status.
@@ -206,6 +207,20 @@ export async function handleOrder(request, env) {
   const tier = affiliate ? commissionTier(await affiliateSalesCount(env, affiliate.code)) : null;
   const commission = affiliate ? +(subtotal * tier.rate).toFixed(2) : 0;
 
+  // Flat promo code (e.g. WELCOME10) — only when the code isn't an affiliate.
+  let promoCode = null;
+  let promoDiscount = 0;
+  if (!affiliate && affiliate_code) {
+    const promo = resolvePromo(affiliate_code);
+    if (promo && (!promo.firstOrderOnly || await isNewCustomer(env, customer.email))) {
+      promoCode = promo.code;
+      promoDiscount = +(subtotal * (promo.pct / 100)).toFixed(2);
+    }
+  }
+  // The single code-based discount recorded on the order (affiliate OR promo).
+  const codeDiscount = affiliate ? affiliateDiscount : promoDiscount;
+  const codeUsed = affCode || promoCode;
+
   // Logged-in customer: membership perks + points
   const account = customer_token ? await customerFromToken(env, customer_token) : null;
   const acctTier = account ? membershipStatus(account) : null;
@@ -217,11 +232,11 @@ export async function handleOrder(request, env) {
     const maxByBalance = Math.floor((account.points || 0) / REDEEM_STEP) * REDEEM_STEP;
     const requested = Math.floor(Number(points_to_redeem) / REDEEM_STEP) * REDEEM_STEP;
     pointsRedeemed = Math.max(0, Math.min(requested, maxByBalance));
-    const maxValue = +(subtotal - cryptoDiscount - affiliateDiscount).toFixed(2);
+    const maxValue = +(subtotal - cryptoDiscount - codeDiscount).toFixed(2);
     pointsValue = Math.min(+(pointsRedeemed * POINTS_REDEEM_VALUE).toFixed(2), Math.max(0, maxValue));
   }
 
-  const discount = +(cryptoDiscount + affiliateDiscount + pointsValue).toFixed(2);
+  const discount = +(cryptoDiscount + codeDiscount + pointsValue).toFixed(2);
   const shipOpt = SHIPPING_OPTIONS[shipping_method] || SHIPPING_OPTIONS.ground;
   const freeShip = acctTier && acctTier.freeShipping;
   const shipping_cost = freeShip ? 0 : shipOpt.price;
@@ -282,8 +297,8 @@ export async function handleOrder(request, env) {
           shippingLabel,
           discount,
           cryptoDiscount,
-          affiliateDiscount,
-          affCode,
+          codeDiscount,
+          codeUsed,
           commission,
           pointsEarned,
           pointsRedeemed,
@@ -328,8 +343,8 @@ export async function handleOrder(request, env) {
     shipping_method: shippingLabel,
     discount,
     crypto_discount: cryptoDiscount,
-    affiliate_discount: affiliateDiscount,
-    affiliate_code: affCode,
+    affiliate_discount: codeDiscount,
+    affiliate_code: codeUsed,
     commission,
     points_earned: pointsEarned,
     points_redeemed: pointsRedeemed,

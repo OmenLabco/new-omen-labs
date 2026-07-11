@@ -122,6 +122,14 @@ export async function markPayout(id, status) {
   return resp.json();
 }
 
+export async function fetchSubscribers() {
+  const resp = await fetch('/api/admin/subscribers', { headers: headers() });
+  if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }
+  if (!resp.ok) throw new Error('Failed to load subscribers.');
+  const data = await resp.json();
+  return data.subscribers || [];
+}
+
 export async function fetchStock() {
   const resp = await fetch('/api/admin/stock', { headers: headers() });
   if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }

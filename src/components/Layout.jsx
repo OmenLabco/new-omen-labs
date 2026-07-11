@@ -7,6 +7,7 @@ import Footer from './Footer';
 import ScrollProgress from './ScrollProgress';
 import CartDock from './CartDock';
 import SupportWidget from './SupportWidget';
+import EmailCapturePopup from './EmailCapturePopup';
 
 export default function Layout() {
   const location = useLocation();
@@ -100,6 +101,7 @@ export default function Layout() {
         onRemove={handleRemove}
       />
       <SupportWidget />
+      <EmailCapturePopup />
     </div>
   );
 }
