@@ -124,11 +124,14 @@ export async function affiliateStats(request, env) {
   if (!aff) return json({ error: 'Unauthorized' }, 401);
 
   const { results } = await env.DB.prepare(
-    'SELECT order_number, total, commission, status, created_date FROM orders WHERE affiliate_code = ? ORDER BY id DESC'
+    'SELECT order_number, subtotal, total, commission, status, created_date FROM orders WHERE affiliate_code = ? ORDER BY id DESC'
   ).bind(aff.code).all();
 
   const orders = results || [];
-  const totalSales = orders.reduce((s, o) => s + Number(o.total || 0), 0);
+  // Commission is earned on each order's subtotal (the sale value before the
+  // customer's code discount), so "total sales" tracks that same base — then
+  // total sales × tier rate == commission, exactly.
+  const totalSales = orders.reduce((s, o) => s + Number(o.subtotal != null ? o.subtotal : (o.total || 0)), 0);
   const totalCommission = orders.reduce((s, o) => s + Number(o.commission || 0), 0);
 
   const tier = commissionTier(orders.length);

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Check, Copy, DollarSign, Package, TrendingUp, LogOut,
-  UserPlus, Share2, Wallet, Tag, BarChart3, Zap, Megaphone, Users, Lock, Download,
+  UserPlus, Share2, Wallet, Tag, BarChart3, Zap, Megaphone, Users, Lock, Download, Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { affiliateAuth, affiliateStats, affiliateRequestPayout } from '@/lib/affiliateApi';
@@ -428,6 +428,33 @@ function PayoutBox({ payout, affiliate, onDone }) {
   );
 }
 
+// Little (i) that reveals the 3-tier commission breakdown.
+function TierInfo({ current }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-label="How commission tiers work"
+        className="inline-flex items-center justify-center h-4 w-4 rounded-full border border-muted-foreground/40 text-muted-foreground hover:text-foreground hover:border-foreground transition-colors">
+        <Info className="h-2.5 w-2.5" />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-6 z-30 w-64 rounded-xl border border-border bg-card shadow-xl p-3">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Commission tiers</p>
+          <div className="space-y-1.5">
+            {TIERS.map((t) => (
+              <div key={t.name} className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 ${current === t.name ? 'bg-primary/10 border border-primary/25' : 'border border-transparent'}`}>
+                <span><span className="text-sm font-semibold">{t.name}</span><span className="text-[11px] text-muted-foreground ml-1.5">{t.req}</span></span>
+                <span className="text-sm font-bold">{t.rate}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">Earned on each order's sale value. Your rate rises automatically as you reach more sales.</p>
+        </div>
+      )}
+    </span>
+  );
+}
+
 function Dashboard({ onLogout }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
@@ -467,7 +494,10 @@ function Dashboard({ onLogout }) {
       {tier && (
         <div className="p-5 rounded-2xl border border-border bg-card mb-6 flex items-center justify-between">
           <div>
-            <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">Commission Tier</p>
+            <div className="flex items-center gap-1.5 mb-1">
+              <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Commission Tier</p>
+              <TierInfo current={tier.name} />
+            </div>
             <p className="text-xl font-bold">{tier.name} — {tier.rate}%</p>
           </div>
           {nextTier && (
@@ -507,7 +537,7 @@ function Dashboard({ onLogout }) {
               </div>
               <div className="text-right">
                 <p className="text-sm font-semibold text-emerald-500">+${Number(o.commission || 0).toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground">order ${Number(o.total || 0).toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground">sale ${Number(o.subtotal != null ? o.subtotal : (o.total || 0)).toFixed(2)}</p>
               </div>
             </div>
           ))}

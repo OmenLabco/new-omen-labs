@@ -32,10 +32,11 @@ async function affiliateInfoForEmail(env, email) {
   const aff = await getAffiliateByEmail(env, email);
   if (!aff) return { enrolled: false };
   const { results } = await env.DB.prepare(
-    'SELECT order_number, total, commission, status, created_date FROM orders WHERE affiliate_code = ? ORDER BY id DESC'
+    'SELECT order_number, subtotal, total, commission, status, created_date FROM orders WHERE affiliate_code = ? ORDER BY id DESC'
   ).bind(aff.code).all();
   const orders = results || [];
-  const totalSales = orders.reduce((s, o) => s + Number(o.total || 0), 0);
+  // Sales tracked on the commission base (subtotal) so it reconciles with commission.
+  const totalSales = orders.reduce((s, o) => s + Number(o.subtotal != null ? o.subtotal : (o.total || 0)), 0);
   const totalCommission = orders.reduce((s, o) => s + Number(o.commission || 0), 0);
   const tier = commissionTier(orders.length);
   const next = tier.name === 'Silver' ? { name: 'Gold', at: 10 } : tier.name === 'Gold' ? { name: 'Platinum', at: 30 } : null;

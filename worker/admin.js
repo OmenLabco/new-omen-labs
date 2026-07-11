@@ -76,7 +76,7 @@ export async function listAffiliates(request, env) {
   const { results } = await env.DB.prepare(
     `SELECT a.code, a.name, a.email, a.created_date, a.marketing_opt_in, a.payout_method, a.payout_handle,
             COUNT(o.id) AS order_count,
-            COALESCE(SUM(o.total), 0) AS total_sales,
+            COALESCE(SUM(COALESCE(o.subtotal, o.total)), 0) AS total_sales,
             COALESCE(SUM(o.commission), 0) AS total_commission
      FROM affiliates a
      LEFT JOIN orders o ON o.affiliate_code = a.code
