@@ -342,12 +342,19 @@ export default function Checkout() {
 
         {/* Shipping method */}
         <div className="p-6 rounded-2xl border border-border bg-card mb-6">
-          <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-5">Shipping Method</h2>
+          <div className="flex items-center justify-between mb-5 gap-2 flex-wrap">
+            <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Shipping Method</h2>
+            {freeShipping && (
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-600 bg-emerald-500/10 rounded-full px-2.5 py-1">
+                <ShieldCheck className="h-3.5 w-3.5" /> Free shipping with {account?.membership?.name || 'membership'}
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {SHIPPING_OPTIONS.map((opt) => {
               const Icon = SHIP_META[opt.id] || Truck;
               const selected = shipMethod === opt.id;
-              const free = opt.price === 0;
+              const free = opt.price === 0 || freeShipping;
               return (
                 <button
                   type="button"
@@ -362,7 +369,13 @@ export default function Checkout() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-semibold truncate">{opt.title}</span>
-                        <span className={`text-sm font-bold shrink-0 ${free ? 'text-emerald-600' : ''}`}>{free ? 'Free' : `$${opt.price.toFixed(2)}`}</span>
+                        <span className={`text-sm font-bold shrink-0 ${free ? 'text-emerald-600' : ''}`}>
+                          {free
+                            ? (freeShipping && opt.price > 0
+                                ? <><span className="text-muted-foreground/60 font-normal line-through mr-1.5">${opt.price.toFixed(2)}</span>Free</>
+                                : 'Free')
+                            : `$${opt.price.toFixed(2)}`}
+                        </span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{opt.desc}</p>
                     </div>
