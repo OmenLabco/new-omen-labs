@@ -9,7 +9,7 @@ import ProductVialImage from '../components/ProductVialImage';
 import { Button } from '@/components/ui/button';
 import PurityBadge from '../components/PurityBadge';
 import { DISCOUNT_TIERS, getDiscountPct, getDiscountedPrice } from '../lib/discountTiers';
-import { getStock, stockStatus } from '../lib/stockApi';
+import { getStock, stockStatus, notifyRestock } from '../lib/stockApi';
 
 export default function ProductDetail() {
   const { slug } = useParams();
@@ -19,6 +19,13 @@ export default function ProductDetail() {
   const [variantIdx, setVariantIdx] = useState(0);
   const [stock, setStock] = useState({});
   useEffect(() => { getStock().then(setStock); }, []);
+
+  // Restock notify (for sold-out doses)
+  const [notifyEmail, setNotifyEmail] = useState('');
+  const [notifyBusy, setNotifyBusy] = useState(false);
+  const [notifyDone, setNotifyDone] = useState(false);
+  const [notifyErr, setNotifyErr] = useState('');
+  useEffect(() => { setNotifyDone(false); setNotifyErr(''); }, [variantIdx]);
 
   const product = useMemo(() => getProductBySlug(slug), [slug]);
   const pairedProducts = useMemo(
@@ -35,6 +42,14 @@ export default function ProductDetail() {
   const vStatus = product ? stockStatus(stock[`${product.id}_${variant.dose}`]) : null;
   // Live stock wins once a dose is tracked; otherwise fall back to the static flag.
   const soldOut = vStatus ? vStatus.key === 'out' : (!!product && product.in_stock === false && !product.coming_soon);
+
+  const handleNotify = async (e) => {
+    e.preventDefault(); setNotifyErr(''); setNotifyBusy(true);
+    try {
+      await notifyRestock({ sku: `${product.id}_${variant.dose}`, email: notifyEmail, product_name: `${product.name} ${variant.dose}`, slug: product.slug });
+      setNotifyDone(true);
+    } catch (err) { setNotifyErr(err.message); } finally { setNotifyBusy(false); }
+  };
 
   const handleAddToCart = () => {
     cart.add({
@@ -228,6 +243,24 @@ export default function ProductDetail() {
                   'Add to Cart'
                 )}
               </Button>
+
+              {soldOut && !product.coming_soon && (
+                <div className="mt-4 rounded-xl border border-border bg-secondary/30 p-4">
+                  {notifyDone ? (
+                    <p className="text-sm text-emerald-600 flex items-center gap-2"><Check className="h-4 w-4 shrink-0" /> You're on the list — we'll email you the moment it's back.</p>
+                  ) : (
+                    <form onSubmit={handleNotify}>
+                      <p className="text-sm font-medium mb-2">Notify me when it's back in stock</p>
+                      <div className="flex gap-2">
+                        <input type="email" required value={notifyEmail} onChange={(e) => setNotifyEmail(e.target.value)} placeholder="you@email.com"
+                          className="flex-1 h-11 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                        <Button type="submit" disabled={notifyBusy} variant="outline" className="h-11 px-5">{notifyBusy ? '…' : 'Notify me'}</Button>
+                      </div>
+                      {notifyErr && <p className="text-xs text-destructive mt-1.5">{notifyErr}</p>}
+                    </form>
+                  )}
+                </div>
+              )}
 
               {variant.coa ? (
                 <a href={variant.coa} target="_blank" rel="noopener noreferrer"

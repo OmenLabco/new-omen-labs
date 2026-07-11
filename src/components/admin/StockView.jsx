@@ -25,12 +25,14 @@ export default function StockView({ onLogout }) {
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
   const [q, setQ] = useState('');
+  const [waiting, setWaiting] = useState({});
 
   useEffect(() => {
     fetchStock()
       .then((d) => {
         const stock = d.stock || {};
         setLow(d.lowStock || 9);
+        setWaiting(d.waiting || {});
         setOrig(stock);
         const init = {};
         for (const p of CATALOG) for (const v of p.variants) {
@@ -126,6 +128,9 @@ export default function StockView({ onLogout }) {
                       <span className="text-sm font-semibold">{v.dose}</span>
                     </div>
                     <span className={`text-[10px] font-medium uppercase tracking-wide px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
+                    {waiting[sku] > 0 && (
+                      <span title="People waiting for a restock email" className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">🔔 {waiting[sku]} waiting</span>
+                    )}
                     <div className="flex-1" />
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button type="button" onClick={() => step(sku, -1)} className="h-8 w-8 rounded-lg border border-border inline-flex items-center justify-center hover:bg-accent transition-colors"><Minus className="h-3.5 w-3.5" /></button>

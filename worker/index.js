@@ -6,7 +6,7 @@ import { loginAffiliate, affiliateStats, validateCode, requestPayout } from './a
 import { signupCustomer, loginCustomer, customerMe, enrollAffiliate } from './customer.js';
 import { withSecurity, rateLimit, tooMany, clientIp } from './security.js';
 import { handleZelleNotify } from './zelle.js';
-import { listStock, updateStock, publicStock } from './stock.js';
+import { listStock, updateStock, publicStock, restockNotifySignup } from './stock.js';
 import { handleSubscribe, listSubscribers } from './subscribe.js';
 import { syncCart, runAbandonedCartWatch } from './cart.js';
 import { runCryptoWatch } from './cryptoWatch.js';
@@ -24,6 +24,7 @@ const LIMITS = {
   '/api/customer/signup': { max: 10, windowMs: 60 * 60 * 1000 },
   '/api/affiliate/payout': { max: 12, windowMs: 60 * 60 * 1000 },
   '/api/subscribe': { max: 20, windowMs: 60 * 60 * 1000 },
+  '/api/restock-notify': { max: 20, windowMs: 60 * 60 * 1000 },
   '/api/order': { max: 40, windowMs: 10 * 60 * 1000 },
   '/api/pay/session': { max: 40, windowMs: 10 * 60 * 1000 },
 };
@@ -192,6 +193,10 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/stock') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
       return publicStock(request, env);
+    }
+    if (pathname === '/api/restock-notify') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return restockNotifySignup(request, env);
     }
     if (pathname === '/api/subscribe') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });

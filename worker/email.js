@@ -219,6 +219,20 @@ export function renderAbandonedCart({ name, items, subtotal }) {
   `);
 }
 
+// Back-in-stock notification.
+export function renderRestockBack({ productName, url }) {
+  return layout(`
+    ${heading('Back in stock')}
+    ${divider()}
+    ${para(`Good news — <b style="color:${WHITE}">${esc(productName || 'the item you wanted')}</b> is back in stock at Omen Labs.`)}
+    ${para('Stock can move fast, so grab it while it lasts:')}
+    <div style="margin:24px 0 6px">
+      <a href="${esc(url)}" style="display:inline-block;background:${BLUE};color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:13px 26px;border-radius:10px">Shop it now →</a>
+    </div>
+    ${para('<span style="font-size:13px;color:#8a90a0">You asked to be notified when this restocked. No further emails for this item.</span>')}
+  `);
+}
+
 // Helper to send via Resend
 export async function sendEmail(env, { to, subject, html, replyTo }) {
   if (!env.RESEND_API_KEY) return;

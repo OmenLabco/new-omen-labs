@@ -23,6 +23,18 @@ export function stockStatus(count) {
   return { key: 'in', label: 'In stock', left: count };
 }
 
+// Sign up to be emailed when a sold-out dose is restocked.
+export async function notifyRestock({ sku, email, product_name, slug }) {
+  const resp = await fetch('/api/restock-notify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sku, email, product_name, slug }),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.error || 'Could not sign you up — try again.');
+  return data;
+}
+
 // Product-level status for catalog cards: worst-case across its tracked variants.
 export function productStatus(product, stock) {
   const counts = (product.variants || [])
