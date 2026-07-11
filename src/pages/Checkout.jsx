@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { cart } from '@/lib/cart';
 import { validateAffiliateCode } from '@/lib/affiliateApi';
 import { customerAuth, customerMe } from '@/lib/customerApi';
+import { FREE_SHIP_THRESHOLD } from '@/lib/shipping';
 
 const STATE_ABBR = { alabama:'AL',alaska:'AK',arizona:'AZ',arkansas:'AR',california:'CA',colorado:'CO',connecticut:'CT',delaware:'DE','district of columbia':'DC',florida:'FL',georgia:'GA',hawaii:'HI',idaho:'ID',illinois:'IL',indiana:'IN',iowa:'IA',kansas:'KS',kentucky:'KY',louisiana:'LA',maine:'ME',maryland:'MD',massachusetts:'MA',michigan:'MI',minnesota:'MN',mississippi:'MS',missouri:'MO',montana:'MT',nebraska:'NE',nevada:'NV','new hampshire':'NH','new jersey':'NJ','new mexico':'NM','new york':'NY','north carolina':'NC','north dakota':'ND',ohio:'OH',oklahoma:'OK',oregon:'OR',pennsylvania:'PA','rhode island':'RI','south carolina':'SC','south dakota':'SD',tennessee:'TN',texas:'TX',utah:'UT',vermont:'VT',virginia:'VA',washington:'WA','west virginia':'WV',wisconsin:'WI',wyoming:'WY' };
 const stateAbbr = (s) => STATE_ABBR[(s || '').toLowerCase()] || s || '';
@@ -150,7 +151,9 @@ export default function Checkout() {
   const pointsValue = redeem && account ? Math.min(redeemablePoints * 0.05, preDiscount) : 0;
   const pointsToRedeem = pointsValue > 0 ? redeemablePoints : 0;
 
-  const freeShipping = !!account?.membership?.freeShipping;
+  const memberFreeShip = !!account?.membership?.freeShipping;
+  const freeByThreshold = subtotal >= FREE_SHIP_THRESHOLD;
+  const freeShipping = memberFreeShip || freeByThreshold;
   const baseShipping = (SHIPPING_OPTIONS.find((o) => o.id === shipMethod) || SHIPPING_OPTIONS[0]).price;
   const shipping = freeShipping ? 0 : baseShipping;
   const total = subtotal - cryptoDiscount - affiliateDiscount - pointsValue + shipping;
@@ -277,7 +280,7 @@ export default function Checkout() {
               <span>Subtotal</span><span>${subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>{shipMethod === 'pickup' ? 'Local Pickup' : 'Shipping'}{freeShipping ? ' (Free — ' + account.membership.name + ')' : ''}</span><span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
+              <span>{shipMethod === 'pickup' ? 'Local Pickup' : 'Shipping'}{memberFreeShip ? ' (Free — ' + account.membership.name + ')' : freeByThreshold ? ' (Free — $150+ order)' : ''}</span><span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
             </div>
             {pointsValue > 0 && (
               <div className="flex justify-between text-emerald-500">
@@ -363,7 +366,7 @@ export default function Checkout() {
             <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Shipping Method</h2>
             {freeShipping && (
               <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-600 bg-emerald-500/10 rounded-full px-2.5 py-1">
-                <ShieldCheck className="h-3.5 w-3.5" /> Free shipping with {account?.membership?.name || 'membership'}
+                <ShieldCheck className="h-3.5 w-3.5" /> {memberFreeShip ? `Free shipping with ${account?.membership?.name || 'membership'}` : 'Free shipping unlocked · $150+ order'}
               </span>
             )}
           </div>

@@ -238,9 +238,13 @@ export async function handleOrder(request, env) {
 
   const discount = +(cryptoDiscount + codeDiscount + pointsValue).toFixed(2);
   const shipOpt = SHIPPING_OPTIONS[shipping_method] || SHIPPING_OPTIONS.ground;
-  const freeShip = acctTier && acctTier.freeShipping;
+  // Free shipping for VIP members, or any order at/above the threshold.
+  const FREE_SHIP_THRESHOLD = 150; // KEEP IN SYNC with src/lib/shipping.js
+  const freeShipMember = !!(acctTier && acctTier.freeShipping);
+  const freeShipThreshold = subtotal >= FREE_SHIP_THRESHOLD;
+  const freeShip = freeShipMember || freeShipThreshold;
   const shipping_cost = freeShip ? 0 : shipOpt.price;
-  const shippingLabel = freeShip ? `${shipOpt.label} (Free — ${acctTier.name})` : shipOpt.label;
+  const shippingLabel = freeShipMember ? `${shipOpt.label} (Free — ${acctTier.name})` : freeShipThreshold ? `${shipOpt.label} (Free shipping)` : shipOpt.label;
   let total = +(subtotal - discount + shipping_cost).toFixed(2);
   const isZelle = payment_method === 'zelle';
   const isCashapp = payment_method === 'cashapp';

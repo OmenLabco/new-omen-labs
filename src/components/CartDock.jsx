@@ -1,7 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Minus, Plus, ShoppingBag, Gift } from 'lucide-react';
+import { X, Minus, Plus, ShoppingBag, Gift, Truck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import OmenLogo from './OmenLogo';
+import { FREE_SHIP_THRESHOLD } from '@/lib/shipping';
 
 export default function CartDock({ isOpen, onClose, items = [], onUpdateQuantity, onRemove }) {
   const navigate = useNavigate();
@@ -98,6 +99,21 @@ export default function CartDock({ isOpen, onClose, items = [], onUpdateQuantity
             {/* Footer */}
             {items.length > 0 && (
               <div className="px-6 py-5 border-t border-border">
+                {/* Free-shipping progress */}
+                {total >= FREE_SHIP_THRESHOLD ? (
+                  <div className="mb-4 flex items-center gap-1.5 text-[12px] font-medium text-emerald-600">
+                    <Truck className="h-4 w-4" /> You've unlocked FREE shipping! 🎉
+                  </div>
+                ) : (
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between text-[11px] mb-1.5">
+                      <span className="text-muted-foreground inline-flex items-center gap-1.5"><Truck className="h-3.5 w-3.5" /> Add <span className="font-semibold text-foreground">${(FREE_SHIP_THRESHOLD - total).toFixed(2)}</span> for FREE shipping</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                      <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${Math.min(100, (total / FREE_SHIP_THRESHOLD) * 100)}%` }} />
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
                     Total
