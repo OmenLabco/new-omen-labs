@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, ChevronDown } from 'lucide-react';
@@ -6,6 +6,7 @@ import { PRODUCTS, getProductsByCategory, sortByPopularity, getCategories } from
 import OmenLogo from '../components/OmenLogo';
 import CategoryFilter from '../components/CategoryFilter';
 import ProductVialImage from '../components/ProductVialImage';
+import { getStock, productStatus } from '../lib/stockApi';
 
 // Soft pastel image backdrops, picked by the product's primary category —
 // mirrors the per-product tinted cards on the reference store.
@@ -30,6 +31,8 @@ export default function Catalog() {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState('popular');
   const [inStockOnly, setInStockOnly] = useState(false);
+  const [stock, setStock] = useState({});
+  useEffect(() => { getStock().then(setStock); }, []);
 
   const products = useMemo(() => {
     let list = sortByPopularity(getProductsByCategory(category));
@@ -116,7 +119,10 @@ export default function Catalog() {
             {products.map((product, i) => {
               const primaryCat = getCategories(product)[0];
               const bg = CARD_BG[primaryCat] || FALLBACK_BG;
-              const soldOut = product.in_stock === false && !product.coming_soon;
+              const liveStatus = productStatus(product, stock);
+              // Live stock wins once tracked; otherwise fall back to the static flag.
+              const soldOut = liveStatus ? liveStatus.key === 'out' : (product.in_stock === false && !product.coming_soon);
+              const lowStock = !soldOut && !product.coming_soon && liveStatus?.key === 'low';
               return (
                 <motion.div
                   key={product.id}
@@ -152,6 +158,13 @@ export default function Catalog() {
                             </span>
                           </div>
                         </>
+                      )}
+                      {lowStock && (
+                        <div className="absolute top-3 left-3">
+                          <span className="inline-flex items-center gap-1 font-mono text-[8px] sm:text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full bg-white/85 backdrop-blur text-amber-600 border border-amber-500/30">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />{liveStatus.label}
+                          </span>
+                        </div>
                       )}
                     </div>
 

@@ -10,6 +10,7 @@ import { renderImageEmail, sendEmail } from './email.js';
 import { signOrder } from './token.js';
 import { safeEqual, zelleSecret } from './security.js';
 import { pushToShipStation } from './shipstation.js';
+import { decrementStockForOrder } from './stock.js';
 
 const SITE = 'https://omenlabs.co';
 const json = (data, status = 200) =>
@@ -52,6 +53,9 @@ export async function reconcilePayment(env, text, opts = {}) {
 
   // Hand the paid order to ShipStation (no-op if not configured)
   await pushToShipStation(env, { ...order, status: 'confirmed', payment_method: confirmedLabel });
+
+  // Subtract the ordered vials from inventory (once).
+  await decrementStockForOrder(env, order);
 
   // Send the customer their confirmation (best effort)
   if (env.RESEND_API_KEY && order.customer_email) {

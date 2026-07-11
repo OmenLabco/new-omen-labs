@@ -9,6 +9,7 @@
 import { renderImageEmail, sendEmail } from './email.js';
 import { signOrder } from './token.js';
 import { pushToShipStation } from './shipstation.js';
+import { decrementStockForOrder } from './stock.js';
 
 const SITE = 'https://omenlabs.co';
 
@@ -161,6 +162,9 @@ async function confirmOrder(env, order, payment) {
   }
   // Hand the paid order to ShipStation for fulfillment (no-op if not configured)
   await pushToShipStation(env, { ...order, status: 'confirmed', payment_method: fixedLabel });
+
+  // Subtract the ordered vials from inventory (once).
+  await decrementStockForOrder(env, order);
 
   // Notify the owner that an auto-confirm happened
   if (env.RESEND_API_KEY) {

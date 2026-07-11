@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, Link, useOutletContext } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Shield, FileCheck, Thermometer, Plus, Minus, Check, Tag } from 'lucide-react';
@@ -9,6 +9,7 @@ import ProductVialImage from '../components/ProductVialImage';
 import { Button } from '@/components/ui/button';
 import PurityBadge from '../components/PurityBadge';
 import { DISCOUNT_TIERS, getDiscountPct, getDiscountedPrice } from '../lib/discountTiers';
+import { getStock, stockStatus } from '../lib/stockApi';
 
 export default function ProductDetail() {
   const { slug } = useParams();
@@ -16,6 +17,8 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const [variantIdx, setVariantIdx] = useState(0);
+  const [stock, setStock] = useState({});
+  useEffect(() => { getStock().then(setStock); }, []);
 
   const product = useMemo(() => getProductBySlug(slug), [slug]);
   const pairedProducts = useMemo(
@@ -29,7 +32,9 @@ export default function ProductDetail() {
 
   const discountPct = getDiscountPct(quantity);
   const discountedUnitPrice = product ? getDiscountedPrice(basePrice, quantity) : 0;
-  const soldOut = !!product && product.in_stock === false && !product.coming_soon;
+  const vStatus = product ? stockStatus(stock[`${product.id}_${variant.dose}`]) : null;
+  // Live stock wins once a dose is tracked; otherwise fall back to the static flag.
+  const soldOut = vStatus ? vStatus.key === 'out' : (!!product && product.in_stock === false && !product.coming_soon);
 
   const handleAddToCart = () => {
     cart.add({
@@ -112,6 +117,14 @@ export default function ProductDetail() {
                 </div>
                 <span className="hidden lg:block"><PurityBadge purity={product.purity} /></span>
               </div>
+
+              {/* Live stock status for the selected dose */}
+              {!product.coming_soon && vStatus && (
+                <div className={`mb-4 inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${vStatus.key === 'out' ? 'bg-red-500/10 text-red-600' : vStatus.key === 'low' ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600'}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${vStatus.key === 'out' ? 'bg-red-500' : vStatus.key === 'low' ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
+                  {vStatus.key === 'out' ? 'Sold out' : vStatus.key === 'low' ? `${vStatus.label} — only ${vStatus.left} left` : 'In stock'}
+                </div>
+              )}
 
               {/* Dose selector */}
               {!product.coming_soon && variants.length > 1 && (

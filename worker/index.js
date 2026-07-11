@@ -6,6 +6,7 @@ import { loginAffiliate, affiliateStats, validateCode, requestPayout } from './a
 import { signupCustomer, loginCustomer, customerMe, enrollAffiliate } from './customer.js';
 import { withSecurity, rateLimit, tooMany, clientIp } from './security.js';
 import { handleZelleNotify } from './zelle.js';
+import { listStock, updateStock, publicStock } from './stock.js';
 import { runCryptoWatch } from './cryptoWatch.js';
 import { handleShipstationWebhook, runShipstationSync } from './shipstation.js';
 import { runTrackingWatch } from './tracking.js';
@@ -184,6 +185,15 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/admin/customers') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
       return listCustomers(request, env);
+    }
+    if (pathname === '/api/stock') {
+      if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+      return publicStock(request, env);
+    }
+    if (pathname === '/api/admin/stock') {
+      if (method === 'GET') return listStock(request, env);
+      if (method === 'POST') return updateStock(request, env);
+      return new Response('Method Not Allowed', { status: 405 });
     }
     if (pathname === '/api/admin/payouts') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });

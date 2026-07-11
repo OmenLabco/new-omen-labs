@@ -10,6 +10,7 @@ import { safeEqual, issueAdminSession, verifyAdminSession, zelleSecret } from '.
 import { cryptoWatchDebug } from './cryptoWatch.js';
 import { COST_SHEET, COST_BY_PRODUCT_ID, COST_BY_NAME } from './costs.js';
 import { ensureAffiliateSchema, PAYOUT_METHODS } from './affiliate.js';
+import { decrementStockForOrder } from './stock.js';
 
 const SITE = 'https://omenlabs.co';
 
@@ -257,6 +258,11 @@ export async function updateOrder(request, env) {
     const fixedLabel = updated.payment_method.replace(/awaiting payment/i, 'payment confirmed');
     await env.DB.prepare('UPDATE orders SET payment_method = ? WHERE id = ?').bind(fixedLabel, id).run();
     updated = { ...updated, payment_method: fixedLabel };
+  }
+
+  // Once an order reaches a paid/fulfilled status, subtract its vials from stock (once).
+  if (status && ['confirmed', 'shipped', 'out_for_delivery', 'delivered'].includes(status)) {
+    await decrementStockForOrder(env, updated);
   }
 
   // Notify the customer if the status changed (or notify was explicitly requested)

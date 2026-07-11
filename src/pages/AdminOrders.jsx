@@ -6,6 +6,7 @@ import OrderEditForm from '@/components/admin/OrderEditForm';
 import SalesDashboard from '@/components/admin/SalesDashboard';
 import ProfitView from '@/components/admin/ProfitView';
 import LiveView from '@/components/admin/LiveView';
+import StockView from '@/components/admin/StockView';
 import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout } from '@/lib/adminApi';
 import { CRYPTO_WALLETS } from '@/data/cryptoWallets';
 
@@ -435,8 +436,8 @@ export default function AdminOrders() {
         <div className="mb-10 flex items-start justify-between">
           <div>
             <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Admin</span>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight">{tab === 'live' ? 'Live View' : tab === 'overview' ? 'Overview' : tab === 'orders' ? 'Orders' : tab === 'profit' ? 'Profit' : tab === 'affiliates' ? 'Affiliates' : 'Customers'}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{tab === 'live' ? 'Who’s on your site right now' : tab === 'orders' ? `${orders.length} total orders` : tab === 'profit' ? 'Peptide revenue, cost & profit' : tab === 'affiliates' ? 'Affiliate partners' : tab === 'customers' ? 'Reward members' : 'Store performance'}</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight">{tab === 'live' ? 'Live View' : tab === 'overview' ? 'Overview' : tab === 'orders' ? 'Orders' : tab === 'profit' ? 'Profit' : tab === 'stock' ? 'Inventory' : tab === 'affiliates' ? 'Affiliates' : 'Customers'}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{tab === 'live' ? 'Who’s on your site right now' : tab === 'orders' ? `${orders.length} total orders` : tab === 'profit' ? 'Peptide revenue, cost & profit' : tab === 'stock' ? 'Vials on hand per product' : tab === 'affiliates' ? 'Affiliate partners' : tab === 'customers' ? 'Reward members' : 'Store performance'}</p>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -456,7 +457,7 @@ export default function AdminOrders() {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 rounded-xl border border-border p-1 w-fit max-w-full overflow-x-auto scrollbar-none">
-          {(adminAuth.role() === 'admin' ? ['live', 'overview', 'orders', 'profit', 'affiliates', 'customers'] : ['live', 'overview', 'orders', 'affiliates', 'customers']).map((t) => (
+          {(adminAuth.role() === 'admin' ? ['live', 'overview', 'orders', 'profit', 'stock', 'affiliates', 'customers'] : ['live', 'overview', 'orders', 'stock', 'affiliates', 'customers']).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -484,6 +485,8 @@ export default function AdminOrders() {
           ) : (
             <ProfitView orders={orders} privacy={privacy} />
           )
+        ) : tab === 'stock' ? (
+          <StockView onLogout={logout} />
         ) : tab === 'affiliates' ? (
           <AffiliatesView onLogout={logout} privacy={privacy} />
         ) : tab === 'customers' ? (

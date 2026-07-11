@@ -122,6 +122,22 @@ export async function markPayout(id, status) {
   return resp.json();
 }
 
+export async function fetchStock() {
+  const resp = await fetch('/api/admin/stock', { headers: headers() });
+  if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }
+  if (!resp.ok) throw new Error('Failed to load stock.');
+  return resp.json(); // { stock: { sku: count }, lowStock }
+}
+
+export async function saveStock(updates) {
+  const resp = await fetch('/api/admin/stock', {
+    method: 'POST', headers: headers(), body: JSON.stringify({ updates }),
+  });
+  if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }
+  if (!resp.ok) throw new Error('Failed to save stock.');
+  return resp.json();
+}
+
 export async function fetchCustomers() {
   const resp = await fetch('/api/admin/customers', { headers: headers() });
   if (resp.status === 401) {

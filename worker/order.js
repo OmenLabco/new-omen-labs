@@ -9,6 +9,7 @@
 import { renderImageEmail, renderOwnerNotification, sendEmail } from './email.js';
 import { signOrder, verifyOrder } from './token.js';
 import { priceFor } from './prices.js';
+import { getStockMap } from './stock.js';
 
 // GET /api/order/status?o=ORDER&t=TOKEN — public status poll for the awaiting page.
 // Token-gated (HMAC) so order numbers can't be enumerated. Returns only status.
@@ -178,6 +179,16 @@ export async function handleOrder(request, env) {
       price: unit,
     });
   }
+  // Block ordering items we track that have hit zero stock.
+  if (env.DB) {
+    const stock = await getStockMap(env);
+    for (const it of pricedItems) {
+      if (it.product_id in stock && stock[it.product_id] <= 0) {
+        return json({ error: `Sold out: ${it.product_name}. Please remove it to continue.` }, 409);
+      }
+    }
+  }
+
   // From here on, use the server-priced line items only.
   const items = pricedItems;
   const subtotal = +(items.reduce((s, i) => s + i.price * i.quantity, 0)).toFixed(2);
