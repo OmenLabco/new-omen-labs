@@ -29,9 +29,11 @@ export default function Catalog() {
   const [category, setCategory] = useState(null);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState('popular');
+  const [inStockOnly, setInStockOnly] = useState(false);
 
   const products = useMemo(() => {
     let list = sortByPopularity(getProductsByCategory(category));
+    if (inStockOnly) list = list.filter((p) => p.in_stock);
     const q = query.trim().toLowerCase();
     if (q) {
       list = list.filter(
@@ -46,7 +48,7 @@ export default function Catalog() {
     else if (sort === 'price-desc') list = [...list].sort((a, b) => priceOf(b) - priceOf(a));
     else if (sort === 'name') list = [...list].sort((a, b) => a.name.localeCompare(b.name));
     return list;
-  }, [category, query, sort]);
+  }, [category, query, sort, inStockOnly]);
 
   return (
     <div className="min-h-screen relative">
@@ -73,18 +75,29 @@ export default function Catalog() {
           />
         </div>
 
-        {/* Sort */}
-        <div className="mb-5 relative inline-block">
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            className="appearance-none h-12 pl-5 pr-11 rounded-full border border-border bg-card text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
+        {/* Sort + stock filter */}
+        <div className="mb-5 flex items-center gap-3 flex-wrap">
+          <div className="relative">
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+              className="appearance-none h-12 pl-5 pr-11 rounded-full border border-border bg-card text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
+            >
+              {SORTS.map((s) => (
+                <option key={s.key} value={s.key}>{s.label}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          </div>
+          <button
+            type="button"
+            onClick={() => setInStockOnly((v) => !v)}
+            aria-pressed={inStockOnly}
+            className={`h-12 px-5 rounded-full border text-sm font-semibold inline-flex items-center gap-2 transition-colors ${inStockOnly ? 'bg-foreground text-background border-foreground' : 'bg-card border-border text-muted-foreground hover:text-foreground'}`}
           >
-            {SORTS.map((s) => (
-              <option key={s.key} value={s.key}>{s.label}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <span className={`h-2 w-2 rounded-full ${inStockOnly ? 'bg-emerald-400' : 'bg-emerald-500'}`} />
+            In Stock
+          </button>
         </div>
 
         {/* Category pills */}

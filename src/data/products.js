@@ -457,6 +457,9 @@ for (const p of PRODUCTS) {
   p.price = priced.length ? Math.min(...priced.map((v) => v.price)) : null;
   p.dosage = p.variants[0] ? `${p.variants[0].dose} lyophilized` : "";
   p.has_multiple = p.variants.length > 1;
+  // Use the product's available COA for any dose that doesn't have its own yet.
+  const coa = p.variants.find((v) => v.coa)?.coa;
+  if (coa) for (const v of p.variants) if (!v.coa) v.coa = coa;
 }
 
 // Demand-weighted order (GLP-1s lead the market, BPC/TB recovery classics next,
