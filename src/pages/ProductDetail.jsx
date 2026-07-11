@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, Link, useOutletContext } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Shield, FileCheck, Thermometer, Plus, Minus, Check, Tag } from 'lucide-react';
+import { ArrowLeft, Shield, FileCheck, Thermometer, Plus, Minus, Check, Tag, Gift } from 'lucide-react';
 import OmenLogo from '../components/OmenLogo';
 import { PRODUCTS, getProductBySlug } from '@/data/products';
 import { cart } from '@/lib/cart';
@@ -124,6 +124,14 @@ export default function ProductDetail() {
                   <span className={`h-1.5 w-1.5 rounded-full ${vStatus.key === 'out' ? 'bg-red-500' : vStatus.key === 'low' ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
                   {vStatus.key === 'out' ? 'Sold out' : vStatus.key === 'low' ? `${vStatus.label} — only ${vStatus.left} left` : 'In stock'}
                 </div>
+              )}
+
+              {/* Rewards */}
+              {!product.coming_soon && discountedUnitPrice > 0 && (
+                <p className="mb-4 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Gift className="h-3.5 w-3.5 text-primary" />
+                  Earn <span className="font-semibold text-foreground">{Math.floor(discountedUnitPrice * quantity)} points</span> on this order · <span className="text-foreground font-medium">2×</span> as an Omen VIP
+                </p>
               )}
 
               {/* Dose selector */}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Package, Loader2, Check, Bitcoin, Receipt, Truck, Zap, Store, ShieldCheck, Copy } from 'lucide-react';
+import { ArrowLeft, Package, Loader2, Check, Bitcoin, Receipt, Truck, Zap, Store, ShieldCheck, Copy, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cart } from '@/lib/cart';
 import { validateAffiliateCode } from '@/lib/affiliateApi';
@@ -124,6 +124,8 @@ export default function Checkout() {
       setAffChecking(false);
     }
   };
+
+  const removeCode = () => { setAffiliate(null); setAffMsg(''); setAffInput(''); };
 
   // Auto-apply ?ref=CODE from affiliate share links
   useEffect(() => {
@@ -326,18 +328,33 @@ export default function Checkout() {
         {/* Affiliate / referral code */}
         <div className="p-6 rounded-2xl border border-border bg-card mb-6">
           <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-5">Promo or Referral Code</h2>
-          <div className="flex gap-2">
-            <input
-              value={affInput}
-              onChange={(e) => setAffInput(e.target.value)}
-              placeholder="e.g. WELCOME10"
-              className="flex-1 h-11 px-3 rounded-lg border border-border bg-background text-sm uppercase focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-            <Button type="button" variant="outline" onClick={() => applyCode()} disabled={affChecking} className="h-11 px-5">
-              {affChecking ? '…' : 'Apply'}
-            </Button>
-          </div>
-          {affMsg && <p className={`text-sm mt-2 ${affiliate ? 'text-emerald-500' : 'text-destructive'}`}>{affMsg}</p>}
+          {affiliate ? (
+            <div className="flex items-center justify-between gap-2 h-11 px-3 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.06]">
+              <span className="inline-flex items-center gap-2 text-sm font-medium text-emerald-600 min-w-0">
+                <Check className="h-4 w-4 shrink-0" />
+                <span className="truncate"><span className="font-mono font-semibold">{affiliate.code}</span> — {affiliate.discountPct}% off applied</span>
+              </span>
+              <button type="button" onClick={removeCode} className="shrink-0 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                <X className="h-3.5 w-3.5" /> Remove
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="flex gap-2">
+                <input
+                  value={affInput}
+                  onChange={(e) => setAffInput(e.target.value)}
+                  placeholder="e.g. WELCOME10"
+                  className="flex-1 h-11 px-3 rounded-lg border border-border bg-background text-sm uppercase focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+                <Button type="button" variant="outline" onClick={() => applyCode()} disabled={affChecking} className="h-11 px-5">
+                  {affChecking ? '…' : 'Apply'}
+                </Button>
+              </div>
+              {affMsg && <p className="text-sm mt-2 text-destructive">{affMsg}</p>}
+            </>
+          )}
+          <p className="text-[11px] text-muted-foreground mt-2">One code per order — applying a new code replaces the current one.</p>
         </div>
 
         {/* Shipping method */}

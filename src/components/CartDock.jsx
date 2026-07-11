@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Minus, Plus, ShoppingBag } from 'lucide-react';
+import { X, Minus, Plus, ShoppingBag, Gift } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import OmenLogo from './OmenLogo';
 
@@ -98,11 +98,15 @@ export default function CartDock({ isOpen, onClose, items = [], onUpdateQuantity
             {/* Footer */}
             {items.length > 0 && (
               <div className="px-6 py-5 border-t border-border">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-3">
                   <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
                     Total
                   </span>
                   <span className="text-xl font-bold">${total.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center gap-1.5 mb-4 text-[11px] text-emerald-600">
+                  <Gift className="h-3.5 w-3.5" />
+                  <span>Earn <span className="font-semibold">{Math.floor(total)} points</span> with this order</span>
                 </div>
                 <button
                   onClick={() => { onClose(); navigate('/checkout'); }}
