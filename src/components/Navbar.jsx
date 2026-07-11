@@ -7,6 +7,7 @@ import { customerAuth, customerMe } from '@/lib/customerApi';
 
 const LINKS = [
   { label: 'Catalog', to: '/catalog' },
+  { label: 'Lab Results', to: '/verify' },
   { label: 'Handling & Storage', to: '/handling' },
   { label: 'About', to: '/about' },
   { label: 'FAQ', to: '/faq' },

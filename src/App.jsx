@@ -22,6 +22,7 @@ import LabelPrint from './pages/LabelPrint';
 import Checkout from './pages/Checkout';
 import OrderConfirmed from './pages/OrderConfirmed';
 import AdminOrders from './pages/AdminOrders';
+import Verify from './pages/Verify';
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
           <Route path="/product/:slug" element={<ProductDetail />} />
           <Route path="/about" element={<About />} />
           <Route path="/faq" element={<FAQ />} />
+          <Route path="/verify" element={<Verify />} />
           <Route path="/handling" element={<PeptideProtocols />} />
           <Route path="/protocols" element={<PeptideProtocols />} />
           <Route path="/order-status" element={<OrderStatus />} />
