@@ -34,7 +34,7 @@ function injectProductMeta(html, p) {
 import { runCryptoWatch } from './cryptoWatch.js';
 import { handleShipstationWebhook, runShipstationSync } from './shipstation.js';
 import { runTrackingWatch } from './tracking.js';
-import { recordPresence, liveStats } from './presence.js';
+import { recordPresence, liveStats, socialProof } from './presence.js';
 import { createPaymentSession, paymentCallback, paymentStatus } from './payment.js';
 import { handleIncomingEmail } from './emailIn.js';
 
@@ -225,6 +225,10 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/stock') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
       return publicStock(request, env);
+    }
+    if (pathname === '/api/social-proof') {
+      if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+      return socialProof(request, env);
     }
     if (pathname === '/api/restock-notify') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });

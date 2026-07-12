@@ -9,6 +9,7 @@ import ScrollProgress from './ScrollProgress';
 import CartDock from './CartDock';
 import SupportWidget from './SupportWidget';
 import EmailCapturePopup from './EmailCapturePopup';
+import SocialProof from './SocialProof';
 
 export default function Layout() {
   const location = useLocation();
@@ -109,6 +110,7 @@ export default function Layout() {
       />
       <SupportWidget />
       <EmailCapturePopup />
+      <SocialProof />
     </div>
   );
 }

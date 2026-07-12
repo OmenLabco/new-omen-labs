@@ -40,6 +40,40 @@ function readGeo(request) {
 }
 
 // POST /api/presence  { sid, path, page, state, cartCount }
+function relAgo(ms) {
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m} min ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} hour${h === 1 ? '' : 's'} ago`;
+  const d = Math.floor(h / 24);
+  return `${d} day${d === 1 ? '' : 's'} ago`;
+}
+
+// GET /api/social-proof — recent purchases + live viewer count (public, no PII).
+export async function socialProof(request, env) {
+  if (!env.DB) return json({ recent: [], online: 0 });
+  const now = Date.now();
+  let online = 0;
+  try {
+    await ensureTable(env);
+    const r = await env.DB.prepare('SELECT COUNT(*) AS n FROM presence WHERE updated_at >= ?').bind(now - 60000).first();
+    online = r ? Number(r.n) : 0;
+  } catch {}
+  const recent = [];
+  try {
+    const { results } = await env.DB.prepare("SELECT items, created_date FROM orders WHERE status != 'awaiting_payment' ORDER BY id DESC LIMIT 8").all();
+    for (const o of results || []) {
+      let items = []; try { items = JSON.parse(o.items || '[]'); } catch {}
+      const name = items[0] && items[0].product_name;
+      if (!name) continue;
+      const t = o.created_date ? new Date(o.created_date).getTime() : now;
+      recent.push({ product: name, ago: relAgo(Math.max(0, now - t)) });
+    }
+  } catch {}
+  return json({ recent, online });
+}
+
 export async function recordPresence(request, env) {
   if (!env.DB) return json({ ok: true });
   let b;
