@@ -9,7 +9,7 @@ import { handleZelleNotify } from './zelle.js';
 import { listStock, updateStock, publicStock, restockNotifySignup } from './stock.js';
 import { handleSubscribe, listSubscribers } from './subscribe.js';
 import { syncCart, runAbandonedCartWatch } from './cart.js';
-import { getProductBySlug } from '../src/data/products.js';
+import { getProductBySlug, PRODUCTS } from '../src/data/products.js';
 
 // Per-product SEO / social-unfurl meta injected into the SPA HTML shell so
 // shared product links preview with the right name, description, and image
@@ -100,6 +100,16 @@ export default {
 };
 
 async function route(request, env, url, pathname, method) {
+    if (pathname === '/robots.txt') {
+      return new Response('User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /checkout\nDisallow: /account\n\nSitemap: https://omenlabs.co/sitemap.xml\n', { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    }
+    if (pathname === '/sitemap.xml') {
+      const staticPaths = ['/', '/catalog', '/verify', '/about', '/faq', '/handling', '/affiliates', '/order-status', '/terms', '/privacy', '/refund', '/shipping'];
+      const productPaths = PRODUCTS.filter((p) => p.slug && p.slug !== 'test-item').map((p) => `/product/${p.slug}`);
+      const url2 = (loc, pri) => `  <url><loc>https://omenlabs.co${loc}</loc><priority>${pri}</priority></url>`;
+      const body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[url2('/', '1.0'), ...staticPaths.slice(1).map((p) => url2(p, '0.7')), ...productPaths.map((p) => url2(p, '0.8'))].join('\n')}\n</urlset>`;
+      return new Response(body, { headers: { 'Content-Type': 'application/xml; charset=utf-8' } });
+    }
     if (pathname === '/api/order') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return handleOrder(request, env);

@@ -1,0 +1,14 @@
+{
+  "name": "Omen Labs",
+  "short_name": "Omen Labs",
+  "description": "Research-grade peptide compounds. HPLC-verified, COA included, cold-chain shipped.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0b",
+  "theme_color": "#0047FF",
+  "icons": [
+    { "src": "/favicon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/favicon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
