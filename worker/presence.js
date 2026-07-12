@@ -65,8 +65,11 @@ export async function socialProof(request, env) {
     const { results } = await env.DB.prepare("SELECT items, created_date FROM orders WHERE status != 'awaiting_payment' ORDER BY id DESC LIMIT 8").all();
     for (const o of results || []) {
       let items = []; try { items = JSON.parse(o.items || '[]'); } catch {}
-      const name = items[0] && items[0].product_name;
-      if (!name) continue;
+      const first = items[0];
+      const name = first && first.product_name;
+      const pid = (first && first.product_id) || '';
+      // Skip the internal test product so it never shows as social proof.
+      if (!name || /^test-item/i.test(pid) || /test item/i.test(name)) continue;
       const t = o.created_date ? new Date(o.created_date).getTime() : now;
       recent.push({ product: name, ago: relAgo(Math.max(0, now - t)) });
     }
