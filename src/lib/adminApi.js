@@ -146,6 +146,16 @@ export async function saveStock(updates) {
   return resp.json();
 }
 
+export async function createOrder(payload) {
+  const resp = await fetch('/api/admin/orders/create', {
+    method: 'POST', headers: headers(), body: JSON.stringify(payload),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }
+  if (!resp.ok) throw new Error(data.error || 'Failed to create order.');
+  return data;
+}
+
 export async function fetchPromos() {
   const resp = await fetch('/api/admin/promos', { headers: headers() });
   if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }

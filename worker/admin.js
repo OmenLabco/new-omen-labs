@@ -11,6 +11,62 @@ import { cryptoWatchDebug } from './cryptoWatch.js';
 import { COST_SHEET, COST_BY_PRODUCT_ID, COST_BY_NAME } from './costs.js';
 import { ensureAffiliateSchema, PAYOUT_METHODS } from './affiliate.js';
 import { decrementStockForOrder } from './stock.js';
+import { priceFor } from './prices.js';
+import { orderNumber } from './order.js';
+
+const SHIP_PRICE = { ground: 9.99, first: 14.99, pickup: 0 };
+const SHIP_LABEL = { ground: '3–5 Day Ground', first: '2-Day First Class', pickup: 'Local Pickup — Spokane, WA' };
+
+// POST /api/admin/orders/create — log a manual (DM/phone) sale.
+export async function createOrder(request, env) {
+  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
+  if (!env.DB) return json({ error: 'Database not configured.' }, 500);
+  let b; try { b = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
+  const c = b.customer || {};
+  const name = String(c.name || '').trim();
+  if (!name) return json({ error: 'Customer name is required.' }, 400);
+
+  const rawItems = Array.isArray(b.items) ? b.items : [];
+  const items = [];
+  for (const it of rawItems) {
+    const entry = priceFor(it && it.product_id);
+    if (!entry) return json({ error: `Unknown item: ${it && it.product_id}` }, 400);
+    const qty = Math.max(1, Math.min(99, Math.floor(Number(it.quantity) || 1)));
+    items.push({ product_id: it.product_id, product_name: String(it.product_name || it.product_id).slice(0, 80), quantity: qty, price: entry.price });
+  }
+  if (!items.length) return json({ error: 'Add at least one item.' }, 400);
+
+  const subtotal = +items.reduce((s, i) => s + i.price * i.quantity, 0).toFixed(2);
+  const ship = SHIP_PRICE[b.shipping_method] != null ? b.shipping_method : 'pickup';
+  const shipping_cost = SHIP_PRICE[ship];
+  const total = +(subtotal + shipping_cost).toFixed(2);
+  const paid = !!b.paid;
+  const status = paid ? 'confirmed' : 'awaiting_payment';
+  const payment_method = `${String(b.payment_method || 'Manual').slice(0, 24)} — ${paid ? 'payment confirmed' : 'awaiting payment'}`;
+  const order_number = orderNumber();
+  const created_date = new Date().toISOString();
+
+  try { await env.DB.prepare('ALTER TABLE orders ADD COLUMN company TEXT').run(); } catch {}
+  try {
+    await env.DB.prepare(
+      `INSERT INTO orders (order_number, customer_name, customer_email, customer_phone, company, address, address2, city, state, zip, country, notes, items, subtotal, shipping_cost, shipping_method, discount, crypto_discount, affiliate_discount, affiliate_code, commission, points_earned, points_redeemed, points_value, total, payment_method, billing, status, created_date)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    ).bind(
+      order_number, name, String(c.email || '').toLowerCase(), c.phone || '', c.company || '',
+      c.address || '', c.address2 || '', c.city || '', c.state || '', c.zip || '', c.country || 'United States',
+      String(b.notes || '').slice(0, 500) + (b.notes ? ' · ' : '') + 'Manual order',
+      JSON.stringify(items), subtotal, shipping_cost, SHIP_LABEL[ship], 0, 0, 0, null, 0, 0, 0, 0, total, payment_method, null, status, created_date
+    ).run();
+  } catch (e) {
+    return json({ error: 'Failed to save order.', detail: String(e) }, 500);
+  }
+
+  if (paid) {
+    const row = await env.DB.prepare('SELECT * FROM orders WHERE order_number = ?').bind(order_number).first();
+    if (row) await decrementStockForOrder(env, row);
+  }
+  return json({ ok: true, order_number, total, status });
+}
 
 const SITE = 'https://omenlabs.co';
 

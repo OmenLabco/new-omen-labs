@@ -8,6 +8,7 @@ import ProfitView from '@/components/admin/ProfitView';
 import LiveView from '@/components/admin/LiveView';
 import StockView from '@/components/admin/StockView';
 import PromosView from '@/components/admin/PromosView';
+import NewOrderForm from '@/components/admin/NewOrderForm';
 import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout, fetchSubscribers, fetchStock } from '@/lib/adminApi';
 import { CRYPTO_WALLETS } from '@/data/cryptoWallets';
 
@@ -476,6 +477,7 @@ export default function AdminOrders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [showNew, setShowNew] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
   const [privacy, setPrivacy] = useState(false);
@@ -638,7 +640,12 @@ export default function AdminOrders() {
           )} disabled={!orders.length} className="h-11 px-4 gap-2 shrink-0">
             <Download className="h-4 w-4" /> <span className="hidden sm:inline">Export CSV</span>
           </Button>
+          <Button onClick={() => setShowNew((v) => !v)} className="h-11 px-4 gap-2 shrink-0">
+            <Package className="h-4 w-4" /> <span className="hidden sm:inline">New order</span>
+          </Button>
         </div>
+
+        {showNew && <NewOrderForm onClose={() => setShowNew(false)} onCreated={() => { setShowNew(false); load(); }} />}
 
         {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
 

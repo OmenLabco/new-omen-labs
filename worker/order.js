@@ -124,7 +124,7 @@ function renderCashappInstructions(order, handle) {
 
 // Order number uses only Roman-numeral letters after "OMEN-"
 // Uses crypto-grade randomness so order numbers aren't predictable.
-function orderNumber() {
+export function orderNumber() {
   const chars = 'XIVLCDM';
   const buf = new Uint8Array(6);
   crypto.getRandomValues(buf);
