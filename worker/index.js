@@ -7,6 +7,7 @@ import { signupCustomer, loginCustomer, customerMe, enrollAffiliate } from './cu
 import { withSecurity, rateLimit, tooMany, clientIp } from './security.js';
 import { handleZelleNotify } from './zelle.js';
 import { listStock, updateStock, publicStock, restockNotifySignup } from './stock.js';
+import { listPromos, upsertPromo, deletePromo } from './promos.js';
 import { handleSubscribe, listSubscribers } from './subscribe.js';
 import { syncCart, runAbandonedCartWatch } from './cart.js';
 import { getProductBySlug, PRODUCTS } from '../src/data/products.js';
@@ -250,6 +251,15 @@ async function route(request, env, url, pathname, method) {
       if (method === 'GET') return listStock(request, env);
       if (method === 'POST') return updateStock(request, env);
       return new Response('Method Not Allowed', { status: 405 });
+    }
+    if (pathname === '/api/admin/promos') {
+      if (method === 'GET') return listPromos(request, env);
+      if (method === 'POST') return upsertPromo(request, env);
+      return new Response('Method Not Allowed', { status: 405 });
+    }
+    if (pathname === '/api/admin/promos/delete') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return deletePromo(request, env);
     }
     if (pathname === '/api/admin/payouts') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });

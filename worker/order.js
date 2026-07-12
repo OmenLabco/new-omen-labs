@@ -10,7 +10,7 @@ import { renderImageEmail, renderOwnerNotification, sendEmail } from './email.js
 import { signOrder, verifyOrder } from './token.js';
 import { priceFor } from './prices.js';
 import { getStockMap } from './stock.js';
-import { resolvePromo } from './promos.js';
+import { getPromo, promoUsable, incrementPromoUse } from './promos.js';
 
 // GET /api/order/status?o=ORDER&t=TOKEN — public status poll for the awaiting page.
 // Token-gated (HMAC) so order numbers can't be enumerated. Returns only status.
@@ -211,8 +211,8 @@ export async function handleOrder(request, env) {
   let promoCode = null;
   let promoDiscount = 0;
   if (!affiliate && affiliate_code) {
-    const promo = resolvePromo(affiliate_code);
-    if (promo && (!promo.firstOrderOnly || await isNewCustomer(env, customer.email))) {
+    const promo = await getPromo(env, affiliate_code);
+    if (promo && promoUsable(promo) && (!promo.firstOrderOnly || await isNewCustomer(env, customer.email))) {
       promoCode = promo.code;
       promoDiscount = +(subtotal * (promo.pct / 100)).toFixed(2);
     }
@@ -323,6 +323,8 @@ export async function handleOrder(request, env) {
           .bind(newPoints, newSpend, account.id)
           .run();
       }
+      // Count a promo-code redemption (for usage limits / reporting)
+      if (promoCode) await incrementPromoUse(env, promoCode);
     } catch (e) {
       return json({ error: 'Failed to save order.', detail: String(e) }, 500);
     }

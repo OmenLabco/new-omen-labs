@@ -146,6 +146,33 @@ export async function saveStock(updates) {
   return resp.json();
 }
 
+export async function fetchPromos() {
+  const resp = await fetch('/api/admin/promos', { headers: headers() });
+  if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }
+  if (!resp.ok) throw new Error('Failed to load promo codes.');
+  const data = await resp.json();
+  return data.promos || [];
+}
+
+export async function savePromo(promo) {
+  const resp = await fetch('/api/admin/promos', {
+    method: 'POST', headers: headers(), body: JSON.stringify(promo),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }
+  if (!resp.ok) throw new Error(data.error || 'Failed to save code.');
+  return data;
+}
+
+export async function deletePromo(code) {
+  const resp = await fetch('/api/admin/promos/delete', {
+    method: 'POST', headers: headers(), body: JSON.stringify({ code }),
+  });
+  if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }
+  if (!resp.ok) throw new Error('Failed to delete code.');
+  return resp.json();
+}
+
 export async function fetchCustomers() {
   const resp = await fetch('/api/admin/customers', { headers: headers() });
   if (resp.status === 401) {

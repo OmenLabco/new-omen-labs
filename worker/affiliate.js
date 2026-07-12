@@ -5,7 +5,7 @@
 //   ADMIN_PASSWORD - also used as a pepper for affiliate password hashing
 
 import { safeEqual } from './security.js';
-import { resolvePromo } from './promos.js';
+import { getPromo, promoUsable } from './promos.js';
 
 export const NEW_CUSTOMER_DISCOUNT = 0.20;       // 20% off for first-time customers
 export const RETURNING_CUSTOMER_DISCOUNT = 0.10; // 10% off for returning customers
@@ -199,9 +199,9 @@ export async function validateCode(request, env) {
   const email = (url.searchParams.get('email') || '').trim();
   const aff = await getAffiliateByCode(env, code);
   if (!aff) {
-    // Not an affiliate code — check flat promo codes (e.g. WELCOME10).
-    const promo = resolvePromo(code);
-    if (promo) {
+    // Not an affiliate code — check flat promo codes (WELCOME10, admin-created…).
+    const promo = await getPromo(env, code);
+    if (promo && promoUsable(promo)) {
       const isNew = email ? await isNewCustomer(env, email) : true;
       if (promo.firstOrderOnly && email && !isNew) return json({ valid: false, reason: 'first_order_only' });
       return json({ valid: true, code: promo.code, discountPct: promo.pct, promo: true });
