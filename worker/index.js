@@ -9,6 +9,28 @@ import { handleZelleNotify } from './zelle.js';
 import { listStock, updateStock, publicStock, restockNotifySignup } from './stock.js';
 import { handleSubscribe, listSubscribers } from './subscribe.js';
 import { syncCart, runAbandonedCartWatch } from './cart.js';
+import { getProductBySlug } from '../src/data/products.js';
+
+// Per-product SEO / social-unfurl meta injected into the SPA HTML shell so
+// shared product links preview with the right name, description, and image
+// (crawlers don't run the app's JS, so this has to happen server-side).
+const escAttr = (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function injectProductMeta(html, p) {
+  const title = `${p.name} — Omen Labs`;
+  const desc = (p.short_description || p.description || '').replace(/\s+/g, ' ').slice(0, 180);
+  const url = `https://omenlabs.co/product/${p.slug}`;
+  const img = p.image ? `https://omenlabs.co${p.image}` : 'https://omenlabs.co/og-image.png?v=1';
+  const DEF_T = 'Omen Labs — Research-Grade Peptides';
+  const DEF_D1 = 'Pharmaceutical-grade peptide compounds for advanced research. HPLC-verified, COA included, cold-chain shipped.';
+  const DEF_D2 = 'HPLC-verified peptide compounds. COA included. Cold-chain shipped.';
+  return html
+    .replace(`<title>${DEF_T}</title>`, `<title>${escAttr(title)}</title>`)
+    .replaceAll(`content="${DEF_T}"`, `content="${escAttr(title)}"`)
+    .replace(`content="${DEF_D1}"`, `content="${escAttr(desc)}"`)
+    .replaceAll(`content="${DEF_D2}"`, `content="${escAttr(desc)}"`)
+    .replace('content="https://omenlabs.co"', `content="${escAttr(url)}"`)
+    .replaceAll('https://omenlabs.co/og-image.png?v=1', escAttr(img));
+}
 import { runCryptoWatch } from './cryptoWatch.js';
 import { handleShipstationWebhook, runShipstationSync } from './shipstation.js';
 import { runTrackingWatch } from './tracking.js';
@@ -263,6 +285,13 @@ async function route(request, env, url, pathname, method) {
     if (ct.includes('text/html')) {
       const h = new Headers(assetResp.headers);
       h.set('Cache-Control', 'no-cache, must-revalidate');
+      // Inject per-product meta so shared product links unfurl correctly.
+      const pm = pathname.match(/^\/product\/([a-z0-9-]+)\/?$/i);
+      const product = pm && getProductBySlug(pm[1]);
+      if (product) {
+        const html = injectProductMeta(await assetResp.text(), product);
+        return new Response(html, { status: assetResp.status, statusText: assetResp.statusText, headers: h });
+      }
       return new Response(assetResp.body, { status: assetResp.status, statusText: assetResp.statusText, headers: h });
     }
     return assetResp;
