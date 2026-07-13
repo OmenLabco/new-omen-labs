@@ -33,6 +33,6 @@ export async function listSubscribers(request, env) {
   if (!(await verifyAdminSession(env, bearer(request)))) return json({ error: 'Unauthorized' }, 401);
   if (!env.DB) return json({ subscribers: [] });
   await ensureTable(env);
-  const { results } = await env.DB.prepare('SELECT email, source, created_at FROM subscribers ORDER BY created_at DESC').all();
+  const { results } = await env.DB.prepare('SELECT email, source, created_at FROM subscribers ORDER BY created_at DESC LIMIT 5000').all();
   return json({ subscribers: results || [] });
 }

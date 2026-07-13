@@ -112,8 +112,10 @@ export async function listOrders(request, env) {
   if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
   if (!env.DB) return json({ orders: [] });
 
+  // Newest 2000 orders — caps the per-load read so a growing table can't make the
+  // dashboard read the whole DB. (Revisit with pagination if volume nears this.)
   const { results } = await env.DB.prepare(
-    `SELECT * FROM orders ORDER BY id DESC`
+    `SELECT * FROM orders ORDER BY id DESC LIMIT 2000`
   ).all();
 
   const orders = (results || []).map((o) => ({

@@ -41,7 +41,8 @@ import { handleIncomingEmail } from './emailIn.js';
 
 // Per-endpoint rate limits (max attempts / window). Keyed by client IP.
 const LIMITS = {
-  '/api/admin/login': { max: 8, windowMs: 10 * 60 * 1000 },
+  // globalMax also caps TOTAL attempts across all IPs (catches distributed brute-force).
+  '/api/admin/login': { max: 8, windowMs: 10 * 60 * 1000, globalMax: 40 },
   '/api/customer/login': { max: 10, windowMs: 10 * 60 * 1000 },
   '/api/affiliate/login': { max: 10, windowMs: 10 * 60 * 1000 },
   '/api/customer/signup': { max: 10, windowMs: 60 * 60 * 1000 },
@@ -84,6 +85,10 @@ export default {
     if (limit && method === 'POST') {
       const { allowed, retryAfter } = await rateLimit(env, `${pathname}:${clientIp(request)}`, limit.max, limit.windowMs);
       if (!allowed) return withSecurity(tooMany(retryAfter));
+      if (limit.globalMax) {
+        const g = await rateLimit(env, `${pathname}:__global__`, limit.globalMax, limit.windowMs);
+        if (!g.allowed) return withSecurity(tooMany(g.retryAfter));
+      }
     }
 
     return withSecurity(await route(request, env, url, pathname, method));

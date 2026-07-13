@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, ChevronDown } from 'lucide-react';
+import { Search, ChevronDown, PackageCheck } from 'lucide-react';
 import { PRODUCTS, getProductsByCategory, sortByPopularity, getCategories } from '@/data/products';
 import OmenLogo from '../components/OmenLogo';
 import CategoryFilter from '../components/CategoryFilter';
@@ -99,7 +99,7 @@ export default function Catalog() {
             aria-pressed={inStockOnly}
             className={`h-12 px-5 rounded-full border text-sm font-semibold inline-flex items-center gap-2 transition-colors ${inStockOnly ? 'bg-foreground text-background border-foreground' : 'bg-card border-border text-muted-foreground hover:text-foreground'}`}
           >
-            <span className={`h-2 w-2 rounded-full ${inStockOnly ? 'bg-emerald-400' : 'bg-emerald-500'}`} />
+            <PackageCheck className="h-4 w-4" />
             In Stock
           </button>
         </div>

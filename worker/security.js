@@ -99,13 +99,18 @@ export function clientIp(request) {
 // D1-backed fixed-window rate limiter. Returns { allowed, retryAfter }.
 // Fails OPEN (allows) if the DB is unavailable so a DB hiccup can't lock
 // everyone out — the auth checks themselves still protect the endpoints.
+let rateSchemaReady = false;
 export async function rateLimit(env, key, max, windowMs) {
   if (!env.DB) return { allowed: true, retryAfter: 0 };
   const now = Date.now();
   try {
-    await env.DB.prepare(
-      'CREATE TABLE IF NOT EXISTS rate_limits (k TEXT PRIMARY KEY, count INTEGER NOT NULL, reset_at INTEGER NOT NULL)'
-    ).run();
+    // Create the table once per isolate, not on every request (saves a D1 op per call).
+    if (!rateSchemaReady) {
+      await env.DB.prepare(
+        'CREATE TABLE IF NOT EXISTS rate_limits (k TEXT PRIMARY KEY, count INTEGER NOT NULL, reset_at INTEGER NOT NULL)'
+      ).run();
+      rateSchemaReady = true;
+    }
     const row = await env.DB.prepare('SELECT count, reset_at FROM rate_limits WHERE k = ?').bind(key).first();
     if (!row || Number(row.reset_at) < now) {
       const reset = now + windowMs;

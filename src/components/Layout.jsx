@@ -59,7 +59,9 @@ export default function Layout() {
       } catch {}
     };
     ping();
-    const id = setInterval(ping, 15000);
+    // 45s heartbeat — stays within the server's 60s "online" window while cutting
+    // D1 write volume ~3× vs. a 15s ping (the top capacity lever).
+    const id = setInterval(ping, 45000);
     return () => clearInterval(id);
   }, [location.pathname]);
 
