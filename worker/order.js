@@ -11,6 +11,7 @@ import { signOrder, verifyOrder } from './token.js';
 import { priceFor } from './prices.js';
 import { getStockMap } from './stock.js';
 import { getPromo, promoUsable, incrementPromoUse } from './promos.js';
+import { computeBundleDiscount } from '../src/data/bundles.js';
 
 // GET /api/order/status?o=ORDER&t=TOKEN — public status poll for the awaiting page.
 // Token-gated (HMAC) so order numbers can't be enumerated. Returns only status.
@@ -193,8 +194,18 @@ export async function handleOrder(request, env) {
   // From here on, use the server-priced line items only.
   const items = pricedItems;
   const subtotal = +(items.reduce((s, i) => s + i.price * i.quantity, 0)).toFixed(2);
+
+  // ---- Curated bundle discount (authoritative) ----
+  // Applies when a full bundle set is in the cart. Priced from our own table.
+  // Every downstream discount (crypto, code, points) is computed on the
+  // POST-BUNDLE amount so they layer on the already-discounted stack.
+  const bundleResult = computeBundleDiscount(items, (sku) => priceFor(sku)?.price ?? null);
+  const bundleDiscount = bundleResult.discount;
+  const hasBundle = bundleDiscount > 0;
+  const postBundle = +(subtotal - bundleDiscount).toFixed(2);
+
   const isCrypto = payment_method === 'crypto';
-  const cryptoDiscount = isCrypto ? +(subtotal * CRYPTO_DISCOUNT_RATE).toFixed(2) : 0;
+  const cryptoDiscount = isCrypto ? +(postBundle * CRYPTO_DISCOUNT_RATE).toFixed(2) : 0;
 
   // Validate affiliate code against the database
   const affiliate = affiliate_code ? await getAffiliateByCode(env, affiliate_code) : null;
@@ -202,19 +213,22 @@ export async function handleOrder(request, env) {
   // New customers get 20% off; returning customers get 10%
   const newCustomer = affiliate ? await isNewCustomer(env, customer.email) : false;
   const custDiscountRate = newCustomer ? NEW_CUSTOMER_DISCOUNT : RETURNING_CUSTOMER_DISCOUNT;
-  const affiliateDiscount = affiliate ? +(subtotal * custDiscountRate).toFixed(2) : 0;
-  // Tiered commission based on the affiliate's existing sales
+  // A bundle is EXCLUSIVE with the affiliate customer-discount: when a bundle is
+  // present we suppress the affiliate % (the code still tracks + earns commission).
+  const affiliateDiscount = (affiliate && !hasBundle) ? +(postBundle * custDiscountRate).toFixed(2) : 0;
+  // Tiered commission — computed on the POST-BUNDLE amount.
   const tier = affiliate ? commissionTier(await affiliateSalesCount(env, affiliate.code)) : null;
-  const commission = affiliate ? +(subtotal * tier.rate).toFixed(2) : 0;
+  const commission = affiliate ? +(postBundle * tier.rate).toFixed(2) : 0;
 
   // Flat promo code (e.g. WELCOME10) — only when the code isn't an affiliate.
+  // Promo codes STACK with a bundle (applied to the post-bundle amount).
   let promoCode = null;
   let promoDiscount = 0;
   if (!affiliate && affiliate_code) {
     const promo = await getPromo(env, affiliate_code);
     if (promo && promoUsable(promo) && (!promo.firstOrderOnly || await isNewCustomer(env, customer.email))) {
       promoCode = promo.code;
-      promoDiscount = +(subtotal * (promo.pct / 100)).toFixed(2);
+      promoDiscount = +(postBundle * (promo.pct / 100)).toFixed(2);
     }
   }
   // The single code-based discount recorded on the order (affiliate OR promo).
@@ -232,11 +246,11 @@ export async function handleOrder(request, env) {
     const maxByBalance = Math.floor((account.points || 0) / REDEEM_STEP) * REDEEM_STEP;
     const requested = Math.floor(Number(points_to_redeem) / REDEEM_STEP) * REDEEM_STEP;
     pointsRedeemed = Math.max(0, Math.min(requested, maxByBalance));
-    const maxValue = +(subtotal - cryptoDiscount - codeDiscount).toFixed(2);
+    const maxValue = +(postBundle - cryptoDiscount - codeDiscount).toFixed(2);
     pointsValue = Math.min(+(pointsRedeemed * POINTS_REDEEM_VALUE).toFixed(2), Math.max(0, maxValue));
   }
 
-  const discount = +(cryptoDiscount + codeDiscount + pointsValue).toFixed(2);
+  const discount = +(bundleDiscount + cryptoDiscount + codeDiscount + pointsValue).toFixed(2);
   const shipOpt = SHIPPING_OPTIONS[shipping_method] || SHIPPING_OPTIONS.ground;
   // Free shipping for VIP members, or any order at/above the threshold.
   const FREE_SHIP_THRESHOLD = 150; // KEEP IN SYNC with src/lib/shipping.js
@@ -277,10 +291,12 @@ export async function handleOrder(request, env) {
     try {
       // Ensure the company column exists (lazy migration for existing DBs)
       try { await env.DB.prepare('ALTER TABLE orders ADD COLUMN company TEXT').run(); } catch {}
+      // Bundle discount column (lazy migration).
+      try { await env.DB.prepare('ALTER TABLE orders ADD COLUMN bundle_discount REAL DEFAULT 0').run(); } catch {}
       await env.DB.prepare(
         `INSERT INTO orders
-         (order_number, customer_name, customer_email, customer_phone, company, address, address2, city, state, zip, country, notes, items, subtotal, shipping_cost, shipping_method, discount, crypto_discount, affiliate_discount, affiliate_code, commission, points_earned, points_redeemed, points_value, total, payment_method, billing, status, created_date)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+         (order_number, customer_name, customer_email, customer_phone, company, address, address2, city, state, zip, country, notes, items, subtotal, shipping_cost, shipping_method, discount, crypto_discount, affiliate_discount, bundle_discount, affiliate_code, commission, points_earned, points_redeemed, points_value, total, payment_method, billing, status, created_date)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
       )
         .bind(
           order_number,
@@ -302,6 +318,7 @@ export async function handleOrder(request, env) {
           discount,
           cryptoDiscount,
           codeDiscount,
+          bundleDiscount,
           codeUsed,
           commission,
           pointsEarned,

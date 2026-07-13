@@ -38,14 +38,14 @@ export default function Verify() {
           </div>
           <h1 className="text-3xl md:text-5xl font-bold tracking-[-0.03em] mb-4">Lab Results & COA Verification</h1>
           <p className="text-base text-muted-foreground leading-relaxed">
-            Every compound is independently HPLC-tested by <span className="text-foreground font-medium">Janoshik Analytical</span> — one of the industry's most trusted third-party labs. Pull any product's Certificate of Analysis below, then verify it yourself directly on Janoshik.
+            Every compound is independently HPLC-tested by <span className="text-foreground font-medium">Janoshik Analytical</span> and <span className="text-foreground font-medium">Freedom Diagnostics</span> — two of the industry's most trusted third-party labs. Pull any product's Certificate of Analysis below to see the issuing lab and results.
           </p>
         </motion.div>
 
         {/* Trust points */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-12">
           {[
-            { icon: FlaskConical, title: 'Independent HPLC testing', desc: 'Analyzed by Janoshik — not us.' },
+            { icon: FlaskConical, title: 'Independent HPLC testing', desc: 'Analyzed by Janoshik & Freedom Diagnostics — not us.' },
             { icon: BadgeCheck, title: '≥ 99% purity', desc: 'Verified on every batch we stock.' },
             { icon: FileCheck, title: 'Publicly verifiable', desc: 'Each COA carries a unique key you can check.' },
           ].map((t) => (
@@ -98,7 +98,7 @@ export default function Verify() {
           <ShieldCheck className="h-9 w-9 text-primary mx-auto mb-4" />
           <h2 className="text-2xl font-bold tracking-tight mb-2">Don't take our word for it</h2>
           <p className="text-sm text-muted-foreground max-w-xl mx-auto leading-relaxed mb-6">
-            Every certificate above lists a <span className="text-foreground font-medium">unique verification key</span> and can be checked directly on Janoshik's site — so you know the report is genuine and unaltered. Open a COA, then enter its key at Janoshik.
+            Janoshik-issued certificates carry a <span className="text-foreground font-medium">unique verification key</span> you can check directly on Janoshik's site — so you know the report is genuine and unaltered. Freedom Diagnostics reports are issued directly by the lab. Open any COA to see its issuing lab and results.
           </p>
           <a href={JANOSHIK_VERIFY} target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors">

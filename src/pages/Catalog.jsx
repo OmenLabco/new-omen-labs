@@ -6,6 +6,7 @@ import { PRODUCTS, getProductsByCategory, sortByPopularity, getCategories } from
 import OmenLogo from '../components/OmenLogo';
 import CategoryFilter from '../components/CategoryFilter';
 import ProductVialImage from '../components/ProductVialImage';
+import BundlesSection from '../components/BundlesSection';
 import { getStock, productStatus } from '../lib/stockApi';
 
 // Soft pastel image backdrops, picked by the product's primary category —
@@ -102,6 +103,9 @@ export default function Catalog() {
             In Stock
           </button>
         </div>
+
+        {/* Bundles — only on the default, unfiltered view to keep it clean */}
+        {!category && !query.trim() && !inStockOnly && <BundlesSection stock={stock} />}
 
         {/* Category pills */}
         <div className="mb-7 sm:mb-9">

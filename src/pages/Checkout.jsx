@@ -6,6 +6,15 @@ import { cart } from '@/lib/cart';
 import { validateAffiliateCode } from '@/lib/affiliateApi';
 import { customerAuth, customerMe } from '@/lib/customerApi';
 import { FREE_SHIP_THRESHOLD } from '@/lib/shipping';
+import { PRODUCTS } from '@/data/products';
+import { computeBundleDiscount } from '@/data/bundles';
+
+// SKU → base unit price, so the checkout summary can mirror the server's
+// authoritative bundle-discount math (one source of truth for the value).
+const SKU_PRICE = {};
+for (const p of PRODUCTS) for (const v of (p.variants || [])) {
+  if (v.price != null) SKU_PRICE[`${p.id}_${v.dose}`] = v.price;
+}
 
 const STATE_ABBR = { alabama:'AL',alaska:'AK',arizona:'AZ',arkansas:'AR',california:'CA',colorado:'CO',connecticut:'CT',delaware:'DE','district of columbia':'DC',florida:'FL',georgia:'GA',hawaii:'HI',idaho:'ID',illinois:'IL',indiana:'IN',iowa:'IA',kansas:'KS',kentucky:'KY',louisiana:'LA',maine:'ME',maryland:'MD',massachusetts:'MA',michigan:'MI',minnesota:'MN',mississippi:'MS',missouri:'MO',montana:'MT',nebraska:'NE',nevada:'NV','new hampshire':'NH','new jersey':'NJ','new mexico':'NM','new york':'NY','north carolina':'NC','north dakota':'ND',ohio:'OH',oklahoma:'OK',oregon:'OR',pennsylvania:'PA','rhode island':'RI','south carolina':'SC','south dakota':'SD',tennessee:'TN',texas:'TX',utah:'UT',vermont:'VT',virginia:'VA',washington:'WA','west virginia':'WV',wisconsin:'WI',wyoming:'WY' };
 const stateAbbr = (s) => STATE_ABBR[(s || '').toLowerCase()] || s || '';
@@ -142,12 +151,21 @@ export default function Checkout() {
   }, [form.email]);
 
   const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
-  const cryptoDiscount = payment === 'crypto' ? subtotal * CRYPTO_DISCOUNT_RATE : 0;
-  const affiliateDiscount = affiliate ? subtotal * ((affiliate.discountPct || 10) / 100) : 0;
+
+  // Bundle discount (mirrors the server) — applies when a full set is in the
+  // cart. Everything else layers on the POST-BUNDLE amount.
+  const bundleResult = computeBundleDiscount(items, (sku) => SKU_PRICE[sku] ?? null);
+  const bundleDiscount = bundleResult.discount;
+  const hasBundle = bundleDiscount > 0;
+  const postBundle = Math.max(0, subtotal - bundleDiscount);
+
+  const cryptoDiscount = payment === 'crypto' ? postBundle * CRYPTO_DISCOUNT_RATE : 0;
+  // A bundle is exclusive with the affiliate customer-discount (crypto/promo still stack).
+  const affiliateDiscount = (affiliate && !hasBundle) ? postBundle * ((affiliate.discountPct || 10) / 100) : 0;
 
   // Points redemption (logged-in only): 100 pts = $5
   const redeemablePoints = account ? Math.floor((account.points || 0) / 100) * 100 : 0;
-  const preDiscount = Math.max(0, subtotal - cryptoDiscount - affiliateDiscount);
+  const preDiscount = Math.max(0, postBundle - cryptoDiscount - affiliateDiscount);
   const pointsValue = redeem && account ? Math.min(redeemablePoints * 0.05, preDiscount) : 0;
   const pointsToRedeem = pointsValue > 0 ? redeemablePoints : 0;
 
@@ -156,7 +174,7 @@ export default function Checkout() {
   const freeShipping = memberFreeShip || freeByThreshold;
   const baseShipping = (SHIPPING_OPTIONS.find((o) => o.id === shipMethod) || SHIPPING_OPTIONS[0]).price;
   const shipping = freeShipping ? 0 : baseShipping;
-  const total = subtotal - cryptoDiscount - affiliateDiscount - pointsValue + shipping;
+  const total = subtotal - bundleDiscount - cryptoDiscount - affiliateDiscount - pointsValue + shipping;
 
   // Points the customer will earn on this order
   const pointsWillEarn = Math.floor(subtotal * (account?.membership?.multiplier || 1));
@@ -279,6 +297,11 @@ export default function Checkout() {
             <div className="flex justify-between text-muted-foreground">
               <span>Subtotal</span><span>${subtotal.toFixed(2)}</span>
             </div>
+            {bundleResult.applied.map((b) => (
+              <div key={b.id} className="flex justify-between text-emerald-500">
+                <span className="truncate pr-2">Bundle · {b.name} ({b.pct}%)</span><span className="shrink-0">-${b.amount.toFixed(2)}</span>
+              </div>
+            ))}
             <div className="flex justify-between text-muted-foreground">
               <span>{shipMethod === 'pickup' ? 'Local Pickup' : 'Shipping'}{memberFreeShip ? ' (Free — ' + account.membership.name + ')' : freeByThreshold ? ' (Free — $150+ order)' : ''}</span><span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
             </div>
@@ -335,7 +358,7 @@ export default function Checkout() {
             <div className="flex items-center justify-between gap-2 h-11 px-3 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.06]">
               <span className="inline-flex items-center gap-2 text-sm font-medium text-emerald-600 min-w-0">
                 <Check className="h-4 w-4 shrink-0" />
-                <span className="truncate"><span className="font-mono font-semibold">{affiliate.code}</span> — {affiliate.discountPct}% off applied</span>
+                <span className="truncate"><span className="font-mono font-semibold">{affiliate.code}</span> — {hasBundle ? 'bundle pricing applied instead' : `${affiliate.discountPct}% off applied`}</span>
               </span>
               <button type="button" onClick={removeCode} className="shrink-0 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
                 <X className="h-3.5 w-3.5" /> Remove
