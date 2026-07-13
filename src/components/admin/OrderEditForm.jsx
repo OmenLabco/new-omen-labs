@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Check } from 'lucide-react';
+import { Check, Tag } from 'lucide-react';
 import { saveOrder } from '@/lib/adminApi';
+import { downloadOrderLabel } from '@/lib/orderLabel';
 
 const STATUSES = ['awaiting_payment', 'processing', 'confirmed', 'shipped', 'out_for_delivery', 'delivered', 'refunded', 'cancelled'];
 const CARRIERS = ['USPS', 'UPS', 'FedEx', 'DHL', 'Other'];
@@ -124,7 +125,16 @@ export default function OrderEditForm({ order, onSaved }) {
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => downloadOrderLabel(order)}
+          className="h-9 px-4 gap-2"
+          title="Download a Niimbot packing label (PNG) for this order"
+        >
+          <Tag className="h-3.5 w-3.5" /> Label
+        </Button>
         <Button onClick={handleSave} disabled={saving || saved} className="h-9 px-6 gap-2">
           {saved ? (
             <><Check className="h-3.5 w-3.5" /> Saved</>
