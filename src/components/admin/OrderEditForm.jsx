@@ -44,6 +44,17 @@ export default function OrderEditForm({ order, onSaved }) {
 
   return (
     <div className="p-5 space-y-4 bg-card/40">
+      {/* Company / research-use (compliance) */}
+      {(order.company_name || order.company) && (
+        <div>
+          <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground block mb-0.5">Company / Organization</span>
+          <p className="text-sm font-medium">
+            {order.company_name || '—'}
+            {order.company && <span className="text-muted-foreground font-normal"> · {order.company}</span>}
+          </p>
+        </div>
+      )}
+
       {/* Items summary */}
       {order.items?.length > 0 && (
         <div className="text-xs text-muted-foreground space-y-1">

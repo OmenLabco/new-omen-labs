@@ -637,8 +637,8 @@ export default function AdminOrders() {
           </div>
           <Button variant="outline" onClick={() => downloadCsv(
             `omen-orders-${new Date().toISOString().slice(0, 10)}.csv`,
-            ['Order', 'Date', 'Status', 'Customer', 'Email', 'Company', 'Subtotal', 'Total', 'Payment', 'Tracking', 'Items'],
-            orders.map((o) => [o.order_number, o.created_date ? new Date(o.created_date).toLocaleString() : '', o.status, o.customer_name, o.customer_email, o.company, o.subtotal, o.total, o.payment_method, o.tracking_number, (Array.isArray(o.items) ? o.items : []).map((i) => `${i.product_name} x${i.quantity}`).join('; ')])
+            ['Order', 'Date', 'Status', 'Customer', 'Email', 'Company Name', 'Institution Type', 'Subtotal', 'Total', 'Payment', 'Tracking', 'Items'],
+            orders.map((o) => [o.order_number, o.created_date ? new Date(o.created_date).toLocaleString() : '', o.status, o.customer_name, o.customer_email, o.company_name, o.company, o.subtotal, o.total, o.payment_method, o.tracking_number, (Array.isArray(o.items) ? o.items : []).map((i) => `${i.product_name} x${i.quantity}`).join('; ')])
           )} disabled={!orders.length} className="h-11 px-4 gap-2 shrink-0">
             <Download className="h-4 w-4" /> <span className="hidden sm:inline">Export CSV</span>
           </Button>

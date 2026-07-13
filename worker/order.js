@@ -147,6 +147,10 @@ export async function handleOrder(request, env) {
   if (!customer.name || !customer.email || !customer.address || !customer.city || !customer.zip) {
     return json({ error: 'Missing required shipping fields.' }, 400);
   }
+  // Compliance: a named company / organization is required on every order.
+  if (!String(customer.company_name || '').trim()) {
+    return json({ error: 'Company / organization name is required.' }, 400);
+  }
   if (!Array.isArray(rawItems) || rawItems.length === 0) {
     return json({ error: 'Cart is empty.' }, 400);
   }
@@ -293,10 +297,12 @@ export async function handleOrder(request, env) {
       try { await env.DB.prepare('ALTER TABLE orders ADD COLUMN company TEXT').run(); } catch {}
       // Bundle discount column (lazy migration).
       try { await env.DB.prepare('ALTER TABLE orders ADD COLUMN bundle_discount REAL DEFAULT 0').run(); } catch {}
+      // Company / organization name column (lazy migration) — compliance.
+      try { await env.DB.prepare('ALTER TABLE orders ADD COLUMN company_name TEXT').run(); } catch {}
       await env.DB.prepare(
         `INSERT INTO orders
-         (order_number, customer_name, customer_email, customer_phone, company, address, address2, city, state, zip, country, notes, items, subtotal, shipping_cost, shipping_method, discount, crypto_discount, affiliate_discount, bundle_discount, affiliate_code, commission, points_earned, points_redeemed, points_value, total, payment_method, billing, status, created_date)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+         (order_number, customer_name, customer_email, customer_phone, company, company_name, address, address2, city, state, zip, country, notes, items, subtotal, shipping_cost, shipping_method, discount, crypto_discount, affiliate_discount, bundle_discount, affiliate_code, commission, points_earned, points_redeemed, points_value, total, payment_method, billing, status, created_date)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
       )
         .bind(
           order_number,
@@ -304,6 +310,7 @@ export async function handleOrder(request, env) {
           customer.email,
           customer.phone || '',
           customer.company || '',
+          customer.company_name || '',
           customer.address,
           customer.address2 || '',
           customer.city,

@@ -47,6 +47,7 @@ const SHIPPING_FIELDS = [
     'Independent Researcher',
     'Other Research Use',
   ] },
+  { name: 'company_name', label: 'Company / Organization Name', required: true },
   { name: 'phone', label: 'Phone (optional)', half: true },
   { name: 'country', label: 'Country', half: true },
   { name: 'address', label: 'Address', required: true },
