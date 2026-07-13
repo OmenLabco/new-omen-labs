@@ -6,7 +6,7 @@
 
 const GENERIC_STORAGE = "Store at -20°C. Reconstituted: 2-8°C, use within 30 days.";
 
-export const PRODUCTS = [
+const ALL_PRODUCTS = [
   {
     id: "test-item",
     name: "Test Item (Do Not Order)",
@@ -452,7 +452,7 @@ export const PRODUCTS = [
 ];
 
 // Backward-compatible fields: price = lowest variant price, dosage = first dose
-for (const p of PRODUCTS) {
+for (const p of ALL_PRODUCTS) {
   const priced = p.variants.filter((v) => v.price != null);
   p.price = priced.length ? Math.min(...priced.map((v) => v.price)) : null;
   p.dosage = p.variants[0] ? `${p.variants[0].dose} lyophilized` : "";
@@ -461,6 +461,17 @@ for (const p of PRODUCTS) {
   const coa = p.variants.find((v) => v.coa)?.coa;
   if (coa) for (const v of p.variants) if (!v.coa) v.coa = coa;
 }
+
+// TEMPORARILY HIDDEN — peptides without a COA on file, pulled from the storefront
+// until their COAs are added back (see TAKEDOWN-NO-COA.md). To restore a product,
+// delete its slug from this set — nothing else changes. Data is fully preserved.
+const HIDDEN_SLUGS = new Set([
+  "semax", "selank", "glow", "nad", "mt2", "ipamorelin",
+  "cjc-ipamorelin", "kpv", "adamax", "mt1", "wolverine", "semax-selank",
+]);
+
+// Public catalog = everything except the temporarily-hidden compounds.
+export const PRODUCTS = ALL_PRODUCTS.filter((p) => !HIDDEN_SLUGS.has(p.slug));
 
 // Demand-weighted order (GLP-1s lead the market, BPC/TB recovery classics next,
 // blends + aesthetics mid, niche compounds lower) — intentionally not a strict ranking.
