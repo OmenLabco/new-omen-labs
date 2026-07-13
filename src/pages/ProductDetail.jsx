@@ -63,6 +63,25 @@ export default function ProductDetail() {
     setTimeout(() => setAdded(false), 2000);
   };
 
+  // One-tap add for a "Frequently Paired" compound — drops its default (first,
+  // in-stock) variant straight into the cart without leaving this page.
+  const [pairedAdded, setPairedAdded] = useState({});
+  const defaultVariant = (p) => p.variants?.find((v) => v.price != null) || p.variants?.[0];
+  const pairedSoldOut = (p, v) => v && stockStatus(stock[`${p.id}_${v.dose}`])?.key === 'out';
+  const addPaired = (p) => {
+    const v = defaultVariant(p);
+    if (!p || p.coming_soon || !v || v.price == null || pairedSoldOut(p, v)) return;
+    cart.add({
+      product_id: `${p.id}_${v.dose}`,
+      product_name: `${p.name} ${v.dose}`,
+      quantity: 1,
+      price: v.price,
+    });
+    loadCart();
+    setPairedAdded((s) => ({ ...s, [p.id]: true }));
+    setTimeout(() => setPairedAdded((s) => ({ ...s, [p.id]: false })), 1800);
+  };
+
   if (!product) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
@@ -369,22 +388,43 @@ export default function ProductDetail() {
                   Frequently Paired Compounds
                 </h3>
                 <div className="space-y-3">
-                  {pairedProducts.map((p) => (
-                    <Link
-                      key={p.id}
-                      to={`/product/${p.slug}`}
-                      className="flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/20 hover:bg-primary/[0.02] transition-all"
-                    >
-                      <div className="h-12 w-12 shrink-0 rounded-lg overflow-hidden bg-secondary">
-                        <ProductVialImage image={p.image} name={p.name} style={{ objectFit: 'cover' }} />
+                  {pairedProducts.map((p) => {
+                    const v = defaultVariant(p);
+                    const canAdd = !p.coming_soon && v && v.price != null && !pairedSoldOut(p, v);
+                    const isAdded = pairedAdded[p.id];
+                    return (
+                      <div
+                        key={p.id}
+                        className="flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/20 hover:bg-primary/[0.02] transition-all"
+                      >
+                        <Link to={`/product/${p.slug}`} className="flex items-center gap-3 min-w-0 flex-1 group/pair">
+                          <div className="h-12 w-12 shrink-0 rounded-lg overflow-hidden bg-secondary">
+                            <ProductVialImage image={p.image} name={p.name} style={{ objectFit: 'cover' }} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate group-hover/pair:text-primary transition-colors">{p.name}</p>
+                            <p className="font-mono text-[10px] text-muted-foreground truncate">
+                              {p.price != null ? `$${p.price.toFixed(2)}${p.has_multiple ? '+' : ''}` : 'TBA'}{v?.dose ? ` · ${v.dose}` : ''}
+                            </p>
+                          </div>
+                        </Link>
+                        {canAdd ? (
+                          <button
+                            type="button"
+                            onClick={() => addPaired(p)}
+                            aria-label={`Add ${p.name} to cart`}
+                            className={`shrink-0 inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-xs font-semibold transition-colors ${isAdded ? 'bg-emerald-500 text-white' : 'bg-foreground text-background hover:bg-primary'}`}
+                          >
+                            {isAdded ? <><Check className="h-3.5 w-3.5" /> Added</> : <><Plus className="h-3.5 w-3.5" /> Add</>}
+                          </button>
+                        ) : (
+                          <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-muted-foreground px-2">
+                            {p.coming_soon ? 'Soon' : 'Sold out'}
+                          </span>
+                        )}
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{p.name}</p>
-                        <p className="font-mono text-[10px] text-muted-foreground truncate">{p.category}</p>
-                      </div>
-                      <span className="text-sm font-semibold shrink-0">{p.price != null ? `$${p.price.toFixed(2)}` : 'TBA'}</span>
-                    </Link>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
