@@ -25,7 +25,12 @@ function priceInfo(bundle) {
   return { parts, list: +list.toFixed(2), pct, save, price: +(list - save).toFixed(2) };
 }
 
-export default function BundlesSection({ stock = {} }) {
+export default function BundlesSection({
+  stock = {},
+  productId = null,               // when set, only bundles that include this product
+  heading = 'Research Bundles',
+  subtitle = 'Frequently-paired compounds, bundled — save 5–10% vs. buying separately.',
+}) {
   const { loadCart } = useOutletContext() || {};
   const [added, setAdded] = useState({});
 
@@ -40,7 +45,11 @@ export default function BundlesSection({ stock = {} }) {
     setTimeout(() => setAdded((a) => ({ ...a, [bundle.id]: false })), 1800);
   };
 
-  const cards = BUNDLES.map((b) => {
+  const source = productId
+    ? BUNDLES.filter((b) => b.skus.some((s) => SKU_INFO[s]?.id === productId))
+    : BUNDLES;
+
+  const cards = source.map((b) => {
     const info = priceInfo(b);
     const soldOut = b.skus.some((s) => stockStatus(stock[s])?.key === 'out');
     return { bundle: b, info, soldOut };
@@ -52,11 +61,9 @@ export default function BundlesSection({ stock = {} }) {
     <div className="mb-9 sm:mb-12">
       <div className="flex items-center gap-2 mb-1">
         <Package className="h-4 w-4 text-primary" />
-        <h2 className="text-lg sm:text-xl font-bold tracking-tight">Research Bundles</h2>
+        <h2 className="text-lg sm:text-xl font-bold tracking-tight">{heading}</h2>
       </div>
-      <p className="text-xs sm:text-sm text-muted-foreground mb-4">
-        Frequently-paired compounds, bundled — save 5–10% vs. buying separately.
-      </p>
+      <p className="text-xs sm:text-sm text-muted-foreground mb-4">{subtitle}</p>
 
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible snap-x">
         {cards.map(({ bundle, info, soldOut }, i) => {

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, ChevronDown, PackageCheck } from 'lucide-react';
+import { Search, ChevronDown, PackageCheck, Layers } from 'lucide-react';
 import { PRODUCTS, getProductsByCategory, sortByPopularity, getCategories } from '@/data/products';
 import OmenLogo from '../components/OmenLogo';
 import CategoryFilter from '../components/CategoryFilter';
@@ -32,6 +32,7 @@ export default function Catalog() {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState('popular');
   const [inStockOnly, setInStockOnly] = useState(false);
+  const [showBundles, setShowBundles] = useState(false);
   const [stock, setStock] = useState({});
   useEffect(() => { getStock().then(setStock); }, []);
 
@@ -73,7 +74,7 @@ export default function Catalog() {
           <input
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { setShowBundles(false); setQuery(e.target.value); }}
             placeholder="Search products..."
             className="w-full h-14 pl-14 pr-5 rounded-full border border-border bg-secondary/50 text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition"
           />
@@ -95,18 +96,28 @@ export default function Catalog() {
           </div>
           <button
             type="button"
-            onClick={() => setInStockOnly((v) => !v)}
+            onClick={() => { setShowBundles(false); setInStockOnly((v) => !v); }}
             aria-pressed={inStockOnly}
             className={`h-12 px-5 rounded-full border text-sm font-semibold inline-flex items-center gap-2 transition-colors ${inStockOnly ? 'bg-foreground text-background border-foreground' : 'bg-card border-border text-muted-foreground hover:text-foreground'}`}
           >
             <PackageCheck className="h-4 w-4" />
             In Stock
           </button>
+          <button
+            type="button"
+            onClick={() => setShowBundles((v) => !v)}
+            aria-pressed={showBundles}
+            className={`h-12 px-5 rounded-full border text-sm font-semibold inline-flex items-center gap-2 transition-colors ${showBundles ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-border text-muted-foreground hover:text-foreground'}`}
+          >
+            <Layers className="h-4 w-4" />
+            Bundle &amp; Save
+          </button>
         </div>
 
-        {/* Bundles — only on the default, unfiltered view to keep it clean */}
-        {!category && !query.trim() && !inStockOnly && <BundlesSection stock={stock} />}
-
+        {showBundles ? (
+          <BundlesSection stock={stock} />
+        ) : (
+        <>
         {/* Category pills */}
         <div className="mb-7 sm:mb-9">
           <CategoryFilter selected={category} onSelect={setCategory} />
@@ -206,6 +217,8 @@ export default function Catalog() {
               );
             })}
           </div>
+        )}
+        </>
         )}
 
         {/* Research notice */}

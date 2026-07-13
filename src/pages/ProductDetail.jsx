@@ -6,6 +6,7 @@ import OmenLogo from '../components/OmenLogo';
 import { PRODUCTS, getProductBySlug } from '@/data/products';
 import { cart } from '@/lib/cart';
 import ProductVialImage from '../components/ProductVialImage';
+import BundlesSection from '../components/BundlesSection';
 import { Button } from '@/components/ui/button';
 import PurityBadge from '../components/PurityBadge';
 import { DISCOUNT_TIERS, getDiscountPct, getDiscountedPrice } from '../lib/discountTiers';
@@ -429,6 +430,16 @@ export default function ProductDetail() {
               </div>
             )}
           </motion.div>
+        </div>
+
+        {/* Bundle & Save — bundles that include this compound (hidden if none) */}
+        <div className="mt-14">
+          <BundlesSection
+            stock={stock}
+            productId={product.id}
+            heading="Bundle & Save"
+            subtitle={`Get ${product.name} in a set with commonly-paired compounds and save 5–10%.`}
+          />
         </div>
 
       </div>
