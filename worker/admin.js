@@ -10,7 +10,7 @@ import { safeEqual, issueAdminSession, verifyAdminSession, zelleSecret } from '.
 import { cryptoWatchDebug } from './cryptoWatch.js';
 import { COST_SHEET, COST_BY_PRODUCT_ID, COST_BY_NAME } from './costs.js';
 import { ensureAffiliateSchema, PAYOUT_METHODS } from './affiliate.js';
-import { decrementStockForOrder } from './stock.js';
+import { decrementStockForOrder, restockOrder } from './stock.js';
 import { priceFor } from './prices.js';
 import { orderNumber } from './order.js';
 
@@ -319,6 +319,9 @@ export async function updateOrder(request, env) {
   // Once an order reaches a paid/fulfilled status, subtract its vials from stock (once).
   if (status && ['confirmed', 'shipped', 'out_for_delivery', 'delivered'].includes(status)) {
     await decrementStockForOrder(env, updated);
+  } else if (status && ['refunded', 'cancelled'].includes(status)) {
+    // Refund/cancel → put the vials back (only if they were deducted).
+    await restockOrder(env, updated);
   }
 
   // Notify the customer if the status changed (or notify was explicitly requested)

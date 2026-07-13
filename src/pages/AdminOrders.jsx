@@ -158,6 +158,8 @@ const STATUS_COLORS = {
   shipped: 'text-purple-400 bg-purple-400/10',
   out_for_delivery: 'text-orange-400 bg-orange-400/10',
   delivered: 'text-green-400 bg-green-400/10',
+  refunded: 'text-rose-400 bg-rose-400/10',
+  cancelled: 'text-muted-foreground bg-muted',
 };
 
 function LoginScreen({ onSuccess }) {

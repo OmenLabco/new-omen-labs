@@ -115,3 +115,21 @@ export async function decrementStockForOrder(env, order) {
   if (order.id != null) await env.DB.prepare('UPDATE orders SET stock_decremented = 1 WHERE id = ?').bind(order.id).run();
   else if (order.order_number) await env.DB.prepare('UPDATE orders SET stock_decremented = 1 WHERE order_number = ?').bind(order.order_number).run();
 }
+
+// Reverse of decrement — add a refunded/cancelled order's quantities back to
+// stock, exactly once (only if they were actually taken out).
+export async function restockOrder(env, order) {
+  if (!env.DB || !order || !order.stock_decremented) return;
+  await ensureTable(env);
+  let items = [];
+  try { items = typeof order.items === 'string' ? JSON.parse(order.items || '[]') : (order.items || []); } catch {}
+  const now = Date.now();
+  for (const it of items) {
+    const sku = it && it.product_id;
+    const qty = Math.max(0, Math.floor(Number(it && it.quantity) || 0));
+    if (!sku || !qty) continue;
+    await env.DB.prepare('UPDATE stock SET count = count + ?, updated_at = ? WHERE sku = ?').bind(qty, now, sku).run();
+  }
+  if (order.id != null) await env.DB.prepare('UPDATE orders SET stock_decremented = 0 WHERE id = ?').bind(order.id).run();
+  else if (order.order_number) await env.DB.prepare('UPDATE orders SET stock_decremented = 0 WHERE order_number = ?').bind(order.order_number).run();
+}

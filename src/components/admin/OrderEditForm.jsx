@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Check } from 'lucide-react';
 import { saveOrder } from '@/lib/adminApi';
 
-const STATUSES = ['awaiting_payment', 'processing', 'confirmed', 'shipped', 'out_for_delivery', 'delivered'];
+const STATUSES = ['awaiting_payment', 'processing', 'confirmed', 'shipped', 'out_for_delivery', 'delivered', 'refunded', 'cancelled'];
 const CARRIERS = ['USPS', 'UPS', 'FedEx', 'DHL', 'Other'];
 
 export default function OrderEditForm({ order, onSaved }) {
