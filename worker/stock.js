@@ -2,7 +2,12 @@
 // Stock is keyed by SKU = `${productId}_${dose}` — the SAME key order line items
 // carry in `product_id`, so decrementing on a paid order is a direct lookup.
 import { verifyAdminSession } from './security.js';
-import { sendEmail, renderRestockBack } from './email.js';
+import { sendEmail, renderRestockBack, renderLowStockDigest } from './email.js';
+import { PRODUCTS } from '../src/data/products.js';
+
+// SKU → friendly name, for the low-stock digest.
+const SKU_NAME = {};
+for (const p of PRODUCTS) for (const v of (p.variants || [])) SKU_NAME[`${p.id}_${v.dose}`] = `${p.name} ${v.dose}`;
 
 export const LOW_STOCK = 9; // under this many vials → "Low stock"
 const SITE = 'https://omenlabs.co';
@@ -114,6 +119,30 @@ export async function decrementStockForOrder(env, order) {
   }
   if (order.id != null) await env.DB.prepare('UPDATE orders SET stock_decremented = 1 WHERE id = ?').bind(order.id).run();
   else if (order.order_number) await env.DB.prepare('UPDATE orders SET stock_decremented = 1 WHERE order_number = ?').bind(order.order_number).run();
+}
+
+// Daily low-stock digest to the owner. Called from the every-2-min cron; only
+// actually sends once per day (~9am ET) when tracked items are low/out.
+export async function runLowStockDigest(env) {
+  if (!env.DB || !env.RESEND_API_KEY) return;
+  const now = new Date();
+  if (now.getUTCHours() !== 13) return; // ~9am ET — one send window per day
+  await ensureTable(env);
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS app_state (k TEXT PRIMARY KEY, v TEXT)').run();
+  const today = now.toISOString().slice(0, 10);
+  const last = await env.DB.prepare("SELECT v FROM app_state WHERE k = 'lowstock_digest_day'").first();
+  if (last && last.v === today) return; // already sent today
+  // Mark done first (idempotent for the ~30 cron ticks in this hour).
+  await env.DB.prepare("INSERT INTO app_state (k, v) VALUES ('lowstock_digest_day', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(today).run();
+  const { results } = await env.DB.prepare('SELECT sku, count FROM stock WHERE count <= ? ORDER BY count ASC').bind(LOW_STOCK).all();
+  if (!results || !results.length) return; // nothing low → no email
+  const items = results.map((r) => ({ sku: r.sku, count: Number(r.count) || 0, name: SKU_NAME[r.sku] || r.sku }));
+  const to = env.ORDER_TO_EMAIL || 'support@omenlabs.co';
+  await sendEmail(env, {
+    to,
+    subject: `Low stock — ${items.length} item${items.length === 1 ? '' : 's'} need restocking`,
+    html: renderLowStockDigest(items),
+  });
 }
 
 // Reverse of decrement — add a refunded/cancelled order's quantities back to

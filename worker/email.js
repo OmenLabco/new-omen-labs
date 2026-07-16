@@ -116,6 +116,33 @@ export function renderStatusUpdate(order, status) {
   `);
 }
 
+// Internal owner digest — low / out-of-stock tracked SKUs that need restocking.
+export function renderLowStockDigest(items = []) {
+  const rows = items.map((it) => {
+    const out = (Number(it.count) || 0) <= 0;
+    const state = out
+      ? `<span style="color:#f8776b;font-weight:700">SOLD OUT</span>`
+      : `<span style="color:#f2c14e;font-weight:700">${Number(it.count)} left</span>`;
+    return `<tr>
+      <td style="padding:14px 20px;border-bottom:1px solid ${ROW_BORDER};font-size:15px;color:#e5e8ef">${esc(it.name)}</td>
+      <td style="padding:14px 20px;border-bottom:1px solid ${ROW_BORDER};font-size:15px;text-align:right">${state}</td>
+    </tr>`;
+  }).join('');
+  return layout(`
+    ${heading('Low Stock Report')}
+    ${divider()}
+    ${para(`${items.length} tracked item${items.length === 1 ? '' : 's'} at or below the low-stock threshold. Restock these soon to avoid sold-out listings.`)}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;background:${PANEL};border:1px solid ${BORDER};border-radius:12px;border-collapse:separate;overflow:hidden">
+      <tr>
+        <td style="padding:14px 20px;font-family:${MONO};font-size:11px;letter-spacing:1px;text-transform:uppercase;color:${BLUE}">Product</td>
+        <td style="padding:14px 20px;font-family:${MONO};font-size:11px;letter-spacing:1px;text-transform:uppercase;color:${BLUE};text-align:right">Stock</td>
+      </tr>
+      ${rows}
+    </table>
+    <p style="color:${MUTED};font-size:13px;line-height:1.6;margin:22px 0 0">Update stock levels in the admin Stock tab.</p>
+  `);
+}
+
 // Internal owner notification (sent to support@) with full shipping details
 export function renderOwnerNotification(order) {
   const c = order;

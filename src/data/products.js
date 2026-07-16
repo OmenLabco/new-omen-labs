@@ -451,14 +451,22 @@ const ALL_PRODUCTS = [
   },
 ];
 
+// COA files added after launch (slug -> "/coa/<file>"). Applied below to any
+// variant that doesn't already carry its own COA. Managed by scripts/add-coas.mjs
+// (drop a COA named <slug>.<ext> into public/coa/ and run `npm run coas`).
+const COA_BY_SLUG = {
+  // "semax": "/coa/semax.jpg",
+};
+
 // Backward-compatible fields: price = lowest variant price, dosage = first dose
 for (const p of ALL_PRODUCTS) {
   const priced = p.variants.filter((v) => v.price != null);
   p.price = priced.length ? Math.min(...priced.map((v) => v.price)) : null;
   p.dosage = p.variants[0] ? `${p.variants[0].dose} lyophilized` : "";
   p.has_multiple = p.variants.length > 1;
-  // Use the product's available COA for any dose that doesn't have its own yet.
-  const coa = p.variants.find((v) => v.coa)?.coa;
+  // Use the product's own COA (or a post-launch COA_BY_SLUG entry) for any dose
+  // that doesn't already have its own.
+  const coa = p.variants.find((v) => v.coa)?.coa || COA_BY_SLUG[p.slug];
   if (coa) for (const v of p.variants) if (!v.coa) v.coa = coa;
 }
 

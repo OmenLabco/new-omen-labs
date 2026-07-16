@@ -7,7 +7,19 @@
 The products are **hidden, not deleted** — all their data is intact in `src/data/products.js`.
 They're pulled from the storefront by their slug in the `HIDDEN_SLUGS` set in that file.
 
-**To restore a product:** delete its slug from `HIDDEN_SLUGS` in `src/data/products.js`, rebuild, and deploy. Nothing else needs to change — its product page, catalog card, bundles, and cross-sells all come back automatically. Ideally add the COA first (drop the file in `public/coa/` and wire it on the variant) so it comes back COA-backed.
+## Restoring — the one-motion way (recommended)
+When the COAs land:
+1. Name each COA file by the product **slug** (from the table below) and drop it in `public/coa/` —
+   e.g. `semax.jpg`, `nad.pdf`, `cjc-ipamorelin.jpg`. (A dose suffix is fine: `semax-5mg.jpg` → `semax`.)
+2. Run **`npm run coas`** (or `npm run coas -- --dry` to preview first).
+   It wires each COA onto the product **and** removes that slug from `HIDDEN_SLUGS` automatically.
+3. `npm run build`, then commit + deploy.
+
+The product's page, catalog card, bundles, and cross-sells all come back automatically — and any
+bundle that was waiting on it reappears too.
+
+**Manual alternative:** delete a slug from `HIDDEN_SLUGS` in `src/data/products.js` by hand (and wire
+its COA on the variant), then rebuild + deploy.
 
 ## Hidden peptides (12)
 

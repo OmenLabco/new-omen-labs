@@ -6,7 +6,7 @@ import { loginAffiliate, affiliateStats, validateCode, requestPayout } from './a
 import { signupCustomer, loginCustomer, customerMe, enrollAffiliate } from './customer.js';
 import { withSecurity, rateLimit, tooMany, clientIp } from './security.js';
 import { handleZelleNotify } from './zelle.js';
-import { listStock, updateStock, publicStock, restockNotifySignup } from './stock.js';
+import { listStock, updateStock, publicStock, restockNotifySignup, runLowStockDigest } from './stock.js';
 import { listPromos, upsertPromo, deletePromo } from './promos.js';
 import { handleSubscribe, listSubscribers } from './subscribe.js';
 import { syncCart, runAbandonedCartWatch } from './cart.js';
@@ -96,7 +96,7 @@ export default {
 
   // Cron trigger: auto-confirm crypto payments + advance shipped orders via USPS tracking.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(Promise.all([runCryptoWatch(env), runShipstationSync(env), runTrackingWatch(env), runAbandonedCartWatch(env)]));
+    ctx.waitUntil(Promise.all([runCryptoWatch(env), runShipstationSync(env), runTrackingWatch(env), runAbandonedCartWatch(env), runLowStockDigest(env)]));
   },
 
   // Email Routing: Cash App receipt emails → auto-confirm the matching order.

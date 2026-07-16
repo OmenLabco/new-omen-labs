@@ -326,9 +326,12 @@ export async function updateOrder(request, env) {
     await restockOrder(env, updated);
   }
 
-  // Notify the customer if the status changed (or notify was explicitly requested)
+  // Notify the customer on customer-positive fulfillment steps only (so nobody
+  // gets an automatic "Awaiting Payment" / "Refunded" / "Cancelled" email). An
+  // explicit `notify` flag from the admin can still force a send for any status.
+  const CUSTOMER_NOTIFY = ['confirmed', 'shipped', 'out_for_delivery', 'delivered'];
   const statusChanged = status && (!prev || prev.status !== status);
-  if (statusChanged || notify) {
+  if (notify || (statusChanged && CUSTOMER_NOTIFY.includes(updated.status))) {
     await sendStatusEmail(env, updated, updated.status);
   }
 
