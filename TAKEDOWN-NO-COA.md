@@ -21,7 +21,7 @@ bundle that was waiting on it reappears too.
 **Manual alternative:** delete a slug from `HIDDEN_SLUGS` in `src/data/products.js` by hand (and wire
 its COA on the variant), then rebuild + deploy.
 
-## Hidden peptides (12)
+## Hidden products (13)
 
 | Product | Slug | In a bundle? |
 |---|---|---|
@@ -37,6 +37,7 @@ its COA on the variant), then rebuild + deploy.
 | MT1 | `mt1` | — |
 | WOLVERINE | `wolverine` | — |
 | Semax + Selank | `semax-selank` | — |
+| Bacteriostatic Water | `bacteriostatic-water` | — |
 
 ## Bundles affected
 Bundles that included a hidden compound are automatically hidden from the site while
@@ -49,9 +50,5 @@ their compound is down (they reappear when the compound is restored):
 
 Bundles still live: **BPC-157 + TB-500**, **GLP-3 RT + Tirzepatide**.
 
-## Kept live (judgment call)
-- **Bacteriostatic Water** (`bacteriostatic-water`) has no COA but is a lab *supply* (sterile
-  water), not a peptide, so it was left live. Add it to `HIDDEN_SLUGS` if you want it down too.
-
 ## Still live (have COAs)
-GLP-3 RT · Tirzepatide · BPC-157 · GHK-Cu · KLOW · MOTS-c · TB-500 · IGF-1 LR3 · Tesamorelin · Bacteriostatic Water
+GLP-3 RT · Tirzepatide · BPC-157 · GHK-Cu · KLOW · MOTS-c · TB-500 · IGF-1 LR3 · Tesamorelin
