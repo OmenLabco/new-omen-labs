@@ -476,6 +476,7 @@ for (const p of ALL_PRODUCTS) {
 const HIDDEN_SLUGS = new Set([
   "semax", "selank", "glow", "nad", "mt2", "ipamorelin",
   "cjc-ipamorelin", "kpv", "adamax", "mt1", "wolverine", "semax-selank",
+  "bacteriostatic-water",
 ]);
 
 // Public catalog = everything except the temporarily-hidden compounds.
