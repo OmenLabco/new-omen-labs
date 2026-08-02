@@ -455,7 +455,8 @@ const ALL_PRODUCTS = [
 // variant that doesn't already carry its own COA. Managed by scripts/add-coas.mjs
 // (drop a COA named <slug>.<ext> into public/coa/ and run `npm run coas`).
 const COA_BY_SLUG = {
-  // "semax": "/coa/semax.jpg",
+  "semax": "/coa/semax.jpg",
+  "nad": "/coa/nad.jpg",
 };
 
 // Backward-compatible fields: price = lowest variant price, dosage = first dose
@@ -474,8 +475,16 @@ for (const p of ALL_PRODUCTS) {
 // until their COAs are added back (see TAKEDOWN-NO-COA.md). To restore a product,
 // delete its slug from this set — nothing else changes. Data is fully preserved.
 const HIDDEN_SLUGS = new Set([
-  "semax", "selank", "glow", "nad", "mt2", "ipamorelin",
-  "cjc-ipamorelin", "kpv", "adamax", "mt1", "wolverine", "semax-selank",
+  "selank",
+  "glow",
+  "mt2",
+  "ipamorelin",
+  "cjc-ipamorelin",
+  "kpv",
+  "adamax",
+  "mt1",
+  "wolverine",
+  "semax-selank",
   "bacteriostatic-water",
 ]);
 
