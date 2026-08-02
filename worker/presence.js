@@ -17,10 +17,24 @@ async function ensureTable(env) {
   ).run();
   // Add newer columns to tables created before they existed. ALTER throws
   // "duplicate column" once they exist — safe to ignore.
-  for (const col of ['lat REAL', 'lon REAL', 'country TEXT', 'city TEXT', 'region TEXT', 'product TEXT', 'cart TEXT']) {
+  for (const col of ['lat REAL', 'lon REAL', 'country TEXT', 'city TEXT', 'region TEXT', 'product TEXT', 'cart TEXT', 'network TEXT', 'asn INTEGER', 'bot INTEGER']) {
     try { await env.DB.prepare(`ALTER TABLE presence ADD COLUMN ${col}`).run(); } catch {}
   }
   schemaReady = true;
+}
+
+// Datacenter / hosting / commercial-VPN networks (by ASN org name) and bot user
+// agents. Real shoppers browse from consumer ISPs; traffic from these is almost
+// always a crawler, scraper, uptime monitor, or someone behind a VPN — none of
+// which are real "visitors", so we flag and filter them out of the Live View.
+const DC_RE = /(amazon|aws|google|azure|microsoft|digital ?ocean|ovh|hetzner|linode|akamai|vultr|choopa|m247|datacamp|data ?camp|leaseweb|contabo|cherry ?servers|hostinger|constant company|nforce|worldstream|scaleway|oracle|equinix|cogent|hostwinds|ip volume|psychz|quadranet|colocrossing|frantech|buyvm|clouvider|nordvpn|mullvad|surfshark|express ?vpn|cyberghost|proton|tefincom|private internet|pia |zscaler|fastly|cloudflare|alibaba|tencent|g-?core|stark|censys|shodan|palo alto|bytedance|datacenter|hosting|colo|server|vpn|proxy)/i;
+const UA_RE = /(bot|crawl|spider|slurp|headless|python|curl|wget|http[-_]?client|monitor|uptime|scan|censys|shodan|semrush|ahrefs|bingpreview|facebookexternal|preview|lighthouse|gtmetrix|pingdom)/i;
+
+function detectBot(request, network) {
+  const ua = request.headers.get('User-Agent') || '';
+  if (UA_RE.test(ua)) return 1;
+  if (network && DC_RE.test(network)) return 1;
+  return 0;
 }
 
 // Read the visitor's approximate location from Cloudflare's edge geo (request.cf).
@@ -36,6 +50,8 @@ function readGeo(request) {
     country: (cf.country || '').slice(0, 2) || null,
     city: (cf.city || '').slice(0, 60) || null,
     region: (cf.region || '').slice(0, 60) || null,
+    network: (cf.asOrganization || '').slice(0, 80) || null,
+    asn: cf.asn != null ? Number(cf.asn) || null : null,
   };
 }
 
@@ -57,7 +73,7 @@ export async function socialProof(request, env) {
   let online = 0;
   try {
     await ensureTable(env);
-    const r = await env.DB.prepare('SELECT COUNT(*) AS n FROM presence WHERE updated_at >= ?').bind(now - 60000).first();
+    const r = await env.DB.prepare('SELECT COUNT(*) AS n FROM presence WHERE updated_at >= ? AND (bot IS NULL OR bot = 0)').bind(now - 60000).first();
     online = r ? Number(r.n) : 0;
   } catch {}
   const recent = [];
@@ -93,10 +109,11 @@ export async function recordPresence(request, env) {
     if (Array.isArray(b.cartItems) && b.cartItems.length) {
       cartJson = JSON.stringify(b.cartItems.slice(0, 20).map((i) => ({ n: String(i.n || 'Item').slice(0, 60), q: Number(i.q) || 0 }))).slice(0, 2000);
     }
+    const bot = detectBot(request, geo.network);
     await env.DB.prepare(
-      `INSERT INTO presence (sid, page, path, state, cart_count, updated_at, lat, lon, country, city, region, product, cart) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
-       ON CONFLICT(sid) DO UPDATE SET page=excluded.page, path=excluded.path, state=excluded.state, cart_count=excluded.cart_count, updated_at=excluded.updated_at, lat=excluded.lat, lon=excluded.lon, country=excluded.country, city=excluded.city, region=excluded.region, product=excluded.product, cart=excluded.cart`
-    ).bind(sid, String(b.page || '').slice(0, 60), String(b.path || '').slice(0, 120), String(b.state || 'browsing').slice(0, 20), Number(b.cartCount) || 0, now, geo.lat, geo.lon, geo.country, geo.city, geo.region, product, cartJson).run();
+      `INSERT INTO presence (sid, page, path, state, cart_count, updated_at, lat, lon, country, city, region, product, cart, network, asn, bot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+       ON CONFLICT(sid) DO UPDATE SET page=excluded.page, path=excluded.path, state=excluded.state, cart_count=excluded.cart_count, updated_at=excluded.updated_at, lat=excluded.lat, lon=excluded.lon, country=excluded.country, city=excluded.city, region=excluded.region, product=excluded.product, cart=excluded.cart, network=excluded.network, asn=excluded.asn, bot=excluded.bot`
+    ).bind(sid, String(b.page || '').slice(0, 60), String(b.path || '').slice(0, 120), String(b.state || 'browsing').slice(0, 20), Number(b.cartCount) || 0, now, geo.lat, geo.lon, geo.country, geo.city, geo.region, product, cartJson, geo.network, geo.asn, bot).run();
     // prune rows older than 5 min occasionally
     if ((now % 10) === 0) await env.DB.prepare('DELETE FROM presence WHERE updated_at < ?').bind(now - 300000).run();
   } catch {}
@@ -113,9 +130,12 @@ export async function liveStats(request, env) {
   const now = Date.now();
   const cutoff = now - 60000; // active in last 60s
   const { results } = await env.DB.prepare(
-    'SELECT sid, page, path, state, cart_count, updated_at, lat, lon, country, city, region, product, cart FROM presence WHERE updated_at >= ? ORDER BY updated_at DESC'
+    'SELECT sid, page, path, state, cart_count, updated_at, lat, lon, country, city, region, product, cart, network, asn, bot FROM presence WHERE updated_at >= ? ORDER BY updated_at DESC'
   ).bind(cutoff).all();
-  const rows = results || [];
+  const all = results || [];
+  // Real shoppers only — datacenter / VPN / crawler traffic is filtered out.
+  const rows = all.filter((r) => !r.bot);
+  const bots = all.length - rows.length;
 
   const online = rows.length;
   const carts = rows.filter((r) => (r.cart_count || 0) > 0).length;
@@ -136,6 +156,9 @@ export async function liveStats(request, env) {
     product: r.product || null,
     state: r.state || 'browsing',
     cartCount: Number(r.cart_count) || 0,
+    city: r.city || null,
+    country: r.country || null,
+    network: r.network || null,
     ago: Math.max(0, Math.round((now - r.updated_at) / 1000)),
   }));
 
@@ -176,10 +199,10 @@ export async function liveStats(request, env) {
     const key = `${r.city || ''}|${r.country || ''}|${r.lat.toFixed(1)},${r.lon.toFixed(1)}`;
     const cur = locMap.get(key);
     if (cur) cur.count += 1;
-    else locMap.set(key, { lat: r.lat, lon: r.lon, city: r.city || null, region: r.region || null, country: r.country || null, count: 1 });
+    else locMap.set(key, { lat: r.lat, lon: r.lon, city: r.city || null, region: r.region || null, country: r.country || null, network: r.network || null, count: 1 });
   }
   const locations = [...locMap.values()].sort((a, b) => b.count - a.count).slice(0, 30);
   const countries = [...countryMap.entries()].map(([country, count]) => ({ country, count })).sort((a, b) => b.count - a.count).slice(0, 12);
 
-  return json({ online, carts, checkingOut, viewingProduct, itemsInCarts, pages, sessions, products, cartContents, locations, countries });
+  return json({ online, bots, carts, checkingOut, viewingProduct, itemsInCarts, pages, sessions, products, cartContents, locations, countries });
 }

@@ -48,7 +48,7 @@ export default function LiveView({ onLogout }) {
   if (err) return <p className="text-destructive text-sm">{err}</p>;
   if (!data) return <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" /></div>;
 
-  const { online = 0, carts = 0, checkingOut = 0, viewingProduct = 0, itemsInCarts = 0, pages = [], sessions = [], products = [], cartContents = [], locations = [], countries = [] } = data;
+  const { online = 0, bots = 0, carts = 0, checkingOut = 0, viewingProduct = 0, itemsInCarts = 0, pages = [], sessions = [], products = [], cartContents = [], locations = [], countries = [] } = data;
   const maxPage = Math.max(1, ...pages.map((p) => p.count));
   const maxProduct = Math.max(1, ...products.map((p) => p.count));
   const maxCartQty = Math.max(1, ...cartContents.map((c) => c.qty));
@@ -102,6 +102,9 @@ export default function LiveView({ onLogout }) {
               </motion.p>
             </AnimatePresence>
             <p className="mt-2 text-sm text-white/70">{online === 1 ? 'visitor' : 'visitors'} on your site right now</p>
+            {bots > 0 && (
+              <p className="mt-1 text-[11px] text-white/40">{bots} bot{bots === 1 ? '' : 's'}/VPN filtered out</p>
+            )}
           </div>
         </div>
       </div>
@@ -273,18 +276,28 @@ export default function LiveView({ onLogout }) {
               <AnimatePresence initial={false}>
                 {sessions.map((s, i) => {
                   const b = STATE_BADGE[s.state] || STATE_BADGE.browsing;
+                  const place = [s.city, s.country ? countryName(s.country) : null].filter(Boolean).join(', ');
                   return (
                     <motion.div key={`${s.page}-${i}`} layout initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                      className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                      <span className="text-sm flex-1 min-w-0 truncate">{s.product || s.page}</span>
-                      {s.cartCount > 0 && (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
-                          <ShoppingCart className="h-3 w-3" />{s.cartCount}
-                        </span>
-                      )}
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${b.cls}`}>{b.label}</span>
-                      <span className="text-[10px] text-muted-foreground w-10 text-right shrink-0 tabular-nums">{s.ago}s ago</span>
+                      className="flex items-start gap-3 py-2 border-b border-border/50 last:border-0">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm flex-1 min-w-0 truncate">{s.product || s.page}</span>
+                          {s.cartCount > 0 && (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
+                              <ShoppingCart className="h-3 w-3" />{s.cartCount}
+                            </span>
+                          )}
+                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${b.cls}`}>{b.label}</span>
+                          <span className="text-[10px] text-muted-foreground w-10 text-right shrink-0 tabular-nums">{s.ago}s ago</span>
+                        </div>
+                        {(place || s.network) && (
+                          <div className="text-[10px] text-muted-foreground truncate mt-0.5">
+                            {s.country ? flagEmoji(s.country) + ' ' : ''}{place || 'Unknown'}{s.network ? ` · ${s.network}` : ''}
+                          </div>
+                        )}
+                      </div>
                     </motion.div>
                   );
                 })}

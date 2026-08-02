@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { cart } from '@/lib/cart';
+import { adminAuth } from '@/lib/adminApi';
 import { syncCart } from '@/lib/cartSync';
 import { getProductBySlug } from '@/data/products';
 import Navbar from './Navbar';
@@ -21,10 +22,13 @@ export default function Layout() {
   const [cartOpen, setCartOpen] = useState(false);
   const [cartItems, setCartItems] = useState([]);
 
-  // Live presence heartbeat (powers the admin Live View). Skips admin pages.
+  // Live presence heartbeat (powers the admin Live View). Skips admin pages,
+  // and skips entirely if this browser is signed into admin/staff — so the owner
+  // never counts as a visitor (and never shows up at their own VPN's city).
   useEffect(() => {
     const path = location.pathname;
     if (path.startsWith('/admin')) return;
+    if (adminAuth.get()) return;
     let sid = sessionStorage.getItem('omenlabs_sid');
     if (!sid) { sid = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('omenlabs_sid', sid); }
     const pageLabel = () => {
