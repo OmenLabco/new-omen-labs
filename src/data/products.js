@@ -481,6 +481,9 @@ const HIDDEN_SLUGS = new Set([
 
 // Public catalog = everything except the temporarily-hidden compounds.
 export const PRODUCTS = ALL_PRODUCTS.filter((p) => !HIDDEN_SLUGS.has(p.slug));
+// Full list (incl. hidden) + a hidden check — for admin tooling like the Stock tab.
+export { ALL_PRODUCTS };
+export const isHidden = (slug) => HIDDEN_SLUGS.has(slug);
 
 // Demand-weighted order (GLP-1s lead the market, BPC/TB recovery classics next,
 // blends + aesthetics mid, niche compounds lower) — intentionally not a strict ranking.

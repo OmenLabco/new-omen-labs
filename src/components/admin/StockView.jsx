@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Minus, Plus, Boxes, AlertTriangle, Check, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { PRODUCTS } from '@/data/products';
+import { ALL_PRODUCTS, isHidden } from '@/data/products';
 import { fetchStock, saveStock } from '@/lib/adminApi';
 
 const skuOf = (product, dose) => `${product.id}_${dose}`;
-// Only real, sellable products (skip the internal test item).
-const CATALOG = PRODUCTS.filter((p) => p.id !== 'test-item');
+// All real products (skip the internal test item). Includes compounds currently
+// hidden from the storefront so inventory can be set before they go back live.
+const CATALOG = ALL_PRODUCTS.filter((p) => p.id !== 'test-item');
 
 function statusFor(val, low) {
   if (val === '' || val == null) return { label: 'Not set', cls: 'text-muted-foreground bg-secondary' };
@@ -113,9 +114,14 @@ export default function StockView({ onLogout }) {
       <div className="space-y-4">
         {shown.map((p) => (
           <div key={p.id} className="rounded-2xl border border-border bg-card overflow-hidden">
-            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-              <span className="font-semibold text-sm">{p.name}</span>
-              <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{p.category}</span>
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-2">
+              <span className="font-semibold text-sm flex items-center gap-2">
+                {p.name}
+                {isHidden(p.slug) && (
+                  <span title="Hidden from the storefront (pending COA) — set stock now; it goes live when the COA is added" className="font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600">Hidden</span>
+                )}
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground shrink-0">{p.category}</span>
             </div>
             <div className="divide-y divide-border">
               {p.variants.map((v) => {
