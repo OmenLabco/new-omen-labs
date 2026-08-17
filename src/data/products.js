@@ -65,6 +65,26 @@ const ALL_PRODUCTS = [
     featured: true,
   },
   {
+    id: "retatrutide",
+    name: "Retatrutide",
+    slug: "retatrutide",
+    category: "Metabolic Research",
+    short_description: "Triple GIP/GLP-1/glucagon receptor agonist for metabolic research.",
+    description:
+      "Retatrutide is a triple receptor agonist targeting the GIP, GLP-1, and glucagon receptors, studied in metabolic research for glucose regulation and energy-metabolism pathways.",
+    molecular_weight: "",
+    sequence: "",
+    purity: null,
+    variants: [
+      { dose: "15mg", price: null },
+      { dose: "30mg", price: null },
+    ],
+    storage: GENERIC_STORAGE,
+    image: null,
+    paired_products: ["GLP-3 RT", "Tirzepatide"],
+    in_stock: true,
+  },
+  {
     id: "69f9871d9cc1fe91aec19c93",
     name: "BPC-157",
     slug: "bpc-157",
@@ -486,6 +506,7 @@ const HIDDEN_SLUGS = new Set([
   "wolverine",
   "semax-selank",
   "bacteriostatic-water",
+  "retatrutide",
 ]);
 
 // Public catalog = everything except the temporarily-hidden compounds.

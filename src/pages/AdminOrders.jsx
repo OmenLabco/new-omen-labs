@@ -473,6 +473,39 @@ function SubscribersCard() {
 }
 
 export default function AdminOrders() {
+  // Make the admin route installable as its own home-screen app (iOS/iPadOS/Android):
+  // while on /admin we swap the manifest + apple-touch icon + title so "Add to Home
+  // Screen" creates an "Omen Admin" app that opens straight to the backend, full-screen.
+  useEffect(() => {
+    const undo = [];
+    const meta = (name, content) => {
+      let el = document.querySelector(`meta[name="${name}"]`);
+      const created = !el;
+      if (!el) { el = document.createElement('meta'); el.setAttribute('name', name); document.head.appendChild(el); }
+      const prev = el.getAttribute('content');
+      el.setAttribute('content', content);
+      undo.push(() => { created ? el.remove() : el.setAttribute('content', prev); });
+    };
+    const attr = (sel, a, val) => {
+      const el = document.querySelector(sel);
+      if (!el) return;
+      const prev = el.getAttribute(a);
+      el.setAttribute(a, val);
+      undo.push(() => el.setAttribute(a, prev));
+    };
+    meta('apple-mobile-web-app-capable', 'yes');
+    meta('mobile-web-app-capable', 'yes');
+    meta('apple-mobile-web-app-status-bar-style', 'black-translucent');
+    meta('apple-mobile-web-app-title', 'Omen Admin');
+    meta('theme-color', '#0a0e1a');
+    attr('link[rel="manifest"]', 'href', '/admin.webmanifest');
+    attr('link[rel="apple-touch-icon"]', 'href', '/admin-180.png');
+    const prevTitle = document.title;
+    document.title = 'Omen Admin';
+    undo.push(() => { document.title = prevTitle; });
+    return () => undo.reverse().forEach((fn) => fn());
+  }, []);
+
   const [authed, setAuthed] = useState(!!adminAuth.get());
   const [tab, setTab] = useState('overview');
   const [orders, setOrders] = useState([]);
