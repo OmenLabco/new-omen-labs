@@ -46,7 +46,7 @@ function injectAdminMeta(html) {
       + '    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />\n'
       + '    <meta name="apple-mobile-web-app-title" content="Omen Admin" />'
     )
-    .replace('<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />', '<link rel="apple-touch-icon" href="/admin-180.png" />')
+    .replace('<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />', '<link rel="apple-touch-icon" href="/admin-180.png?v=2" />')
     .replace('<title>Omen Labs — Research-Grade Peptides</title>', '<title>Omen Admin</title>');
 }
 import { runCryptoWatch } from './cryptoWatch.js';

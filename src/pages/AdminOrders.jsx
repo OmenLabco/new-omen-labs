@@ -499,7 +499,7 @@ export default function AdminOrders() {
     meta('apple-mobile-web-app-title', 'Omen Admin');
     meta('theme-color', '#0a0e1a');
     attr('link[rel="manifest"]', 'href', '/admin.webmanifest');
-    attr('link[rel="apple-touch-icon"]', 'href', '/admin-180.png');
+    attr('link[rel="apple-touch-icon"]', 'href', '/admin-180.png?v=2');
     const prevTitle = document.title;
     document.title = 'Omen Admin';
     undo.push(() => { document.title = prevTitle; });
