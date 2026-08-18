@@ -32,6 +32,23 @@ function injectProductMeta(html, p) {
     .replace('content="https://omenlabs.co"', `content="${escAttr(url)}"`)
     .replaceAll('https://omenlabs.co/og-image.png?v=1', escAttr(img));
 }
+
+// For /admin/* pages, serve HTML that points at the ADMIN web-app manifest + Apple
+// PWA tags, so "Add to Home Screen" installs a standalone "Omen Admin" app that
+// opens straight to /admin/orders (iOS reads these from the served HTML, not JS).
+function injectAdminMeta(html) {
+  return html
+    .replace(
+      '<link rel="manifest" href="/manifest.json" />',
+      '<link rel="manifest" href="/admin.webmanifest" />\n'
+      + '    <meta name="apple-mobile-web-app-capable" content="yes" />\n'
+      + '    <meta name="mobile-web-app-capable" content="yes" />\n'
+      + '    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />\n'
+      + '    <meta name="apple-mobile-web-app-title" content="Omen Admin" />'
+    )
+    .replace('<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />', '<link rel="apple-touch-icon" href="/admin-180.png" />')
+    .replace('<title>Omen Labs — Research-Grade Peptides</title>', '<title>Omen Admin</title>');
+}
 import { runCryptoWatch } from './cryptoWatch.js';
 import { handleShipstationWebhook, runShipstationSync } from './shipstation.js';
 import { runTrackingWatch } from './tracking.js';
@@ -323,6 +340,11 @@ async function route(request, env, url, pathname, method) {
       const product = pm && getProductBySlug(pm[1]);
       if (product) {
         const html = injectProductMeta(await assetResp.text(), product);
+        return new Response(html, { status: assetResp.status, statusText: assetResp.statusText, headers: h });
+      }
+      // Admin pages advertise the installable "Omen Admin" app.
+      if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+        const html = injectAdminMeta(await assetResp.text());
         return new Response(html, { status: assetResp.status, statusText: assetResp.statusText, headers: h });
       }
       return new Response(assetResp.body, { status: assetResp.status, statusText: assetResp.statusText, headers: h });
