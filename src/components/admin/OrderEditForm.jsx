@@ -13,7 +13,6 @@ export default function OrderEditForm({ order, onSaved }) {
     status: order.status || 'processing',
     tracking_number: order.tracking_number || '',
     carrier: order.carrier || '',
-    estimated_delivery: order.estimated_delivery || '',
     notes: order.notes || '',
   });
   const [saving, setSaving] = useState(false);
@@ -143,17 +142,11 @@ export default function OrderEditForm({ order, onSaved }) {
               {CARRIERS.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-          <div>
+          <div className="col-span-2">
             <label className={`${LABEL} block mb-1.5`}>Tracking Number</label>
             <input type="text" value={form.tracking_number} onChange={e => set('tracking_number', e.target.value)}
               placeholder="e.g. 9400 1118 9922 3396 …"
               className="w-full h-9 px-3 rounded-lg border border-border bg-background font-mono text-xs focus:outline-none focus:ring-2 focus:ring-ring" />
-          </div>
-          <div>
-            <label className={`${LABEL} block mb-1.5`}>Est. Delivery</label>
-            <input type="text" value={form.estimated_delivery} onChange={e => set('estimated_delivery', e.target.value)}
-              placeholder="e.g. June 10, 2026"
-              className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
           </div>
         </div>
       </div>
