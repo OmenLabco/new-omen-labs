@@ -280,8 +280,9 @@ export async function handleOrder(request, env) {
     } catch {}
   }
   const paymentLabel = isZelle ? 'Zelle — awaiting payment' : isCashapp ? 'Cash App — awaiting payment' : isCrypto ? 'Crypto — awaiting payment' : 'Manual — invoice to follow';
-  // Zelle + Cash App + crypto orders wait for payment confirmation (auto-reconciled via SMS / IPN webhook).
-  const orderStatus = (isZelle || isCashapp || isCrypto) ? 'awaiting_payment' : 'processing';
+  // All new orders start awaiting payment (Zelle/Cash App/crypto auto-reconcile;
+  // manual/invoice orders are marked paid by the admin). 'processing' is retired.
+  const orderStatus = 'awaiting_payment';
 
   // Points earned (on subtotal, multiplied by tier)
   const pointsEarned = account ? Math.floor(subtotal * POINTS_PER_DOLLAR * acctTier.multiplier) : 0;

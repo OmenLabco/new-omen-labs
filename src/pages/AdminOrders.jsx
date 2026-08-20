@@ -661,7 +661,6 @@ export default function AdminOrders() {
           {[
             { key: 'all', label: 'All Orders', count: orders.length },
             { key: 'awaiting_payment', label: 'Awaiting Payment', count: statusCount('awaiting_payment') },
-            { key: 'processing', label: 'Processing', count: statusCount('processing') },
             { key: 'confirmed', label: 'Confirmed', count: statusCount('confirmed') },
             { key: 'shipped', label: 'Shipped', count: statusCount('shipped') },
             { key: 'out_for_delivery', label: 'Out for Delivery', count: statusCount('out_for_delivery') },

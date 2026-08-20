@@ -4,15 +4,22 @@ import { Check, Tag, Copy, MapPin } from 'lucide-react';
 import { saveOrder } from '@/lib/adminApi';
 import { downloadOrderLabel } from '@/lib/orderLabel';
 
-const STATUSES = ['awaiting_payment', 'processing', 'confirmed', 'shipped', 'out_for_delivery', 'delivered', 'refunded', 'cancelled'];
-const CARRIERS = ['USPS', 'UPS', 'FedEx', 'DHL', 'Other'];
+// Order lifecycle — shown as clickable colored pills.
+const STATUS_FLOW = [
+  { key: 'awaiting_payment', label: 'Awaiting Payment', on: 'bg-amber-500 border-amber-500 text-white' },
+  { key: 'confirmed', label: 'Confirmed', on: 'bg-blue-500 border-blue-500 text-white' },
+  { key: 'shipped', label: 'Shipped', on: 'bg-violet-500 border-violet-500 text-white' },
+  { key: 'out_for_delivery', label: 'Out for Delivery', on: 'bg-orange-500 border-orange-500 text-white' },
+  { key: 'delivered', label: 'Delivered', on: 'bg-emerald-500 border-emerald-500 text-white' },
+  { key: 'refunded', label: 'Refunded', on: 'bg-rose-500 border-rose-500 text-white' },
+  { key: 'cancelled', label: 'Cancelled', on: 'bg-neutral-500 border-neutral-500 text-white' },
+];
 const LABEL = 'font-mono text-[10px] uppercase tracking-wider text-muted-foreground';
 
 export default function OrderEditForm({ order, onSaved }) {
   const [form, setForm] = useState({
-    status: order.status || 'processing',
+    status: order.status || 'awaiting_payment',
     tracking_number: order.tracking_number || '',
-    carrier: order.carrier || '',
     notes: order.notes || '',
   });
   const [saving, setSaving] = useState(false);
@@ -124,30 +131,35 @@ export default function OrderEditForm({ order, onSaved }) {
       )}
 
       {/* Fulfillment */}
-      <div>
-        <div className={`${LABEL} mb-2`}>Fulfillment</div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={`${LABEL} block mb-1.5`}>Status</label>
-            <select value={form.status} onChange={e => set('status', e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-              {STATUSES.map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
-            </select>
+      <div className="space-y-4">
+        <div>
+          <div className={`${LABEL} mb-2`}>Status</div>
+          <div className="flex flex-wrap gap-2">
+            {STATUS_FLOW.map((s) => {
+              const active = form.status === s.key;
+              return (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => set('status', s.key)}
+                  aria-pressed={active}
+                  className={`h-9 px-3.5 rounded-full text-xs font-semibold border transition-all ${active ? `${s.on} shadow-sm` : 'bg-background border-border text-muted-foreground hover:text-foreground hover:border-foreground/30'}`}
+                >
+                  {s.label}
+                </button>
+              );
+            })}
           </div>
-          <div>
-            <label className={`${LABEL} block mb-1.5`}>Carrier</label>
-            <select value={form.carrier} onChange={e => set('carrier', e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-              <option value="">Select carrier</option>
-              {CARRIERS.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div className="col-span-2">
-            <label className={`${LABEL} block mb-1.5`}>Tracking Number</label>
-            <input type="text" value={form.tracking_number} onChange={e => set('tracking_number', e.target.value)}
-              placeholder="e.g. 9400 1118 9922 3396 …"
-              className="w-full h-9 px-3 rounded-lg border border-border bg-background font-mono text-xs focus:outline-none focus:ring-2 focus:ring-ring" />
-          </div>
+        </div>
+        <div>
+          <label className={`${LABEL} block mb-1.5`}>UPS Tracking Number</label>
+          <input
+            type="text"
+            value={form.tracking_number}
+            onChange={e => set('tracking_number', e.target.value)}
+            placeholder="e.g. 1Z999AA10123456784"
+            className="w-full h-10 px-3.5 rounded-lg border border-border bg-background font-mono text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
         </div>
       </div>
 
