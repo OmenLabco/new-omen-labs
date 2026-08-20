@@ -213,6 +213,28 @@ const Mask = ({ on, children }) => (
   <span className={on ? 'blur-[6px] select-none pointer-events-none' : ''}>{children}</span>
 );
 
+// Compact "2h ago" relative time (full timestamp shown on hover via title).
+const relTime = (d) => {
+  if (!d) return '—';
+  const t = new Date(d).getTime();
+  if (Number.isNaN(t)) return '—';
+  const s = Math.floor((Date.now() - t) / 1000);
+  if (s < 60) return 'just now';
+  const m = Math.floor(s / 60); if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
+  const days = Math.floor(h / 24); if (days < 7) return `${days}d ago`;
+  return new Date(d).toLocaleDateString([], { month: 'short', day: 'numeric' });
+};
+// Short payment label ("Crypto" from "Crypto — awaiting payment").
+const shortPay = (pm) => { const b = String(pm || '').split('—')[0].trim(); return b || null; };
+// Item count + names summary for an order row.
+const orderSummary = (items) => {
+  const arr = Array.isArray(items) ? items : [];
+  const count = arr.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+  const names = arr.map((i) => i.product_name || i.name).filter(Boolean).join(', ');
+  return { count, names };
+};
+
 const PAYOUT_LABELS = { cashapp: 'CashApp', paypal: 'PayPal', zelle: 'Zelle', crypto: 'Crypto · USDT/SOL' };
 
 function AffiliatesView({ onLogout, privacy }) {
@@ -698,36 +720,46 @@ export default function AdminOrders() {
           <div className="space-y-2">
             {filtered.map((order) => {
               const isOpen = expandedId === order.id;
+              const sum = orderSummary(order.items);
+              const pay = shortPay(order.payment_method);
+              const awaiting = order.status === 'awaiting_payment';
               return (
-                <div key={order.id} className="rounded-2xl border border-border overflow-hidden">
+                <div key={order.id} className={`rounded-2xl border overflow-hidden transition-colors ${isOpen ? 'border-primary/40' : awaiting ? 'border-amber-500/40 bg-amber-500/[0.025]' : 'border-border'}`}>
                   <div className="flex items-stretch">
                   <button
                     onClick={() => setExpandedId(isOpen ? null : order.id)}
-                    className="flex-1 min-w-0 flex items-center gap-4 px-5 py-4 hover:bg-accent/40 transition-colors text-left"
+                    className="flex-1 min-w-0 flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3.5 hover:bg-accent/40 transition-colors text-left"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3">
-                        <span className="font-mono font-semibold text-sm">{order.order_number}</span>
-                        <span className={`font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full ${STATUS_COLORS[order.status] || 'text-muted-foreground bg-muted'}`}>
+                      <div className="flex items-center gap-2.5">
+                        <span className="font-mono font-semibold text-sm shrink-0">{order.order_number}</span>
+                        <span className={`font-mono text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${STATUS_COLORS[order.status] || 'text-muted-foreground bg-muted'}`}>
                           {order.status?.replace(/_/g, ' ')}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 mt-0.5">
-                        <span className="text-xs text-muted-foreground truncate">{order.customer_name || '—'}</span>
-                        <span className="text-xs text-muted-foreground truncate">{order.customer_email || '—'}</span>
+                      <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground min-w-0">
+                        <span className="font-medium text-foreground/75 truncate shrink-0 max-w-[45%]"><Mask on={privacy}>{order.customer_name || '—'}</Mask></span>
+                        {sum.count > 0 && (
+                          <>
+                            <span className="shrink-0 text-muted-foreground/50">·</span>
+                            <span className="truncate">{sum.count} item{sum.count === 1 ? '' : 's'}{sum.names ? ` · ${sum.names}` : ''}</span>
+                          </>
+                        )}
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="font-mono text-sm font-semibold">${order.total?.toFixed(2) || '—'}</p>
-                      <p className="text-xs text-muted-foreground">{order.created_date ? new Date(order.created_date).toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—'}</p>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-semibold tabular-nums">${order.total?.toFixed(2) || '—'}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5 whitespace-nowrap" title={order.created_date ? new Date(order.created_date).toLocaleString() : ''}>
+                        {pay ? `${pay} · ` : ''}{relTime(order.created_date)}
+                      </p>
                     </div>
-                    {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+                    {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
                   </button>
                   <button
                     onClick={() => removeOrder(order.id, order.order_number)}
                     aria-label="Delete order"
                     title="Delete order"
-                    className="px-4 flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/5 border-l border-border transition-colors"
+                    className="px-3.5 flex items-center justify-center text-muted-foreground/60 hover:text-destructive hover:bg-destructive/5 border-l border-border transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
