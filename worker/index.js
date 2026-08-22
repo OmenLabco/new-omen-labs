@@ -53,6 +53,7 @@ import { runCryptoWatch } from './cryptoWatch.js';
 import { handleShipstationWebhook, runShipstationSync } from './shipstation.js';
 import { runTrackingWatch } from './tracking.js';
 import { recordPresence, liveStats, socialProof } from './presence.js';
+import { recordCheckoutReached, funnelStats } from './funnel.js';
 import { createPaymentSession, paymentCallback, paymentStatus } from './payment.js';
 import { handleIncomingEmail } from './emailIn.js';
 
@@ -66,6 +67,7 @@ const LIMITS = {
   '/api/affiliate/payout': { max: 12, windowMs: 60 * 60 * 1000 },
   '/api/subscribe': { max: 20, windowMs: 60 * 60 * 1000 },
   '/api/restock-notify': { max: 20, windowMs: 60 * 60 * 1000 },
+  '/api/checkout-reached': { max: 30, windowMs: 10 * 60 * 1000 },
   '/api/order': { max: 40, windowMs: 10 * 60 * 1000 },
   '/api/pay/session': { max: 40, windowMs: 10 * 60 * 1000 },
 };
@@ -144,6 +146,14 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/presence') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return recordPresence(request, env);
+    }
+    if (pathname === '/api/checkout-reached') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return recordCheckoutReached(request, env);
+    }
+    if (pathname === '/api/admin/funnel') {
+      if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+      return funnelStats(request, env);
     }
     if (pathname === '/api/admin/live') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });

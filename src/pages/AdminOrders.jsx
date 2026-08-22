@@ -9,7 +9,7 @@ import LiveView from '@/components/admin/LiveView';
 import StockView from '@/components/admin/StockView';
 import PromosView from '@/components/admin/PromosView';
 import NewOrderForm from '@/components/admin/NewOrderForm';
-import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout, fetchSubscribers, fetchStock } from '@/lib/adminApi';
+import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout, fetchSubscribers, fetchStock, fetchFunnel } from '@/lib/adminApi';
 import { CRYPTO_WALLETS } from '@/data/cryptoWallets';
 
 // Build a CSV and trigger a client-side download.
@@ -55,6 +55,61 @@ function OverviewWidgets({ orders }) {
           <p className="text-[11px] text-muted-foreground/70">{c.sub}</p>
         </div>
       ))}
+    </div>
+  );
+}
+
+// Checkout funnel — how many sessions reached checkout vs purchased (owner excluded).
+const FUNNEL_WINDOWS = [{ key: '24h', label: '24h' }, { key: '7d', label: '7 days' }, { key: '30d', label: '30 days' }, { key: 'all', label: 'All time' }];
+function FunnelCard() {
+  const [data, setData] = useState(null);
+  const [win, setWin] = useState('7d');
+  const [err, setErr] = useState('');
+  useEffect(() => { fetchFunnel().then(setData).catch((e) => setErr(e.message)); }, []);
+  const d = data?.[win] || { reached: 0, converted: 0, abandoned: 0, conversionRate: 0, lostValue: 0 };
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 mb-6">
+      <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+        <div>
+          <p className="text-sm font-semibold">Checkout funnel</p>
+          <p className="text-[11px] text-muted-foreground">Reached checkout vs. purchased · you're excluded</p>
+        </div>
+        <div className="flex gap-1 rounded-lg border border-border p-0.5">
+          {FUNNEL_WINDOWS.map((w) => (
+            <button key={w.key} onClick={() => setWin(w.key)}
+              className={`px-2.5 h-7 rounded-md text-[11px] font-medium transition-colors ${win === w.key ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}>
+              {w.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {err ? <p className="text-xs text-destructive">{err}</p> : (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="rounded-xl border border-border p-3.5">
+              <p className="text-2xl font-bold tabular-nums leading-none">{d.reached}</p>
+              <p className="text-[11px] text-muted-foreground mt-1.5">Reached checkout</p>
+            </div>
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-3.5">
+              <p className="text-2xl font-bold tabular-nums leading-none text-emerald-600">{d.converted}</p>
+              <p className="text-[11px] text-muted-foreground mt-1.5">Purchased</p>
+            </div>
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-3.5">
+              <p className="text-2xl font-bold tabular-nums leading-none text-amber-600">{d.abandoned}</p>
+              <p className="text-[11px] text-muted-foreground mt-1.5">Left without buying</p>
+            </div>
+            <div className="rounded-xl border border-border p-3.5">
+              <p className="text-2xl font-bold tabular-nums leading-none">{d.conversionRate}%</p>
+              <p className="text-[11px] text-muted-foreground mt-1.5">Conversion rate</p>
+            </div>
+          </div>
+          {d.lostValue > 0 && (
+            <p className="text-[11px] text-muted-foreground mt-3">
+              ~<span className="font-semibold text-foreground">${d.lostValue.toFixed(2)}</span> in carts reached checkout but didn't complete.
+            </p>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -674,6 +729,8 @@ export default function AdminOrders() {
           <>
             {/* At-a-glance widgets */}
             {!loading && <OverviewWidgets orders={orders} />}
+            {/* Checkout funnel — reached vs purchased */}
+            {!loading && <FunnelCard />}
             {/* Sales dashboard */}
             {!loading && orders.length > 0 && <SalesDashboard orders={orders} />}
             {/* Payment automation reference */}

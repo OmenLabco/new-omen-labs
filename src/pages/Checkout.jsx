@@ -3,6 +3,7 @@ import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Package, Loader2, Check, Bitcoin, Receipt, Truck, Zap, Store, ShieldCheck, Copy, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cart } from '@/lib/cart';
+import { adminAuth } from '@/lib/adminApi';
 import { validateAffiliateCode } from '@/lib/affiliateApi';
 import { customerAuth, customerMe } from '@/lib/customerApi';
 import { FREE_SHIP_THRESHOLD } from '@/lib/shipping';
@@ -182,6 +183,25 @@ export default function Checkout() {
   // Points the customer will earn on this order
   const pointsWillEarn = Math.floor(subtotal * (account?.membership?.multiplier || 1));
 
+  // Funnel: record that this session reached checkout (once), so the admin can
+  // see reached-vs-purchased. Skips the owner (signed into admin in this browser).
+  const funnelReported = useRef(false);
+  useEffect(() => {
+    if (funnelReported.current || adminAuth.get() || items.length === 0) return;
+    funnelReported.current = true;
+    let sid = sessionStorage.getItem('omenlabs_sid');
+    if (!sid) { sid = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('omenlabs_sid', sid); }
+    fetch('/api/checkout-reached', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+      body: JSON.stringify({
+        sid,
+        email: account?.email || form.email || null,
+        cartCount: items.reduce((s, i) => s + (i.quantity || 0), 0),
+        cartValue: subtotal,
+      }),
+    }).catch(() => {});
+  }, [items, account]);
+
   if (items.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
@@ -239,6 +259,7 @@ export default function Checkout() {
           customer_token: customerAuth.token() || null,
           points_to_redeem: pointsToRedeem,
           billing: billingSame ? null : billing,
+          sid: sessionStorage.getItem('omenlabs_sid') || null,
         }),
       });
       const data = await resp.json().catch(() => ({}));

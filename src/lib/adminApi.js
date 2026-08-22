@@ -130,6 +130,13 @@ export async function fetchSubscribers() {
   return data.subscribers || [];
 }
 
+export async function fetchFunnel() {
+  const resp = await fetch('/api/admin/funnel', { headers: headers() });
+  if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }
+  if (!resp.ok) throw new Error('Failed to load funnel.');
+  return resp.json();
+}
+
 export async function fetchStock() {
   const resp = await fetch('/api/admin/stock', { headers: headers() });
   if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }

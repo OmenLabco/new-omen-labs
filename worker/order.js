@@ -12,6 +12,7 @@ import { priceFor } from './prices.js';
 import { getStockMap } from './stock.js';
 import { getPromo, promoUsable, incrementPromoUse } from './promos.js';
 import { computeBundleDiscount } from '../src/data/bundles.js';
+import { markCheckoutConverted } from './funnel.js';
 
 // GET /api/order/status?o=ORDER&t=TOKEN — public status poll for the awaiting page.
 // Token-gated (HMAC) so order numbers can't be enumerated. Returns only status.
@@ -142,7 +143,7 @@ export async function handleOrder(request, env) {
     return json({ error: 'Invalid request body.' }, 400);
   }
 
-  const { customer = {}, items: rawItems = [], payment_method = 'manual', billing = null, shipping_method = 'ground', affiliate_code = null, customer_token = null, points_to_redeem = 0 } = body;
+  const { customer = {}, items: rawItems = [], payment_method = 'manual', billing = null, shipping_method = 'ground', affiliate_code = null, customer_token = null, points_to_redeem = 0, sid = null } = body;
 
   if (!customer.name || !customer.email || !customer.address || !customer.city || !customer.zip) {
     return json({ error: 'Missing required shipping fields.' }, 400);
@@ -384,6 +385,9 @@ export async function handleOrder(request, env) {
     payment_method: paymentLabel,
     billing,
   };
+
+  // Mark this session's checkout as converted (funnel tracking).
+  if (sid) await markCheckoutConverted(env, sid);
 
   // 2) Emails via Resend (best effort — order is already saved)
   if (env.RESEND_API_KEY) {
