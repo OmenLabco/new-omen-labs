@@ -85,10 +85,10 @@ export default function Checkout() {
   const [form, setForm] = useState({ country: 'United States' });
   const [billing, setBilling] = useState({ country: 'United States' });
   const [billingSame, setBillingSame] = useState(true);
-  const [payment, setPayment] = useState('cashapp');
+  const [payment, setPayment] = useState('');
   const [copiedPay, setCopiedPay] = useState('');
   const copyPay = (key, text) => { navigator.clipboard?.writeText(text); setCopiedPay(key); setTimeout(() => setCopiedPay(''), 1500); };
-  const [shipMethod, setShipMethod] = useState('ground');
+  const [shipMethod, setShipMethod] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -173,9 +173,11 @@ export default function Checkout() {
   const memberFreeShip = !!account?.membership?.freeShipping;
   const freeByThreshold = subtotal >= FREE_SHIP_THRESHOLD;
   const freeShipping = memberFreeShip || freeByThreshold;
-  const baseShipping = (SHIPPING_OPTIONS.find((o) => o.id === shipMethod) || SHIPPING_OPTIONS[0]).price;
-  const shipping = freeShipping ? 0 : baseShipping;
+  const shipOpt = SHIPPING_OPTIONS.find((o) => o.id === shipMethod); // undefined until the customer picks
+  const shippingChosen = !!shipOpt;
+  const shipping = freeShipping ? 0 : (shipOpt ? shipOpt.price : 0);
   const total = subtotal - bundleDiscount - cryptoDiscount - affiliateDiscount - pointsValue + shipping;
+  const canSubmit = shippingChosen && !!payment;
 
   // Points the customer will earn on this order
   const pointsWillEarn = Math.floor(subtotal * (account?.membership?.multiplier || 1));
@@ -221,6 +223,8 @@ export default function Checkout() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    if (!shipMethod) { setError('Please choose a shipping method.'); return; }
+    if (!payment) { setError('Please choose a payment method.'); return; }
     setSubmitting(true);
     try {
       const resp = await fetch('/api/order', {
@@ -304,7 +308,8 @@ export default function Checkout() {
               </div>
             ))}
             <div className="flex justify-between text-muted-foreground">
-              <span>{shipMethod === 'pickup' ? 'Local Pickup' : 'Shipping'}{memberFreeShip ? ' (Free — ' + account.membership.name + ')' : freeByThreshold ? ' (Free — $150+ order)' : ''}</span><span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
+              <span>{shipMethod === 'pickup' ? 'Local Pickup' : 'Shipping'}{memberFreeShip ? ' (Free — ' + account.membership.name + ')' : freeByThreshold ? ' (Free — $150+ order)' : ''}</span>
+              <span>{!shippingChosen ? <span className="text-muted-foreground/60">Select a method</span> : shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
             </div>
             {pointsValue > 0 && (
               <div className="flex justify-between text-emerald-500">
@@ -573,9 +578,13 @@ export default function Checkout() {
 
           {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
 
-          <Button type="submit" disabled={submitting} className="w-full h-12 mt-6 text-sm font-medium tracking-wide">
+          <Button type="submit" disabled={submitting || !canSubmit} className="w-full h-12 mt-6 text-sm font-medium tracking-wide">
             {submitting ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting Order…</>
+            ) : !shipMethod ? (
+              'Choose a shipping method'
+            ) : !payment ? (
+              'Choose a payment method'
             ) : (
               `Place Order — $${total.toFixed(2)}`
             )}
