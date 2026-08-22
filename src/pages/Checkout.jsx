@@ -476,59 +476,11 @@ export default function Checkout() {
             })}
           </div>
 
-          {payment === 'cashapp' && (
-            <div className="mt-4 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.05] p-4">
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <div className="min-w-0">
-                  <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Send Cash App to</p>
-                  <p className="text-lg font-bold truncate">{CASHAPP_HANDLE}</p>
-                </div>
-                <button type="button" onClick={() => copyPay('cashapp', CASHAPP_HANDLE)}
-                  className="shrink-0 inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-border bg-background text-xs font-medium hover:bg-accent transition-colors">
-                  {copiedPay === 'cashapp' ? <><Check className="h-3.5 w-3.5 text-emerald-500" /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy</>}
-                </button>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Place your order, then send the total to <span className="font-semibold text-foreground">{CASHAPP_HANDLE}</span> and <span className="font-semibold text-foreground">put your order number in the “For” note</span>. That's it.
-              </p>
-              <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600"><Zap className="h-3.5 w-3.5" /> Confirms automatically — usually within minutes</p>
-            </div>
-          )}
-
-          {payment === 'zelle' && (
-            <div className="mt-4 rounded-xl border border-violet-500/25 bg-violet-500/[0.05] p-4">
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <div className="min-w-0">
-                  <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Send Zelle to</p>
-                  <p className="text-lg font-bold truncate">{ZELLE_PHONE}</p>
-                  <p className="text-[11px] text-muted-foreground">recipient name: “omenlabs”</p>
-                </div>
-                <button type="button" onClick={() => copyPay('zelle', ZELLE_PHONE)}
-                  className="shrink-0 inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-border bg-background text-xs font-medium hover:bg-accent transition-colors">
-                  {copiedPay === 'zelle' ? <><Check className="h-3.5 w-3.5 text-emerald-500" /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy</>}
-                </button>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Place your order, then Zelle the total to the number above and <span className="font-semibold text-foreground">put your order number in the memo/note</span>. That's it.
-              </p>
-              <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-violet-600"><Zap className="h-3.5 w-3.5" /> Confirms automatically — usually within minutes</p>
-            </div>
-          )}
-
-          {payment === 'crypto' && (
-            <div className="mt-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.05] p-4 text-sm leading-relaxed">
-              <p className="font-semibold mb-1">Pay with crypto — save 10%</p>
-              <p className="text-muted-foreground">
-                After you place the order we'll show wallet addresses for <span className="font-semibold text-foreground">USDC, USDT, and BTC</span>. Send the exact amount and it <span className="font-semibold text-foreground">auto-confirms on-chain</span> — no account or card needed.
-              </p>
-              <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-amber-600"><Zap className="h-3.5 w-3.5" /> 10% discount already applied to your total</p>
-            </div>
-          )}
-
-          {payment === 'manual' && (
-            <div className="mt-4 rounded-xl border border-border bg-secondary/30 p-4 text-sm text-muted-foreground leading-relaxed">
-              Place your order and we'll email you an invoice with payment options. Your order is reserved until it's paid.
-            </div>
+          {payment && (
+            <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+              Secure payment instructions are shown on the next step, right after you place your order.
+            </p>
           )}
         </div>
 
