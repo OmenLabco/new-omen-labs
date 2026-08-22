@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut, Trash2, Eye, EyeOff, Check, Copy, Download, DollarSign, Clock, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -559,6 +559,35 @@ export default function AdminOrders() {
     if (authed) load();
   }, [authed]);
 
+  // Silent background refresh — updates the list without the loading spinner.
+  const refresh = async () => {
+    try {
+      setOrders(await fetchOrders());
+    } catch (e) {
+      if (e.message === 'unauthorized') setAuthed(false);
+      // otherwise ignore — a transient poll failure shouldn't flash an error
+    }
+  };
+
+  // Track when the admin is mid-action so polling never disturbs an edit.
+  const busyRef = useRef(false);
+  busyRef.current = expandedId != null || showNew;
+
+  // Auto-refresh every 8s so new orders appear on their own. Skips the tick while
+  // an order is expanded / being edited, the New-order form is open, or the tab
+  // is in the background — so it never interrupts what you're doing.
+  useEffect(() => {
+    if (!authed) return;
+    const id = setInterval(() => {
+      if (busyRef.current || document.hidden) return;
+      refresh();
+    }, 8000);
+    // Also refresh the moment you return to the tab.
+    const onVisible = () => { if (!document.hidden && !busyRef.current) refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVisible); };
+  }, [authed]);
+
   const removeOrder = async (id, num) => {
     if (!window.confirm(`Delete order ${num}? This permanently removes it and cannot be undone.`)) return;
     try {
@@ -595,7 +624,19 @@ export default function AdminOrders() {
           <div>
             <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Admin</span>
             <h1 className="mt-2 text-3xl font-bold tracking-tight">{tab === 'live' ? 'Live View' : tab === 'overview' ? 'Overview' : tab === 'orders' ? 'Orders' : tab === 'profit' ? 'Profit' : tab === 'stock' ? 'Inventory' : tab === 'promos' ? 'Promo Codes' : tab === 'affiliates' ? 'Affiliates' : 'Customers'}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{tab === 'live' ? 'Who’s on your site right now' : tab === 'orders' ? `${orders.length} total orders` : tab === 'profit' ? 'Peptide revenue, cost & profit' : tab === 'stock' ? 'Vials on hand per product' : tab === 'promos' ? 'Create & manage discount codes' : tab === 'affiliates' ? 'Affiliate partners' : tab === 'customers' ? 'Reward members' : 'Store performance'}</p>
+            <p className="mt-1 text-sm text-muted-foreground flex items-center gap-2">
+              {tab === 'live' ? 'Who’s on your site right now' : tab === 'orders' ? `${orders.length} total orders` : tab === 'profit' ? 'Peptide revenue, cost & profit' : tab === 'stock' ? 'Vials on hand per product' : tab === 'promos' ? 'Create & manage discount codes' : tab === 'affiliates' ? 'Affiliate partners' : tab === 'customers' ? 'Reward members' : 'Store performance'}
+              {tab === 'orders' && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/80">
+                  ·
+                  {expandedId != null || showNew ? (
+                    <span className="text-amber-600">paused while editing</span>
+                  ) : (
+                    <><span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-70 animate-ping" /><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" /></span> auto-updating</>
+                  )}
+                </span>
+              )}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Button
