@@ -231,7 +231,10 @@ export default function Checkout() {
   // when configured. (Peptides are never eligible.)
   useEffect(() => { fetch('/api/paypal/config').then((r) => r.json()).then(setPaypalCfg).catch(() => {}); }, []);
   const paypalEligible = items.length > 0 && items.every((i) => PAYPAL_OK_SKUS.has(i.product_id));
-  const paypalAvailable = !!(paypalCfg?.enabled && paypalCfg?.clientId && paypalEligible);
+  // In sandbox (test) mode, only reveal PayPal via the secret ?paypaltest=1 link,
+  // so real customers never see a test button that can't complete. Live = always.
+  const paypalTestUnlock = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('paypaltest') === '1';
+  const paypalAvailable = !!(paypalCfg?.enabled && paypalCfg?.clientId && paypalEligible && (paypalCfg?.env === 'live' || paypalTestUnlock));
   const paypalFormReady = !!(form.name && form.email && form.company && form.company_name && shipMethod && (shipMethod === 'pickup' || (form.address && form.city && form.zip)));
   const onPaypalSuccess = (orderNumber) => {
     cart.clear();
