@@ -374,7 +374,7 @@ const ALL_PRODUCTS = [
     storage: "Store at room temperature. Once opened, use within 28 days.",
     image: "/products/bacteriostatic-water.png",
     paired_products: ["BPC-157", "MT2", "GLP-3 RT"],
-    in_stock: false,
+    in_stock: true,
     featured: false,
     paypal_ok: true, // non-peptide lab supply — safe to accept via PayPal
   },
@@ -506,7 +506,6 @@ const HIDDEN_SLUGS = new Set([
   "mt1",
   "wolverine",
   "semax-selank",
-  "bacteriostatic-water",
   "retatrutide",
 ]);
 
