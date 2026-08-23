@@ -22,11 +22,12 @@ export async function safeEqual(a, b) {
 // need them), site cannot be framed (clickjacking), no plugins, forms stay local.
 const CSP = [
   "default-src 'self'",
-  "script-src 'self'",
+  "script-src 'self' https://*.paypal.com https://*.paypalobjects.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com data:",
-  "img-src 'self' data: blob:",
-  "connect-src 'self'",
+  "img-src 'self' data: blob: https://*.paypal.com https://*.paypalobjects.com",
+  "connect-src 'self' https://*.paypal.com https://*.paypalobjects.com",
+  "frame-src https://*.paypal.com https://*.paypalobjects.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
