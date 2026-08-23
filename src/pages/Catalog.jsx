@@ -37,7 +37,8 @@ export default function Catalog() {
   useEffect(() => { getStock().then(setStock); }, []);
 
   const products = useMemo(() => {
-    let list = sortByPopularity(getProductsByCategory(category));
+    // Hide the internal $1 test product from the public catalog + search.
+    let list = sortByPopularity(getProductsByCategory(category)).filter((p) => p.slug !== 'test-item');
     if (inStockOnly) list = list.filter((p) => p.in_stock);
     const q = query.trim().toLowerCase();
     if (q) {
