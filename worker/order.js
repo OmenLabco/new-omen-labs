@@ -9,7 +9,7 @@
 import { renderImageEmail, renderOwnerNotification, sendEmail } from './email.js';
 import { signOrder, verifyOrder } from './token.js';
 import { priceFor } from './prices.js';
-import { getStockMap } from './stock.js';
+import { getStockMap, decrementStockForOrder } from './stock.js';
 import { getPromo, promoUsable, incrementPromoUse } from './promos.js';
 import { computeBundleDiscount } from '../src/data/bundles.js';
 import { markCheckoutConverted } from './funnel.js';
@@ -142,7 +142,12 @@ export async function handleOrder(request, env) {
   } catch {
     return json({ error: 'Invalid request body.' }, 400);
   }
+  return processOrder(body, env);
+}
 
+// Core order pipeline. opts.paid=true marks it confirmed + paid (used by an
+// already-captured PayPal payment) and decrements stock immediately.
+export async function processOrder(body, env, opts = {}) {
   const { customer = {}, items: rawItems = [], payment_method = 'manual', billing = null, shipping_method = 'ground', affiliate_code = null, customer_token = null, points_to_redeem = 0, sid = null } = body;
 
   if (!customer.name || !customer.email || !customer.address || !customer.city || !customer.zip) {
@@ -280,10 +285,10 @@ export async function handleOrder(request, env) {
       }
     } catch {}
   }
-  const paymentLabel = isZelle ? 'Zelle — awaiting payment' : isCashapp ? 'Cash App — awaiting payment' : isCrypto ? 'Crypto — awaiting payment' : 'Manual — invoice to follow';
-  // All new orders start awaiting payment (Zelle/Cash App/crypto auto-reconcile;
-  // manual/invoice orders are marked paid by the admin). 'processing' is retired.
-  const orderStatus = 'awaiting_payment';
+  const paymentLabel = opts.paid ? (opts.paymentLabel || 'Paid') : (isZelle ? 'Zelle — awaiting payment' : isCashapp ? 'Cash App — awaiting payment' : isCrypto ? 'Crypto — awaiting payment' : 'Manual — invoice to follow');
+  // New orders start awaiting payment (Zelle/Cash App/crypto auto-reconcile;
+  // manual/invoice marked paid by admin). opts.paid = already captured (PayPal).
+  const orderStatus = opts.paid ? 'confirmed' : 'awaiting_payment';
 
   // Points earned (on subtotal, multiplied by tier)
   const pointsEarned = account ? Math.floor(subtotal * POINTS_PER_DOLLAR * acctTier.multiplier) : 0;
@@ -388,6 +393,9 @@ export async function handleOrder(request, env) {
 
   // Mark this session's checkout as converted (funnel tracking).
   if (sid) await markCheckoutConverted(env, sid);
+
+  // Already-paid (PayPal capture): subtract stock now, just like a confirmed order.
+  if (opts.paid) { try { await decrementStockForOrder(env, { order_number, items, stock_decremented: 0 }); } catch {} }
 
   // 2) Emails via Resend (best effort — order is already saved)
   if (env.RESEND_API_KEY) {

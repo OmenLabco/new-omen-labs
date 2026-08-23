@@ -376,6 +376,7 @@ const ALL_PRODUCTS = [
     paired_products: ["BPC-157", "MT2", "GLP-3 RT"],
     in_stock: false,
     featured: false,
+    paypal_ok: true, // non-peptide lab supply — safe to accept via PayPal
   },
 
   // ── Coming soon (pricing TBD) ────────────────────────────────────────────
@@ -514,6 +515,13 @@ export const PRODUCTS = ALL_PRODUCTS.filter((p) => !HIDDEN_SLUGS.has(p.slug));
 // Full list (incl. hidden) + a hidden check — for admin tooling like the Stock tab.
 export { ALL_PRODUCTS };
 export const isHidden = (slug) => HIDDEN_SLUGS.has(slug);
+
+// SKUs allowed to be paid via PayPal — NON-PEPTIDE lab supplies only (bac water,
+// syringes, etc.). PayPal prohibits research peptides, so peptide SKUs are never
+// eligible. PayPal only appears at checkout when EVERY cart item is in this set.
+export const PAYPAL_OK_SKUS = new Set(
+  ALL_PRODUCTS.filter((p) => p.paypal_ok).flatMap((p) => p.variants.map((v) => `${p.id}_${v.dose}`))
+);
 
 // Demand-weighted order (GLP-1s lead the market, BPC/TB recovery classics next,
 // blends + aesthetics mid, niche compounds lower) — intentionally not a strict ranking.

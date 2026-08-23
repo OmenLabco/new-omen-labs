@@ -54,6 +54,7 @@ import { handleShipstationWebhook, runShipstationSync } from './shipstation.js';
 import { runTrackingWatch } from './tracking.js';
 import { recordPresence, liveStats, socialProof } from './presence.js';
 import { recordCheckoutReached, funnelStats } from './funnel.js';
+import { paypalConfig, paypalCreate, paypalCapture } from './paypal.js';
 import { createPaymentSession, paymentCallback, paymentStatus } from './payment.js';
 import { handleIncomingEmail } from './emailIn.js';
 
@@ -150,6 +151,17 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/checkout-reached') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return recordCheckoutReached(request, env);
+    }
+    if (pathname === '/api/paypal/config') {
+      return paypalConfig(request, env);
+    }
+    if (pathname === '/api/paypal/create') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return paypalCreate(request, env);
+    }
+    if (pathname === '/api/paypal/capture') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return paypalCapture(request, env);
     }
     if (pathname === '/api/admin/funnel') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });

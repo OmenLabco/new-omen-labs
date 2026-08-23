@@ -60,7 +60,7 @@ export default function OrderConfirmed() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canPoll, orderNumber, statusToken]);
 
-  const paid = liveStatus && liveStatus !== 'awaiting_payment';
+  const paid = state?.paid || (liveStatus && liveStatus !== 'awaiting_payment');
 
   const noteWord = isZelle ? 'memo' : isCrypto ? 'transaction' : 'note';
   const supportHref = `mailto:support@omenlabs.co?subject=${encodeURIComponent(`Payment help — ${orderNumber || 'my order'}`)}`;

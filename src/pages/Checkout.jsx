@@ -7,7 +7,7 @@ import { adminAuth } from '@/lib/adminApi';
 import { validateAffiliateCode } from '@/lib/affiliateApi';
 import { customerAuth, customerMe } from '@/lib/customerApi';
 import { FREE_SHIP_THRESHOLD } from '@/lib/shipping';
-import { PRODUCTS } from '@/data/products';
+import { PRODUCTS, PAYPAL_OK_SKUS } from '@/data/products';
 import { computeBundleDiscount } from '@/data/bundles';
 
 // SKU → base unit price, so the checkout summary can mirror the server's
@@ -33,6 +33,7 @@ const PAY_META = {
   cashapp: { glyph: '$', tile: 'bg-[#00D54B]',                                      sel: 'border-emerald-400 bg-emerald-500/[0.06] ring-1 ring-emerald-400/40' },
   crypto:  { Icon: Bitcoin, tile: 'bg-gradient-to-br from-amber-400 to-orange-600', sel: 'border-amber-400 bg-amber-500/[0.06] ring-1 ring-amber-400/40' },
   manual:  { Icon: Receipt, tile: 'bg-gradient-to-br from-slate-400 to-slate-600',  sel: 'border-primary bg-primary/[0.05] ring-1 ring-primary/40' },
+  paypal:  { glyph: 'P', tile: 'bg-gradient-to-br from-sky-500 to-indigo-700',      sel: 'border-sky-400 bg-sky-500/[0.06] ring-1 ring-sky-400/40' },
 };
 const SHIP_META = { ground: Truck, first: Zap, pickup: Store };
 
@@ -78,6 +79,51 @@ const ZELLE_HANDLE = '“omenlabs” — Zelle to (509) 842-7930';
 const CASHAPP_HANDLE = '$omenlabs';
 const ZELLE_PHONE = '(509) 842-7930'; // copyable Zelle recipient
 
+// PayPal Smart Buttons — loads the SDK and renders the pay buttons. Amounts and
+// eligibility are enforced server-side (/api/paypal/create + /capture).
+function PayPalButtonsBox({ clientId, getPayload, onSuccess, onError }) {
+  const ref = useRef(null);
+  const payloadRef = useRef(getPayload);
+  payloadRef.current = getPayload;
+  useEffect(() => {
+    let cancelled = false;
+    const loadSdk = () => new Promise((resolve, reject) => {
+      if (window.paypal) return resolve();
+      let s = document.getElementById('paypal-sdk');
+      if (s) { s.addEventListener('load', () => resolve()); s.addEventListener('error', reject); return; }
+      s = document.createElement('script');
+      s.id = 'paypal-sdk';
+      s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=USD&intent=capture`;
+      s.onload = () => resolve();
+      s.onerror = reject;
+      document.body.appendChild(s);
+    });
+    loadSdk().then(() => {
+      if (cancelled || !window.paypal || !ref.current) return;
+      ref.current.innerHTML = '';
+      window.paypal.Buttons({
+        style: { layout: 'vertical', color: 'blue', shape: 'pill', label: 'paypal' },
+        createOrder: async () => {
+          const p = payloadRef.current();
+          const r = await fetch('/api/paypal/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: p.items, shipping_method: p.shipping_method }) });
+          const d = await r.json();
+          if (!d.id) throw new Error(d.error || 'PayPal error');
+          return d.id;
+        },
+        onApprove: async (data) => {
+          const p = payloadRef.current();
+          const r = await fetch('/api/paypal/capture', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderID: data.orderID, ...p }) });
+          const d = await r.json();
+          if (d.ok) onSuccess(d.order_number); else onError?.(d.error || 'Payment could not be completed.');
+        },
+        onError: (err) => onError?.(String(err?.message || 'PayPal error')),
+      }).render(ref.current).catch(() => {});
+    }).catch(() => onError?.('Could not load PayPal.'));
+    return () => { cancelled = true; };
+  }, [clientId]);
+  return <div ref={ref} />;
+}
+
 export default function Checkout() {
   const { cartItems, loadCart } = useOutletContext();
   const navigate = useNavigate();
@@ -87,6 +133,7 @@ export default function Checkout() {
   const [billing, setBilling] = useState({ country: 'United States' });
   const [billingSame, setBillingSame] = useState(true);
   const [payment, setPayment] = useState('');
+  const [paypalCfg, setPaypalCfg] = useState(null);
   const [copiedPay, setCopiedPay] = useState('');
   const copyPay = (key, text) => { navigator.clipboard?.writeText(text); setCopiedPay(key); setTimeout(() => setCopiedPay(''), 1500); };
   const [shipMethod, setShipMethod] = useState('');
@@ -179,6 +226,20 @@ export default function Checkout() {
   const shipping = freeShipping ? 0 : (shipOpt ? shipOpt.price : 0);
   const total = subtotal - bundleDiscount - cryptoDiscount - affiliateDiscount - pointsValue + shipping;
   const canSubmit = shippingChosen && !!payment;
+
+  // PayPal — only for carts made up entirely of PayPal-safe supplies, and only
+  // when configured. (Peptides are never eligible.)
+  useEffect(() => { fetch('/api/paypal/config').then((r) => r.json()).then(setPaypalCfg).catch(() => {}); }, []);
+  const paypalEligible = items.length > 0 && items.every((i) => PAYPAL_OK_SKUS.has(i.product_id));
+  const paypalAvailable = !!(paypalCfg?.enabled && paypalCfg?.clientId && paypalEligible);
+  const paypalFormReady = !!(form.name && form.email && form.company && form.company_name && shipMethod && (shipMethod === 'pickup' || (form.address && form.city && form.zip)));
+  const onPaypalSuccess = (orderNumber) => {
+    cart.clear();
+    loadCart();
+    const confirmState = { paid: true, paypal: true, orderNumber: orderNumber || '', total: Number(total.toFixed(2)) };
+    try { sessionStorage.setItem('omenlabs_last_order', JSON.stringify(confirmState)); } catch {}
+    navigate('/order-confirmed', { state: confirmState });
+  };
 
   // Points the customer will earn on this order
   const pointsWillEarn = Math.floor(subtotal * (account?.membership?.multiplier || 1));
@@ -464,6 +525,7 @@ export default function Checkout() {
               { id: 'cashapp', title: 'Cash App', desc: 'Pay to $omenlabs', badge: 'Auto-confirm' },
               { id: 'zelle', title: 'Zelle', desc: 'Pay from your bank', badge: 'Auto-confirm' },
               { id: 'crypto', title: 'Crypto', desc: 'USDC · USDT · BTC', badge: '10% off', badgeTone: 'save' },
+              ...(paypalAvailable ? [{ id: 'paypal', title: 'PayPal', desc: 'Pay with PayPal or card' }] : []),
               { id: 'manual', title: 'Manual / Invoice', desc: 'Invoice to follow' },
             ].map((opt) => {
               const m = PAY_META[opt.id];
@@ -551,17 +613,33 @@ export default function Checkout() {
 
           {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
 
-          <Button type="submit" disabled={submitting || !canSubmit} className="w-full h-12 mt-6 text-sm font-medium tracking-wide">
-            {submitting ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting Order…</>
-            ) : !shipMethod ? (
-              'Choose a shipping method'
-            ) : !payment ? (
-              'Choose a payment method'
+          {payment === 'paypal' && paypalAvailable ? (
+            paypalFormReady ? (
+              <div className="mt-6">
+                <PayPalButtonsBox
+                  clientId={paypalCfg.clientId}
+                  getPayload={() => ({ customer: { ...form, notes }, items, shipping_method: shipMethod, sid: sessionStorage.getItem('omenlabs_sid') || null })}
+                  onSuccess={onPaypalSuccess}
+                  onError={(m) => setError(m)}
+                />
+                <p className="mt-2 text-[12px] text-muted-foreground text-center">Secure PayPal checkout — no card details touch this site.</p>
+              </div>
             ) : (
-              `Place Order — $${total.toFixed(2)}`
-            )}
-          </Button>
+              <p className="mt-6 text-sm text-muted-foreground text-center">Fill in your shipping details above to pay with PayPal.</p>
+            )
+          ) : (
+            <Button type="submit" disabled={submitting || !canSubmit} className="w-full h-12 mt-6 text-sm font-medium tracking-wide">
+              {submitting ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting Order…</>
+              ) : !shipMethod ? (
+                'Choose a shipping method'
+              ) : !payment ? (
+                'Choose a payment method'
+              ) : (
+                `Place Order — $${total.toFixed(2)}`
+              )}
+            </Button>
+          )}
 
           <div className="mt-4 flex items-center justify-center gap-2 text-[12px] text-emerald-600">
             <ShieldCheck className="h-4 w-4" />
