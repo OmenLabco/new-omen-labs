@@ -16,7 +16,7 @@ export const customerAuth = {
   isLoggedIn: () => !!(localStorage.getItem(KEY) || sessionStorage.getItem(KEY)),
 };
 
-export async function customerSignup({ name, email, password, research_field, remember = true }) {
+export async function customerSignup({ name, email, password, research_field }) {
   const resp = await fetch('/api/customer/signup', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -24,8 +24,8 @@ export async function customerSignup({ name, email, password, research_field, re
   });
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) throw new Error(data.error || 'Signup failed.');
-  customerAuth.set(email, password, remember);
-  return data;
+  // New accounts must verify their email first — no session token is set here.
+  return data; // { verify: true, email }
 }
 
 export async function customerLogin({ email, password, remember = true }) {
@@ -34,9 +34,34 @@ export async function customerLogin({ email, password, remember = true }) {
     headers: { Authorization: `Bearer ${btoa(`${email}:${password}`)}` },
   });
   const data = await resp.json().catch(() => ({}));
+  // Unverified account → caller should show the code-entry step (not an error).
+  if (resp.status === 403 && data.unverified) return { unverified: true, email: data.email || email };
   if (!resp.ok) throw new Error(data.error || 'Login failed.');
   customerAuth.set(email, password, remember);
   return data;
+}
+
+// Confirm the emailed 6-digit code, then log the account in.
+export async function customerVerify({ email, code, password, remember = true }) {
+  const resp = await fetch('/api/customer/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code }),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.error || 'Verification failed.');
+  if (password) customerAuth.set(email, password, remember);
+  return data;
+}
+
+export async function customerResendCode(email) {
+  try {
+    await fetch('/api/customer/resend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+  } catch { /* best effort */ }
 }
 
 export async function customerMe() {

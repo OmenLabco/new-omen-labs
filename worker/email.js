@@ -116,6 +116,20 @@ export function renderStatusUpdate(order, status) {
   `);
 }
 
+// Account email-verification code (first-time sign-in).
+export function renderVerifyCode({ name, code }) {
+  return layout(`
+    ${heading('Verify your email')}
+    ${divider()}
+    ${para(`Hi ${esc(name || 'there')},`)}
+    ${para('Enter this code to finish setting up your Omen Labs account:')}
+    <div style="margin:26px 0;text-align:center">
+      <div style="display:inline-block;font-family:${MONO};font-size:34px;font-weight:800;letter-spacing:10px;color:${WHITE};background:${PANEL};border:1px solid ${BORDER};border-radius:12px;padding:18px 12px 18px 22px">${esc(code)}</div>
+    </div>
+    ${para('This code expires in 15 minutes. If you didn’t create an account, you can safely ignore this email.')}
+  `);
+}
+
 // Internal owner digest — low / out-of-stock tracked SKUs that need restocking.
 export function renderLowStockDigest(items = []) {
   const rows = items.map((it) => {

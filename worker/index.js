@@ -3,7 +3,7 @@ import { listOrders, updateOrder, adminLogin, listAffiliates, listCustomers, set
 import { receiptImage } from './receiptImage.js';
 import { verifyOrder } from './token.js';
 import { loginAffiliate, affiliateStats, validateCode, requestPayout } from './affiliate.js';
-import { signupCustomer, loginCustomer, customerMe, enrollAffiliate } from './customer.js';
+import { signupCustomer, loginCustomer, customerMe, enrollAffiliate, verifyCustomer, resendVerification } from './customer.js';
 import { withSecurity, rateLimit, tooMany, clientIp } from './security.js';
 import { handleZelleNotify } from './zelle.js';
 import { listStock, updateStock, publicStock, restockNotifySignup, runLowStockDigest } from './stock.js';
@@ -65,6 +65,8 @@ const LIMITS = {
   '/api/customer/login': { max: 10, windowMs: 10 * 60 * 1000 },
   '/api/affiliate/login': { max: 10, windowMs: 10 * 60 * 1000 },
   '/api/customer/signup': { max: 10, windowMs: 60 * 60 * 1000 },
+  '/api/customer/verify': { max: 20, windowMs: 10 * 60 * 1000 },
+  '/api/customer/resend': { max: 6, windowMs: 30 * 60 * 1000 },
   '/api/affiliate/payout': { max: 12, windowMs: 60 * 60 * 1000 },
   '/api/subscribe': { max: 20, windowMs: 60 * 60 * 1000 },
   '/api/restock-notify': { max: 20, windowMs: 60 * 60 * 1000 },
@@ -219,6 +221,14 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/customer/login') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return loginCustomer(request, env);
+    }
+    if (pathname === '/api/customer/verify') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return verifyCustomer(request, env);
+    }
+    if (pathname === '/api/customer/resend') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return resendVerification(request, env);
     }
     if (pathname === '/api/customer/me') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });

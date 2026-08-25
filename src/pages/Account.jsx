@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Star, Award, TrendingUp, LogOut, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { customerAuth, customerSignup, customerLogin, customerMe } from '@/lib/customerApi';
+import { customerAuth, customerSignup, customerLogin, customerMe, customerVerify, customerResendCode } from '@/lib/customerApi';
 
 function Field({ label, ...props }) {
   return (
@@ -20,6 +20,9 @@ function AuthForms({ onAuthed }) {
   const [remember, setRemember] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [verifyStep, setVerifyStep] = useState(null); // { email, password }
+  const [code, setCode] = useState('');
+  const [resent, setResent] = useState(false);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   const submit = async (e) => {
@@ -27,10 +30,71 @@ function AuthForms({ onAuthed }) {
     setError(''); setBusy(true);
     try {
       const payload = { ...form, remember };
-      mode === 'signup' ? await customerSignup(payload) : await customerLogin(payload);
+      if (mode === 'signup') {
+        const res = await customerSignup(payload);
+        if (res.verify) setVerifyStep({ email: form.email, password: form.password });
+        else onAuthed();
+      } else {
+        const res = await customerLogin(payload);
+        if (res.unverified) setVerifyStep({ email: res.email, password: form.password });
+        else onAuthed();
+      }
+    } catch (err) { setError(err.message); } finally { setBusy(false); }
+  };
+
+  const submitVerify = async (e) => {
+    e.preventDefault();
+    setError(''); setBusy(true);
+    try {
+      await customerVerify({ email: verifyStep.email, code: code.trim(), password: verifyStep.password, remember });
       onAuthed();
     } catch (err) { setError(err.message); } finally { setBusy(false); }
   };
+
+  const resend = async () => {
+    setError('');
+    await customerResendCode(verifyStep.email);
+    setResent(true);
+    setTimeout(() => setResent(false), 4000);
+  };
+
+  if (verifyStep) {
+    return (
+      <div className="max-w-md mx-auto">
+        <div className="flex items-center gap-2 mb-2 justify-center">
+          <div className="h-px w-6 bg-primary" />
+          <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-primary">Verify Email</span>
+          <div className="h-px w-6 bg-primary" />
+        </div>
+        <h1 className="text-3xl font-bold tracking-tight text-center mb-3">Enter your code</h1>
+        <p className="text-sm text-muted-foreground text-center mb-8 leading-relaxed">
+          We emailed a 6-digit security code to <strong className="text-foreground">{verifyStep.email}</strong>. Enter it below to finish signing in.
+        </p>
+        <form onSubmit={submitVerify} className="space-y-4 p-6 rounded-2xl border border-border bg-card">
+          <input
+            inputMode="numeric" autoComplete="one-time-code" maxLength={6} required autoFocus
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            placeholder="000000"
+            className="w-full h-14 px-3 rounded-lg border border-border bg-background text-center text-2xl font-mono tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button type="submit" disabled={busy || code.length < 6} className="w-full h-11">
+            {busy ? 'Verifying…' : 'Verify & Sign In'}
+          </Button>
+          <div className="flex items-center justify-between text-xs">
+            <button type="button" onClick={resend} className="text-primary hover:underline">
+              {resent ? 'Code re-sent ✓' : 'Resend code'}
+            </button>
+            <button type="button" onClick={() => { setVerifyStep(null); setCode(''); setError(''); }} className="text-muted-foreground hover:text-foreground">
+              ← Back
+            </button>
+          </div>
+          <p className="text-[11px] text-muted-foreground text-center">The code expires in 15 minutes. Check your spam folder if you don't see it.</p>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-md mx-auto">

@@ -3,6 +3,7 @@
 // Environment: DB (D1), ADMIN_PASSWORD (pepper for hashing)
 
 import { safeEqual } from './security.js';
+import { sendEmail, renderVerifyCode } from './email.js';
 
 export const POINTS_PER_DOLLAR = 1;
 export const POINTS_REDEEM_VALUE = 0.05; // $ per point → 100 pts = $5
@@ -54,6 +55,41 @@ async function hashPw(pw, email, env) {
   const data = new TextEncoder().encode(`${pw}:${email.toLowerCase()}:${env.ADMIN_PASSWORD || 'omen'}`);
   const buf = await crypto.subtle.digest('SHA-256', data);
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ---- Email verification (first-time sign-in security code) ----
+let verifyColsReady = false;
+async function ensureVerifyCols(env) {
+  if (verifyColsReady || !env.DB) return;
+  // DEFAULT 1 grandfathers existing accounts as already-verified (they aren't locked out);
+  // new signups are inserted with verified = 0 explicitly.
+  for (const c of ['verified INTEGER DEFAULT 1', 'verify_code TEXT', 'verify_expires INTEGER', 'verify_attempts INTEGER DEFAULT 0']) {
+    try { await env.DB.prepare(`ALTER TABLE customers ADD COLUMN ${c}`).run(); } catch {}
+  }
+  verifyColsReady = true;
+}
+
+function genCode() {
+  const n = new Uint32Array(1);
+  crypto.getRandomValues(n);
+  return String(100000 + (n[0] % 900000)); // 6 digits
+}
+
+// Generate + store a fresh (hashed) code, return the plaintext to email.
+async function issueCode(env, email) {
+  const code = genCode();
+  const hash = await hashPw(code, email, env);
+  const expires = Date.now() + 15 * 60 * 1000; // 15 min
+  await env.DB.prepare('UPDATE customers SET verify_code = ?, verify_expires = ?, verify_attempts = 0 WHERE LOWER(email) = ?')
+    .bind(hash, expires, email.toLowerCase()).run();
+  return code;
+}
+
+async function emailCode(env, email, name, code) {
+  if (!env.RESEND_API_KEY) return;
+  try {
+    await sendEmail(env, { to: email, subject: `Your Omen Labs verification code: ${code}`, html: renderVerifyCode({ name, code }) });
+  } catch {}
 }
 
 export async function getCustomerByEmail(env, email) {
@@ -109,6 +145,7 @@ export async function signupCustomer(request, env) {
 
   // Ensure the research_field column exists (lazy migration for existing DBs)
   try { await env.DB.prepare('ALTER TABLE customers ADD COLUMN research_field TEXT').run(); } catch {}
+  await ensureVerifyCols(env);
 
   const password_hash = await hashPw(password, email, env);
   // Credit lifetime spend + points from any prior guest orders with this email
@@ -117,19 +154,70 @@ export async function signupCustomer(request, env) {
   if (agg) priorSpend = Number(agg.s) || 0;
   const startPoints = Math.floor(priorSpend * POINTS_PER_DOLLAR);
 
+  // New accounts start UNVERIFIED — a code is emailed and required for first sign-in.
   await env.DB.prepare(
-    'INSERT INTO customers (email, name, password_hash, points, lifetime_spend, created_date, research_field) VALUES (?,?,?,?,?,?,?)'
+    'INSERT INTO customers (email, name, password_hash, points, lifetime_spend, created_date, research_field, verified) VALUES (?,?,?,?,?,?,?,0)'
   ).bind(email, name, password_hash, startPoints, priorSpend, new Date().toISOString(), research_field).run();
 
-  const cust = await getCustomerByEmail(env, email);
-  return json({ ok: true, ...publicStats(cust) });
+  const code = await issueCode(env, email);
+  await emailCode(env, email, name, code);
+  return json({ ok: true, verify: true, email });
 }
 
 export async function loginCustomer(request, env) {
   if (!env.DB) return json({ error: 'Service unavailable.' }, 500);
   const cust = await authedCustomer(request, env);
   if (!cust) return json({ error: 'Incorrect email or password.' }, 401);
+  await ensureVerifyCols(env);
+  // Block sign-in until the emailed code has been entered (legacy accounts are grandfathered as verified = 1).
+  if (cust.verified === 0) {
+    const code = await issueCode(env, cust.email);
+    await emailCode(env, cust.email, cust.name, code);
+    return json({ error: 'Please verify your email — we just sent you a 6-digit code.', unverified: true, email: cust.email }, 403);
+  }
   return json({ ok: true, ...publicStats(cust) });
+}
+
+// POST /api/customer/verify — { email, code } → verifies the account (first-time sign-in).
+export async function verifyCustomer(request, env) {
+  if (!env.DB) return json({ error: 'Service unavailable.' }, 500);
+  let b; try { b = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
+  const email = (b.email || '').trim().toLowerCase();
+  const code = String(b.code || '').trim();
+  if (!email || !code) return json({ error: 'Email and code are required.' }, 400);
+  await ensureVerifyCols(env);
+  const cust = await getCustomerByEmail(env, email);
+  if (!cust) return json({ error: 'No account found for that email.' }, 404);
+  if (cust.verified !== 0) return json({ ok: true, already: true, ...publicStats(cust) });
+  if (!cust.verify_code || !cust.verify_expires || Date.now() > Number(cust.verify_expires)) {
+    return json({ error: 'That code has expired — request a new one.', expired: true }, 400);
+  }
+  if (Number(cust.verify_attempts || 0) >= 5) {
+    return json({ error: 'Too many attempts — request a new code.', locked: true }, 429);
+  }
+  const ok = await safeEqual(await hashPw(code, email, env), cust.verify_code || '');
+  if (!ok) {
+    await env.DB.prepare('UPDATE customers SET verify_attempts = verify_attempts + 1 WHERE LOWER(email) = ?').bind(email).run();
+    return json({ error: 'Incorrect code. Please try again.' }, 400);
+  }
+  await env.DB.prepare('UPDATE customers SET verified = 1, verify_code = NULL, verify_expires = NULL, verify_attempts = 0 WHERE LOWER(email) = ?').bind(email).run();
+  const fresh = await getCustomerByEmail(env, email);
+  return json({ ok: true, ...publicStats(fresh) });
+}
+
+// POST /api/customer/resend — { email } → re-sends the code (no account-existence leak).
+export async function resendVerification(request, env) {
+  if (!env.DB) return json({ ok: true });
+  let b; try { b = await request.json(); } catch { return json({ ok: true }); }
+  const email = (b.email || '').trim().toLowerCase();
+  if (!email) return json({ ok: true });
+  await ensureVerifyCols(env);
+  const cust = await getCustomerByEmail(env, email);
+  if (cust && cust.verified === 0) {
+    const code = await issueCode(env, email);
+    await emailCode(env, email, cust.name, code);
+  }
+  return json({ ok: true });
 }
 
 export async function customerMe(request, env) {
