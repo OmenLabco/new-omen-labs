@@ -9,7 +9,7 @@ import LiveView from '@/components/admin/LiveView';
 import StockView from '@/components/admin/StockView';
 import PromosView from '@/components/admin/PromosView';
 import NewOrderForm from '@/components/admin/NewOrderForm';
-import { adminAuth, adminLogin, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout, fetchSubscribers, fetchStock, fetchFunnel } from '@/lib/adminApi';
+import { adminAuth, adminLogin, adminVerify2fa, adminResend2fa, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout, fetchSubscribers, fetchStock, fetchFunnel } from '@/lib/adminApi';
 import { CRYPTO_WALLETS } from '@/data/cryptoWallets';
 
 // Build a CSV and trigger a client-side download.
@@ -222,43 +222,73 @@ function LoginScreen({ onSuccess }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [remember, setRemember] = useState(true);
+  const [challenge, setChallenge] = useState(null); // 2FA challenge id
+  const [code, setCode] = useState('');
+  const [resent, setResent] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
-    setError('');
-    setBusy(true);
-    const ok = await adminLogin(pw, remember);
-    setBusy(false);
-    if (ok) onSuccess();
-    else setError('Incorrect password.');
+    setError(''); setBusy(true);
+    try {
+      const res = await adminLogin(pw, remember);
+      if (res.twofa) setChallenge(res.challenge);
+      else if (res.ok) onSuccess();
+      else setError('Incorrect password.');
+    } catch { setError('Sign-in failed.'); } finally { setBusy(false); }
   };
+
+  const submitCode = async (e) => {
+    e.preventDefault();
+    setError(''); setBusy(true);
+    try {
+      await adminVerify2fa(challenge, code.trim(), remember);
+      onSuccess();
+    } catch (err) { setError(err.message); } finally { setBusy(false); }
+  };
+
+  const resend = async () => { setError(''); await adminResend2fa(challenge); setResent(true); setTimeout(() => setResent(false), 4000); };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-6">
-      <form onSubmit={submit} className="w-full max-w-sm rounded-2xl border border-border bg-card p-8">
+      <form onSubmit={challenge ? submitCode : submit} className="w-full max-w-sm rounded-2xl border border-border bg-card p-8">
         <div className="flex justify-center mb-5">
           <div className="h-12 w-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
             <Lock className="h-5 w-5 text-primary" />
           </div>
         </div>
-        <h1 className="text-xl font-bold text-center mb-1">Admin Access</h1>
-        <p className="text-sm text-muted-foreground text-center mb-6">Enter your admin password to continue.</p>
-        <input
-          type="password"
-          value={pw}
-          onChange={(e) => setPw(e.target.value)}
-          placeholder="Password"
-          autoFocus
-          className="w-full h-11 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        />
-        {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
-        <label className="flex items-center gap-2 mt-4 cursor-pointer select-none">
-          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="h-4 w-4 accent-primary" />
-          <span className="text-sm text-muted-foreground">Remember me on this device</span>
-        </label>
-        <Button type="submit" disabled={busy} className="w-full h-11 mt-5">
-          {busy ? 'Checking…' : 'Sign In'}
-        </Button>
+        {!challenge ? (
+          <>
+            <h1 className="text-xl font-bold text-center mb-1">Admin Access</h1>
+            <p className="text-sm text-muted-foreground text-center mb-6">Enter your admin password to continue.</p>
+            <input
+              type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Password" autoFocus
+              className="w-full h-11 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+            <label className="flex items-center gap-2 mt-4 cursor-pointer select-none">
+              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="h-4 w-4 accent-primary" />
+              <span className="text-sm text-muted-foreground">Remember me on this device</span>
+            </label>
+            <Button type="submit" disabled={busy} className="w-full h-11 mt-5">{busy ? 'Checking…' : 'Sign In'}</Button>
+          </>
+        ) : (
+          <>
+            <h1 className="text-xl font-bold text-center mb-1">Enter your code</h1>
+            <p className="text-sm text-muted-foreground text-center mb-6">We emailed a 6-digit sign-in code to your admin inbox.</p>
+            <input
+              inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus
+              value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000"
+              className="w-full h-14 px-3 rounded-lg border border-border bg-background text-center text-2xl font-mono tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+            <Button type="submit" disabled={busy || code.length < 6} className="w-full h-11 mt-5">{busy ? 'Verifying…' : 'Verify & Sign In'}</Button>
+            <div className="flex items-center justify-between text-xs mt-4">
+              <button type="button" onClick={resend} className="text-primary hover:underline">{resent ? 'Code re-sent ✓' : 'Resend code'}</button>
+              <button type="button" onClick={() => { setChallenge(null); setCode(''); setError(''); }} className="text-muted-foreground hover:text-foreground">← Back</button>
+            </div>
+            <p className="text-[11px] text-muted-foreground text-center mt-3">Code expires in 10 minutes.</p>
+          </>
+        )}
       </form>
     </div>
   );

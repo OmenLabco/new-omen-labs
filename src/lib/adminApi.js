@@ -38,13 +38,33 @@ export async function adminLogin(password, remember = true) {
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${password}` },
     body: JSON.stringify({ remember }),
   });
-  if (resp.ok) {
-    const data = await resp.json().catch(() => ({}));
-    if (!data.token) return false;
-    adminAuth.set(data.token, remember);
-    return true;
-  }
-  return false;
+  if (!resp.ok) return { ok: false };
+  const data = await resp.json().catch(() => ({}));
+  if (data.twofa) return { ok: true, twofa: true, challenge: data.challenge, remember };
+  if (data.token) { adminAuth.set(data.token, remember); return { ok: true, token: data.token }; }
+  return { ok: false };
+}
+
+export async function adminVerify2fa(challenge, code, remember = true) {
+  const resp = await fetch('/api/admin/verify-2fa', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ challenge, code }),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok || !data.token) throw new Error(data.error || 'Verification failed.');
+  adminAuth.set(data.token, remember);
+  return data;
+}
+
+export async function adminResend2fa(challenge) {
+  try {
+    await fetch('/api/admin/resend-2fa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ challenge }),
+    });
+  } catch { /* best effort */ }
 }
 
 export async function deleteOrder(id) {

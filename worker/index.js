@@ -1,5 +1,5 @@
 import { handleOrder, orderStatus } from './order.js';
-import { listOrders, updateOrder, adminLogin, listAffiliates, listCustomers, setMembership, deleteCustomer, zelleSetup, cryptoCheck, deleteOrder, profitCosts, listPayouts, updatePayout, createOrder } from './admin.js';
+import { listOrders, updateOrder, adminLogin, adminVerify2fa, adminResend2fa, listAffiliates, listCustomers, setMembership, deleteCustomer, zelleSetup, cryptoCheck, deleteOrder, profitCosts, listPayouts, updatePayout, createOrder } from './admin.js';
 import { receiptImage } from './receiptImage.js';
 import { verifyOrder } from './token.js';
 import { loginAffiliate, affiliateStats, validateCode, requestPayout } from './affiliate.js';
@@ -62,6 +62,8 @@ import { handleIncomingEmail } from './emailIn.js';
 const LIMITS = {
   // globalMax also caps TOTAL attempts across all IPs (catches distributed brute-force).
   '/api/admin/login': { max: 8, windowMs: 10 * 60 * 1000, globalMax: 40 },
+  '/api/admin/verify-2fa': { max: 20, windowMs: 10 * 60 * 1000, globalMax: 60 },
+  '/api/admin/resend-2fa': { max: 6, windowMs: 30 * 60 * 1000 },
   '/api/customer/login': { max: 10, windowMs: 10 * 60 * 1000 },
   '/api/affiliate/login': { max: 10, windowMs: 10 * 60 * 1000 },
   '/api/customer/signup': { max: 10, windowMs: 60 * 60 * 1000 },
@@ -268,6 +270,14 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/admin/login') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return adminLogin(request, env);
+    }
+    if (pathname === '/api/admin/verify-2fa') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return adminVerify2fa(request, env);
+    }
+    if (pathname === '/api/admin/resend-2fa') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return adminResend2fa(request, env);
     }
     if (pathname === '/api/admin/affiliates') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });

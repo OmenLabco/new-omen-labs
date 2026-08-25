@@ -116,6 +116,19 @@ export function renderStatusUpdate(order, status) {
   `);
 }
 
+// Admin dashboard sign-in 2FA code.
+export function renderAdminLoginCode({ code }) {
+  return layout(`
+    ${heading('Admin sign-in code')}
+    ${divider()}
+    ${para('Use this code to finish signing in to the Omen Labs admin dashboard:')}
+    <div style="margin:26px 0;text-align:center">
+      <div style="display:inline-block;font-family:${MONO};font-size:34px;font-weight:800;letter-spacing:10px;color:${WHITE};background:${PANEL};border:1px solid ${BORDER};border-radius:12px;padding:18px 12px 18px 22px">${esc(code)}</div>
+    </div>
+    ${para('This code expires in 10 minutes. If you did not just try to sign in, someone may have your admin password — change it immediately.')}
+  `);
+}
+
 // Account email-verification code (first-time sign-in).
 export function renderVerifyCode({ name, code }) {
   return layout(`

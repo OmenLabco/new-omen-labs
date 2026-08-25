@@ -4,7 +4,7 @@
 //   DB             - D1 database binding
 //   ADMIN_PASSWORD - secret password for admin access
 
-import { renderImageEmail, sendEmail, renderPayoutReceipt } from './email.js';
+import { renderImageEmail, sendEmail, renderPayoutReceipt, renderAdminLoginCode } from './email.js';
 import { signOrder } from './token.js';
 import { safeEqual, issueAdminSession, verifyAdminSession, zelleSecret } from './security.js';
 import { cryptoWatchDebug } from './cryptoWatch.js';
@@ -353,14 +353,90 @@ export async function zelleSetup(request, env) {
 
 // POST /api/admin/login — verify password, then issue a signed session token.
 // The browser stores the TOKEN (expiring), never the password.
+// ---- Admin sign-in 2FA (emailed code) ----
+let twofaReady = false;
+async function ensure2faTable(env) {
+  if (twofaReady || !env.DB) return;
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS admin_2fa (id TEXT PRIMARY KEY, code_hash TEXT, role TEXT, remember INTEGER, expires INTEGER, attempts INTEGER DEFAULT 0)').run();
+  twofaReady = true;
+}
+function gen2faCode() {
+  const n = new Uint32Array(1); crypto.getRandomValues(n);
+  return String(100000 + (n[0] % 900000));
+}
+function randHex(bytes) {
+  const a = new Uint8Array(bytes); crypto.getRandomValues(a);
+  return [...a].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+async function hash2fa(code, env) {
+  const data = new TextEncoder().encode(`2fa:${code}:${env.ADMIN_PASSWORD || 'omen'}`);
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+const ttlFor = (remember) => (remember ? 7 * 24 * 60 * 60 * 1000 : 12 * 60 * 60 * 1000);
+const adminEmail = (env) => env.ADMIN_2FA_EMAIL || env.ORDER_TO_EMAIL || 'support@omenlabs.co';
+async function send2fa(env, code) {
+  try { await sendEmail(env, { to: adminEmail(env), subject: `Omen Labs admin sign-in code: ${code}`, html: renderAdminLoginCode({ code }) }); } catch {}
+}
+
 export async function adminLogin(request, env) {
   const role = await loginRole(request, env);
   if (!role) return json({ error: 'Unauthorized' }, 401);
   let remember = false;
   try { remember = !!(await request.json()).remember; } catch {}
-  const ttl = remember ? 7 * 24 * 60 * 60 * 1000 : 12 * 60 * 60 * 1000; // 7d or 12h
-  const token = await issueAdminSession(env, ttl, role);
+
+  // Require an emailed code (2FA), unless disabled or email isn't configured (avoid lockout).
+  const twofaOn = !!env.RESEND_API_KEY && env.ADMIN_2FA !== 'off' && !!env.DB;
+  if (twofaOn) {
+    await ensure2faTable(env);
+    const id = randHex(16);
+    const code = gen2faCode();
+    const now = Date.now();
+    await env.DB.prepare('INSERT INTO admin_2fa (id, code_hash, role, remember, expires, attempts) VALUES (?,?,?,?,?,0)')
+      .bind(id, await hash2fa(code, env), role, remember ? 1 : 0, now + 10 * 60 * 1000).run();
+    try { await env.DB.prepare('DELETE FROM admin_2fa WHERE expires < ?').bind(now).run(); } catch {}
+    await send2fa(env, code);
+    return json({ ok: true, twofa: true, challenge: id });
+  }
+
+  const token = await issueAdminSession(env, ttlFor(remember), role);
   return json({ ok: true, token, role });
+}
+
+// POST /api/admin/verify-2fa — { challenge, code } → issues the session token.
+export async function adminVerify2fa(request, env) {
+  if (!env.DB) return json({ error: 'Service unavailable.' }, 500);
+  let b; try { b = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
+  const id = String(b.challenge || '');
+  const code = String(b.code || '').trim();
+  if (!id || !code) return json({ error: 'Missing code.' }, 400);
+  await ensure2faTable(env);
+  const row = await env.DB.prepare('SELECT * FROM admin_2fa WHERE id = ?').bind(id).first();
+  if (!row) return json({ error: 'This sign-in expired — start again.', expired: true }, 400);
+  if (Date.now() > Number(row.expires)) { await env.DB.prepare('DELETE FROM admin_2fa WHERE id = ?').bind(id).run(); return json({ error: 'Code expired — sign in again.', expired: true }, 400); }
+  if (Number(row.attempts || 0) >= 5) { await env.DB.prepare('DELETE FROM admin_2fa WHERE id = ?').bind(id).run(); return json({ error: 'Too many attempts — sign in again.', locked: true }, 429); }
+  const ok = await safeEqual(await hash2fa(code, env), row.code_hash || '');
+  if (!ok) { await env.DB.prepare('UPDATE admin_2fa SET attempts = attempts + 1 WHERE id = ?').bind(id).run(); return json({ error: 'Incorrect code.' }, 400); }
+  await env.DB.prepare('DELETE FROM admin_2fa WHERE id = ?').bind(id).run();
+  const token = await issueAdminSession(env, ttlFor(!!row.remember), row.role);
+  return json({ ok: true, token, role: row.role });
+}
+
+// POST /api/admin/resend-2fa — { challenge } → re-sends a fresh code for that sign-in.
+export async function adminResend2fa(request, env) {
+  if (!env.DB) return json({ ok: true });
+  let b; try { b = await request.json(); } catch { return json({ ok: true }); }
+  const id = String(b.challenge || '');
+  if (!id) return json({ ok: true });
+  await ensure2faTable(env);
+  const row = await env.DB.prepare('SELECT * FROM admin_2fa WHERE id = ?').bind(id).first();
+  if (row && Date.now() < Number(row.expires)) {
+    const code = gen2faCode();
+    await env.DB.prepare('UPDATE admin_2fa SET code_hash = ?, attempts = 0, expires = ? WHERE id = ?')
+      .bind(await hash2fa(code, env), Date.now() + 10 * 60 * 1000, id).run();
+    await send2fa(env, code);
+  }
+  return json({ ok: true });
 }
 
 // GET /api/admin/profit-costs — OWNER ONLY. Returns cost data for the Profit tab.
