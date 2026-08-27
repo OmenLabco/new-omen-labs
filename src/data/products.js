@@ -167,6 +167,7 @@ const ALL_PRODUCTS = [
     paired_products: ["Semax", "NAD+"],
     in_stock: true,
     featured: false,
+    awaiting_coa: true,
   },
   {
     id: "69f9871d9cc1fe91aec19c92",
@@ -201,8 +202,9 @@ const ALL_PRODUCTS = [
     storage: "Store at -20°C. Reconstituted: 2-8°C, use within 21 days.",
     image: "/products/glow.png",
     paired_products: ["GHK-Cu", "MT2"],
-    in_stock: false,
+    in_stock: true,
     featured: true,
+    awaiting_coa: true,
   },
   {
     id: "nad",
@@ -282,8 +284,9 @@ const ALL_PRODUCTS = [
     storage: "Store at -20°C. Protect from light. Reconstituted: 2-8°C.",
     image: "/products/mt2.png",
     paired_products: ["GHK-Cu", "GLOW"],
-    in_stock: false,
+    in_stock: true,
     featured: true,
+    awaiting_coa: true,
   },
   {
     id: "ipamorelin",
@@ -300,8 +303,9 @@ const ALL_PRODUCTS = [
     storage: GENERIC_STORAGE,
     image: "/products/ipamorelin.png",
     paired_products: ["CJC + Ipamorelin", "Bacteriostatic Water"],
-    in_stock: false,
+    in_stock: true,
     featured: false,
+    awaiting_coa: true,
   },
   {
     id: "cjc-ipamorelin",
@@ -320,8 +324,9 @@ const ALL_PRODUCTS = [
     storage: GENERIC_STORAGE,
     image: "/products/cjc-ipamorelin.png",
     paired_products: ["Ipamorelin", "Bacteriostatic Water"],
-    in_stock: false,
+    in_stock: true,
     featured: false,
+    awaiting_coa: true,
   },
   {
     id: "kpv",
@@ -338,8 +343,9 @@ const ALL_PRODUCTS = [
     storage: GENERIC_STORAGE,
     image: "/products/kpv.png",
     paired_products: ["BPC-157", "TB-500"],
-    in_stock: false,
+    in_stock: true,
     featured: false,
+    awaiting_coa: true,
   },
   {
     id: "igf1-lr3",
@@ -495,13 +501,10 @@ for (const p of ALL_PRODUCTS) {
 // TEMPORARILY HIDDEN — peptides without a COA on file, pulled from the storefront
 // until their COAs are added back (see TAKEDOWN-NO-COA.md). To restore a product,
 // delete its slug from this set — nothing else changes. Data is fully preserved.
+// Fully hidden (not ready — no price / backend-only). Compounds that are priced
+// and in stock but still awaiting a COA are instead shown with `awaiting_coa`
+// (visible on the site, marked "Currently Unavailable", not purchasable).
 const HIDDEN_SLUGS = new Set([
-  "selank",
-  "glow",
-  "mt2",
-  "ipamorelin",
-  "cjc-ipamorelin",
-  "kpv",
   "adamax",
   "mt1",
   "wolverine",
@@ -520,6 +523,12 @@ export const isHidden = (slug) => HIDDEN_SLUGS.has(slug);
 // eligible. PayPal only appears at checkout when EVERY cart item is in this set.
 export const PAYPAL_OK_SKUS = new Set(
   ALL_PRODUCTS.filter((p) => p.paypal_ok).flatMap((p) => p.variants.map((v) => `${p.id}_${v.dose}`))
+);
+
+// SKUs shown on the site but NOT purchasable — priced/in-stock compounds still
+// awaiting their COA. Used to block ordering + mark bundles unavailable.
+export const AWAITING_COA_SKUS = new Set(
+  ALL_PRODUCTS.filter((p) => p.awaiting_coa).flatMap((p) => p.variants.map((v) => `${p.id}_${v.dose}`))
 );
 
 // Demand-weighted order (GLP-1s lead the market, BPC/TB recovery classics next,

@@ -138,7 +138,8 @@ export default function Catalog() {
               const liveStatus = productStatus(product, stock);
               // Live stock wins once tracked; otherwise fall back to the static flag.
               const soldOut = liveStatus ? liveStatus.key === 'out' : (product.in_stock === false && !product.coming_soon);
-              const lowStock = !soldOut && !product.coming_soon && liveStatus?.key === 'low';
+              const awaitingCoa = !!product.awaiting_coa && !soldOut && !product.coming_soon;
+              const lowStock = !soldOut && !awaitingCoa && !product.coming_soon && liveStatus?.key === 'low';
               return (
                 <motion.div
                   key={product.id}
@@ -182,6 +183,13 @@ export default function Catalog() {
                           </span>
                         </div>
                       )}
+                      {awaitingCoa && (
+                        <div className="absolute top-3 left-3">
+                          <span className="font-mono text-[8px] sm:text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full bg-white/85 backdrop-blur text-amber-600 border border-amber-500/30">
+                            Awaiting COA
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Info */}
@@ -208,8 +216,8 @@ export default function Catalog() {
                       )}
                       {/* View button */}
                       <div className="mt-3 sm:mt-4">
-                        <span className={`block w-full text-center rounded-full font-bold text-[13px] sm:text-sm py-2.5 sm:py-3 transition-colors ${soldOut ? 'bg-secondary text-muted-foreground' : 'bg-foreground text-background group-hover:bg-primary'}`}>
-                          {soldOut ? 'Sold Out' : 'View'}
+                        <span className={`block w-full text-center rounded-full font-bold text-[13px] sm:text-sm py-2.5 sm:py-3 transition-colors ${soldOut || awaitingCoa ? 'bg-secondary text-muted-foreground' : 'bg-foreground text-background group-hover:bg-primary'}`}>
+                          {soldOut ? 'Sold Out' : awaitingCoa ? 'Unavailable' : 'View'}
                         </span>
                       </div>
                     </div>

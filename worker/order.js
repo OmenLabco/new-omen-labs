@@ -12,6 +12,7 @@ import { priceFor } from './prices.js';
 import { getStockMap, decrementStockForOrder } from './stock.js';
 import { getPromo, promoUsable, incrementPromoUse } from './promos.js';
 import { computeBundleDiscount } from '../src/data/bundles.js';
+import { AWAITING_COA_SKUS } from '../src/data/products.js';
 import { markCheckoutConverted } from './funnel.js';
 
 // GET /api/order/status?o=ORDER&t=TOKEN — public status poll for the awaiting page.
@@ -180,6 +181,7 @@ export async function processOrder(body, env, opts = {}) {
     const entry = priceFor(i && i.product_id);
     if (!entry) return json({ error: `Unavailable item: ${i?.product_name || i?.product_id || 'unknown'}` }, 400);
     if (entry.comingSoon || entry.soldOut) return json({ error: `Item not available for purchase: ${i?.product_name || i?.product_id}` }, 400);
+    if (AWAITING_COA_SKUS.has(i && i.product_id)) return json({ error: `Currently unavailable (awaiting COA): ${i?.product_name || i?.product_id}` }, 400);
     let q = Math.floor(Number(i.quantity));
     if (!Number.isFinite(q) || q < 1) return json({ error: 'Invalid quantity.' }, 400);
     if (q > 100) q = 100;

@@ -13,7 +13,7 @@ const SKU_INFO = {};
 for (const p of PRODUCTS) for (const v of (p.variants || [])) {
   SKU_INFO[`${p.id}_${v.dose}`] = {
     name: p.name, dose: v.dose, price: v.price ?? p.price,
-    image: v.image || p.image, id: p.id,
+    image: v.image || p.image, id: p.id, awaiting_coa: !!p.awaiting_coa,
   };
 }
 
@@ -51,7 +51,7 @@ export default function BundlesSection({
 
   const cards = source.map((b) => {
     const info = priceInfo(b);
-    const soldOut = b.skus.some((s) => stockStatus(stock[s])?.key === 'out');
+    const soldOut = b.skus.some((s) => stockStatus(stock[s])?.key === 'out' || SKU_INFO[s]?.awaiting_coa);
     return { bundle: b, info, soldOut };
   }).filter((c) => c.info.parts.length === c.bundle.skus.length); // only fully-resolvable bundles
 

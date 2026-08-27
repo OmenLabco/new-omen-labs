@@ -43,6 +43,8 @@ export default function ProductDetail() {
   const vStatus = product ? stockStatus(stock[`${product.id}_${variant.dose}`]) : null;
   // Live stock wins once a dose is tracked; otherwise fall back to the static flag.
   const soldOut = vStatus ? vStatus.key === 'out' : (!!product && product.in_stock === false && !product.coming_soon);
+  // Visible but not purchasable — priced/in-stock but still awaiting a COA.
+  const awaitingCoa = !!product?.awaiting_coa;
 
   const handleNotify = async (e) => {
     e.preventDefault(); setNotifyErr(''); setNotifyBusy(true);
@@ -53,6 +55,7 @@ export default function ProductDetail() {
   };
 
   const handleAddToCart = () => {
+    if (product.coming_soon || soldOut || awaitingCoa) return;
     cart.add({
       product_id: `${product.id}_${variant.dose}`,
       product_name: `${product.name} ${variant.dose}`,
@@ -71,7 +74,7 @@ export default function ProductDetail() {
   const pairedSoldOut = (p, v) => v && stockStatus(stock[`${p.id}_${v.dose}`])?.key === 'out';
   const addPaired = (p) => {
     const v = defaultVariant(p);
-    if (!p || p.coming_soon || !v || v.price == null || pairedSoldOut(p, v)) return;
+    if (!p || p.coming_soon || p.awaiting_coa || !v || v.price == null || pairedSoldOut(p, v)) return;
     cart.add({
       product_id: `${p.id}_${v.dose}`,
       product_name: `${p.name} ${v.dose}`,
@@ -248,10 +251,12 @@ export default function ProductDetail() {
               <Button
                 onClick={handleAddToCart}
                 className="w-full h-12 text-sm font-medium tracking-wide"
-                disabled={added || product.coming_soon || soldOut}
+                disabled={added || product.coming_soon || soldOut || awaitingCoa}
               >
                 {product.coming_soon ? (
                   'Coming Soon'
+                ) : awaitingCoa ? (
+                  'Currently Unavailable'
                 ) : soldOut ? (
                   'Sold Out'
                 ) : added ? (
@@ -264,13 +269,19 @@ export default function ProductDetail() {
                 )}
               </Button>
 
-              {soldOut && !product.coming_soon && (
+              {awaitingCoa && (
+                <p className="mt-3 text-xs text-amber-600 text-center">
+                  Awaiting its Certificate of Analysis — available to order as soon as third-party lab results are in.
+                </p>
+              )}
+
+              {(soldOut || awaitingCoa) && !product.coming_soon && (
                 <div className="mt-4 rounded-xl border border-border bg-secondary/30 p-4">
                   {notifyDone ? (
-                    <p className="text-sm text-emerald-600 flex items-center gap-2"><Check className="h-4 w-4 shrink-0" /> You're on the list — we'll email you the moment it's back.</p>
+                    <p className="text-sm text-emerald-600 flex items-center gap-2"><Check className="h-4 w-4 shrink-0" /> You're on the list — we'll email you the moment it's available.</p>
                   ) : (
                     <form onSubmit={handleNotify}>
-                      <p className="text-sm font-medium mb-2">Notify me when it's back in stock</p>
+                      <p className="text-sm font-medium mb-2">{awaitingCoa ? 'Notify me when it’s available' : 'Notify me when it’s back in stock'}</p>
                       <div className="flex gap-2">
                         <input type="email" required value={notifyEmail} onChange={(e) => setNotifyEmail(e.target.value)} placeholder="you@email.com"
                           className="flex-1 h-11 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
@@ -391,7 +402,7 @@ export default function ProductDetail() {
                 <div className="space-y-3">
                   {pairedProducts.map((p) => {
                     const v = defaultVariant(p);
-                    const canAdd = !p.coming_soon && v && v.price != null && !pairedSoldOut(p, v);
+                    const canAdd = !p.coming_soon && !p.awaiting_coa && v && v.price != null && !pairedSoldOut(p, v);
                     const isAdded = pairedAdded[p.id];
                     return (
                       <div
@@ -420,7 +431,7 @@ export default function ProductDetail() {
                           </button>
                         ) : (
                           <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-muted-foreground px-2">
-                            {p.coming_soon ? 'Soon' : 'Sold out'}
+                            {p.coming_soon ? 'Soon' : p.awaiting_coa ? 'Unavailable' : 'Sold out'}
                           </span>
                         )}
                       </div>
@@ -458,10 +469,10 @@ export default function ProductDetail() {
           </div>
           <Button
             onClick={handleAddToCart}
-            disabled={added || product.coming_soon || soldOut}
+            disabled={added || product.coming_soon || soldOut || awaitingCoa}
             className="flex-1 h-12 text-sm font-semibold tracking-wide"
           >
-            {product.coming_soon ? 'Coming Soon' : soldOut ? 'Sold Out' : added ? (
+            {product.coming_soon ? 'Coming Soon' : awaitingCoa ? 'Unavailable' : soldOut ? 'Sold Out' : added ? (
               <><Check className="mr-2 h-4 w-4" /> Added</>
             ) : (
               'Add to Cart'
