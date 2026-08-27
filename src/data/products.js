@@ -159,13 +159,13 @@ const ALL_PRODUCTS = [
     sequence: "Thr-Lys-Pro-Arg-Pro-Gly-Pro",
     purity: 99.0,
     variants: [
-      { dose: "5mg", price: 40 },
-      { dose: "10mg", price: 70 },
+      { dose: "5mg", price: 40, image: "/products/selank-5mg.png" },
+      { dose: "10mg", price: 70, image: "/products/selank-10mg.png" },
     ],
     storage: GENERIC_STORAGE,
-    image: "/products/selank.png",
+    image: "/products/selank-5mg.png",
     paired_products: ["Semax", "NAD+"],
-    in_stock: false,
+    in_stock: true,
     featured: false,
   },
   {
