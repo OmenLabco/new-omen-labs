@@ -326,7 +326,6 @@ const ALL_PRODUCTS = [
     paired_products: ["Ipamorelin", "Bacteriostatic Water"],
     in_stock: true,
     featured: false,
-    awaiting_coa: true,
   },
   {
     id: "kpv",
