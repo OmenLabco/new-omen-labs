@@ -35,30 +35,37 @@ export default function AgeGate() {
         </div>
 
         <p className="font-mono text-[12px] uppercase tracking-[0.4em] text-muted-foreground mb-6">
-          Omen Labs
+          Omen Labs · Restricted Access
         </p>
 
-        <h1 className="text-4xl font-bold tracking-tight mb-5">Age Verification</h1>
-        <p className="text-base text-muted-foreground leading-relaxed mb-9 max-w-md mx-auto">
-          This site contains research compounds intended for adults only. You must be{' '}
-          <strong className="text-foreground">21 years or older</strong> to enter.
+        <h1 className="text-4xl font-bold tracking-tight mb-5">Before you continue</h1>
+        <p className="text-base text-muted-foreground leading-relaxed mb-6 max-w-md mx-auto">
+          Everything sold here is a laboratory reference material for qualified research use.
+          Entry is limited to adults <strong className="text-foreground">21 and over</strong>.
+          Please confirm your age to proceed.
         </p>
+
+        <div className="mb-8 rounded-lg border border-border bg-secondary/40 px-4 py-2.5">
+          <p className="font-mono text-[10px] sm:text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+            Research use only · Not for human or animal consumption
+          </p>
+        </div>
 
         <div className="flex flex-col gap-3">
           <Button onClick={accept} className="w-full h-14 text-base font-semibold tracking-wide">
-            Yes, I am 21 or older
+            I'm 21 or older — enter
           </Button>
           <Button onClick={decline} variant="outline" className="w-full h-14 text-base">
-            No, I am under 21
+            I'm under 21
           </Button>
         </div>
 
         <p className="mt-8 text-[13px] text-muted-foreground leading-relaxed max-w-md mx-auto">
-          By entering you confirm you are of legal age and agree to our{' '}
+          By entering, you confirm you are of legal age in your jurisdiction and agree to our{' '}
           <Link to="/terms" className="underline hover:text-foreground transition-colors">
             terms of service
           </Link>
-          . Products are for research use only.
+          . These products are not drugs, supplements, or cosmetics, and no therapeutic claims are made.
         </p>
       </div>
     </div>

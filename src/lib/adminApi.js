@@ -157,6 +157,13 @@ export async function fetchFunnel() {
   return resp.json();
 }
 
+export async function fetchReturning() {
+  const resp = await fetch('/api/admin/returning', { headers: headers() });
+  if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }
+  if (!resp.ok) throw new Error('Failed to load returning-customer stats.');
+  return resp.json();
+}
+
 export async function fetchStock() {
   const resp = await fetch('/api/admin/stock', { headers: headers() });
   if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }

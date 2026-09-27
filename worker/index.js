@@ -53,7 +53,7 @@ import { runCryptoWatch } from './cryptoWatch.js';
 import { handleShipstationWebhook, runShipstationSync } from './shipstation.js';
 import { runTrackingWatch } from './tracking.js';
 import { recordPresence, liveStats, socialProof } from './presence.js';
-import { recordCheckoutReached, funnelStats } from './funnel.js';
+import { recordCheckoutReached, funnelStats, returningStats } from './funnel.js';
 import { paypalConfig, paypalCreate, paypalCapture } from './paypal.js';
 import { createPaymentSession, paymentCallback, paymentStatus } from './payment.js';
 import { handleIncomingEmail } from './emailIn.js';
@@ -170,6 +170,10 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/admin/funnel') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
       return funnelStats(request, env);
+    }
+    if (pathname === '/api/admin/returning') {
+      if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+      return returningStats(request, env);
     }
     if (pathname === '/api/admin/live') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });

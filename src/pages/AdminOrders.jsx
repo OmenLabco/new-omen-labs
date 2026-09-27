@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut, Trash2, Eye, EyeOff, Check, Copy, Download, DollarSign, Clock, Wallet } from 'lucide-react';
+import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut, Trash2, Eye, EyeOff, Check, Copy, Download, DollarSign, Clock, Wallet, Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import OrderEditForm from '@/components/admin/OrderEditForm';
 import SalesDashboard from '@/components/admin/SalesDashboard';
@@ -9,7 +9,7 @@ import LiveView from '@/components/admin/LiveView';
 import StockView from '@/components/admin/StockView';
 import PromosView from '@/components/admin/PromosView';
 import NewOrderForm from '@/components/admin/NewOrderForm';
-import { adminAuth, adminLogin, adminVerify2fa, adminResend2fa, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout, fetchSubscribers, fetchStock, fetchFunnel } from '@/lib/adminApi';
+import { adminAuth, adminLogin, adminVerify2fa, adminResend2fa, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout, fetchSubscribers, fetchStock, fetchFunnel, fetchReturning } from '@/lib/adminApi';
 import { CRYPTO_WALLETS } from '@/data/cryptoWallets';
 
 // Build a CSV and trigger a client-side download.
@@ -108,6 +108,56 @@ function FunnelCard() {
               ~<span className="font-semibold text-foreground">${d.lostValue.toFixed(2)}</span> in carts reached checkout but didn't complete.
             </p>
           )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// Returning-customer rate — share of buyers who ordered more than once (owner excluded).
+function ReturningCustomersCard() {
+  const [d, setD] = useState(null);
+  const [err, setErr] = useState('');
+  useEffect(() => { fetchReturning().then(setD).catch((e) => setErr(e.message)); }, []);
+  const rate = d?.returningRate ?? 0;
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 mb-6">
+      <div className="flex items-center gap-2 mb-1">
+        <div className="h-9 w-9 rounded-lg flex items-center justify-center bg-primary/10 text-primary"><Repeat className="h-4 w-4" /></div>
+        <div>
+          <p className="text-sm font-semibold">Returning customers</p>
+          <p className="text-[11px] text-muted-foreground">Buyers who've ordered more than once · you're excluded</p>
+        </div>
+      </div>
+      {err ? <p className="text-xs text-destructive mt-3">{err}</p> : !d ? (
+        <p className="text-xs text-muted-foreground mt-3">Loading…</p>
+      ) : d.totalCustomers === 0 ? (
+        <p className="text-xs text-muted-foreground mt-3">No completed orders yet — the rate appears once customers start buying.</p>
+      ) : (
+        <>
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-3.5">
+              <p className="text-2xl font-bold tabular-nums leading-none text-primary">{rate}%</p>
+              <p className="text-[11px] text-muted-foreground mt-1.5">Returning rate</p>
+            </div>
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-3.5">
+              <p className="text-2xl font-bold tabular-nums leading-none text-emerald-600">{d.returning}</p>
+              <p className="text-[11px] text-muted-foreground mt-1.5">Repeat buyers</p>
+            </div>
+            <div className="rounded-xl border border-border p-3.5">
+              <p className="text-2xl font-bold tabular-nums leading-none">{d.newCustomers}</p>
+              <p className="text-[11px] text-muted-foreground mt-1.5">One-time buyers</p>
+            </div>
+            <div className="rounded-xl border border-border p-3.5">
+              <p className="text-2xl font-bold tabular-nums leading-none">{d.avgOrdersPerCustomer}</p>
+              <p className="text-[11px] text-muted-foreground mt-1.5">Avg orders / customer</p>
+            </div>
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-3">
+            <span className="font-semibold text-foreground">{d.totalCustomers}</span> total customers ·{' '}
+            <span className="font-semibold text-foreground">{d.totalOrders}</span> orders ·{' '}
+            <span className="font-semibold text-foreground">{d.active30}</span> bought in the last 30 days
+          </p>
         </>
       )}
     </div>
@@ -761,6 +811,8 @@ export default function AdminOrders() {
             {!loading && <OverviewWidgets orders={orders} />}
             {/* Checkout funnel — reached vs purchased */}
             {!loading && <FunnelCard />}
+            {/* Returning-customer rate */}
+            {!loading && <ReturningCustomersCard />}
             {/* Sales dashboard */}
             {!loading && orders.length > 0 && <SalesDashboard orders={orders} />}
             {/* Payment automation reference */}

@@ -59,6 +59,55 @@ export async function markCheckoutConverted(env, sid) {
   } catch {}
 }
 
+// GET /api/admin/returning  (admin) — repeat-customer rate from the orders table.
+// A "customer" is a distinct email that has placed at least one real (paid, not
+// cancelled) order; "returning" = that email has 2+ such orders. Guests count too
+// (grouped by the email on the order). The owner's own emails are excluded.
+export async function returningStats(request, env) {
+  if (!(await verifyAdminSession(env, bearer(request)))) return json({ error: 'Unauthorized' }, 401);
+  if (!env.DB) return json({});
+  let rows = [];
+  try {
+    const res = await env.DB.prepare(
+      `SELECT LOWER(customer_email) AS em,
+              COUNT(*) AS n,
+              MIN(created_date) AS first_date,
+              MAX(created_date) AS last_date
+       FROM orders
+       WHERE customer_email IS NOT NULL AND customer_email <> ''
+         AND status NOT IN ('cancelled', 'awaiting_payment')
+       GROUP BY em`
+    ).all();
+    rows = res.results || [];
+  } catch { rows = []; }
+
+  const owners = new Set(ownerEmails(env));
+  rows = rows.filter((r) => r.em && !owners.has(r.em));
+
+  const totalCustomers = rows.length;
+  const returning = rows.filter((r) => Number(r.n) >= 2).length;
+  const totalOrders = rows.reduce((s, r) => s + Number(r.n || 0), 0);
+  const repeatOrders = totalOrders - totalCustomers; // orders beyond each customer's first
+  const now = Date.now();
+  const cutoff30 = now - 30 * 86400000;
+  const active30 = rows.filter((r) => {
+    const t = Date.parse(r.last_date);
+    return Number.isFinite(t) && t >= cutoff30;
+  }).length;
+
+  return json({
+    totalCustomers,
+    returning,
+    newCustomers: totalCustomers - returning,
+    returningRate: totalCustomers ? +((returning / totalCustomers) * 100).toFixed(1) : 0,
+    totalOrders,
+    repeatOrders,
+    repeatOrderRate: totalOrders ? +((repeatOrders / totalOrders) * 100).toFixed(1) : 0,
+    avgOrdersPerCustomer: totalCustomers ? +(totalOrders / totalCustomers).toFixed(2) : 0,
+    active30,
+  });
+}
+
 // GET /api/admin/funnel  (admin) — reached / converted / abandoned per window.
 export async function funnelStats(request, env) {
   if (!(await verifyAdminSession(env, bearer(request)))) return json({ error: 'Unauthorized' }, 401);
