@@ -9,7 +9,7 @@ import LiveView from '@/components/admin/LiveView';
 import StockView from '@/components/admin/StockView';
 import PromosView from '@/components/admin/PromosView';
 import NewOrderForm from '@/components/admin/NewOrderForm';
-import { adminAuth, adminLogin, adminVerify2fa, adminResend2fa, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout, fetchSubscribers, fetchStock, fetchFunnel, fetchReturning, adjustCustomerPoints } from '@/lib/adminApi';
+import { adminAuth, adminLogin, adminVerify2fa, adminResend2fa, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout, fetchSubscribers, fetchStock, fetchFunnel, fetchReturning, adjustCustomerPoints, sendCreditEmail } from '@/lib/adminApi';
 import { CRYPTO_WALLETS } from '@/data/cryptoWallets';
 
 // Build a CSV and trigger a client-side download.
@@ -529,6 +529,23 @@ function CustomersView({ onLogout, privacy }) {
     }
   };
 
+  // Email the customer their on-brand credit notice (and a standalone copy to the owner).
+  const emailCredit = async (email, name, points) => {
+    const pts = Number(points) || 0;
+    if (pts <= 0) { setError(`${name || email} has no points to notify about — grant a credit first with "Adjust pts".`); return; }
+    const dollars = (pts * 0.05).toFixed(2);
+    if (!window.confirm(`Email ${name || email} about their ${pts}-point ($${dollars}) credit?\n\nA separate copy also goes to JacobBurlachenko@gmail.com. Make sure the points are already on the account.`)) return;
+    setBusy(email);
+    try {
+      const res = await sendCreditEmail(email, pts);
+      window.alert(`Sent to ${res.sentTo}` + (res.ownerSent ? ` · copy sent to ${res.copyTo}` : ` · but the copy to ${res.copyTo} failed`));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
   const removeCustomer = async (email, name) => {
     if (!window.confirm(`Permanently delete ${name || email}? This cannot be undone.`)) return;
     setBusy(email);
@@ -595,6 +612,14 @@ function CustomersView({ onLogout, privacy }) {
               className="h-8 px-3 text-xs"
             >
               {busy === c.email ? '…' : 'Adjust pts'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => emailCredit(c.email, c.name, c.points)}
+              disabled={busy === c.email || !Number(c.points)}
+              className="h-8 px-3 text-xs"
+            >
+              {busy === c.email ? '…' : 'Email credit'}
             </Button>
             <Button
               variant={c.isVip ? 'outline' : 'default'}

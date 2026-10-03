@@ -1,6 +1,6 @@
 import { handleOrder, orderStatus } from './order.js';
-import { listOrders, updateOrder, adminLogin, adminVerify2fa, adminResend2fa, listAffiliates, listCustomers, setMembership, adjustPoints, deleteCustomer, zelleSetup, cryptoCheck, deleteOrder, profitCosts, listPayouts, updatePayout, createOrder } from './admin.js';
-import { receiptImage } from './receiptImage.js';
+import { listOrders, updateOrder, adminLogin, adminVerify2fa, adminResend2fa, listAffiliates, listCustomers, setMembership, adjustPoints, sendCreditEmail, deleteCustomer, zelleSetup, cryptoCheck, deleteOrder, profitCosts, listPayouts, updatePayout, createOrder } from './admin.js';
+import { receiptImage, creditImage } from './receiptImage.js';
 import { verifyOrder } from './token.js';
 import { loginAffiliate, affiliateStats, validateCode, requestPayout } from './affiliate.js';
 import { signupCustomer, loginCustomer, customerMe, enrollAffiliate, verifyCustomer, resendVerification } from './customer.js';
@@ -218,6 +218,23 @@ async function route(request, env, url, pathname, method) {
       headers.set('Cache-Control', 'public, max-age=31536000, immutable');
       return new Response(resp.body, { status: resp.status, headers });
     }
+    if (pathname === '/api/credit-image') {
+      const e = (url.searchParams.get('e') || '').toLowerCase();
+      const p = Math.round(Number(url.searchParams.get('p')));
+      const t = url.searchParams.get('t');
+      if (!e || !Number.isFinite(p) || p <= 0 || !(await verifyOrder(`credit:${e}:${p}`, t, env.ADMIN_PASSWORD))) {
+        return new Response('Not found', { status: 404 });
+      }
+      let name = '';
+      if (env.DB) {
+        const cust = await env.DB.prepare('SELECT name FROM customers WHERE LOWER(email) = ?').bind(e).first();
+        name = cust?.name || '';
+      }
+      const resp = await creditImage({ name, points: p, dollars: +(p * 0.05).toFixed(2) });
+      const headers = new Headers(resp.headers);
+      headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+      return new Response(resp.body, { status: resp.status, headers });
+    }
 
     // Customer accounts + rewards
     if (pathname === '/api/customer/signup') {
@@ -344,6 +361,10 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/admin/customers/points') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return adjustPoints(request, env);
+    }
+    if (pathname === '/api/admin/customers/credit-email') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return sendCreditEmail(request, env);
     }
     if (pathname === '/api/admin/customers/delete') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });

@@ -54,6 +54,54 @@ function totalRow(label, value, opts = {}) {
   </div>`;
 }
 
+// Branded "account credit added" card — same visual language as the receipt,
+// but for a goodwill points/credit grant rather than an order.
+export async function creditImage({ name, points, dollars, reason } = {}) {
+  const fonts = await getFonts();
+  const pts = Number(points) || 0;
+  const amt = Number(dollars || pts * 0.05);
+  const steps = [
+    'Sign in to your account at omenlabs.co',
+    'Add your items and continue to checkout',
+    'Apply your reward points at the payment step for up to $' + amt.toFixed(2) + ' off (redeemed in $5 increments)',
+  ];
+  const stepRows = steps
+    .map(
+      (s, i) => `<div style="display:flex;width:100%;margin-top:${i === 0 ? 0 : 14}px">
+        <div style="display:flex;width:34px;height:34px;background:${PANEL};border:1px solid ${BORDER};border-radius:17px;color:${BLUE};font-size:18px;font-weight:700;align-items:center;justify-content:center;margin-right:16px">${i + 1}</div>
+        <div style="display:flex;width:490px;color:${TEXT};font-size:19px;line-height:1.4">${esc(s)}</div>
+      </div>`
+    )
+    .join('');
+
+  const markup = `
+  <div style="display:flex;flex-direction:column;width:600px;background:${NAVY};padding:44px;font-family:Inter">
+    <div style="display:flex;align-items:center;margin-bottom:6px">
+      <img src="${LOGO_URI}" width="34" height="34" style="margin-right:14px" />
+      <div style="display:flex;color:${BLUE};font-size:16px;font-weight:700;letter-spacing:6px">OMEN LABS</div>
+    </div>
+    <div style="display:flex;color:${WHITE};font-size:42px;font-weight:700;margin-top:10px">Account Credit Added</div>
+    <div style="display:flex;width:100%;height:1px;background:${BORDER};margin:26px 0"></div>
+    <div style="display:flex;color:${MUTED};font-size:22px">Hi ${esc(name || 'there')},</div>
+    <div style="display:flex;color:${MUTED};font-size:21px;line-height:1.5;margin-top:14px">We noticed your last order was placed at full price when a discount should have applied. To make it right, we've added an account credit — a little extra, as thanks for your patience.</div>
+
+    <div style="display:flex;flex-direction:column;width:100%;background:${PANEL};border:1px solid ${BORDER};border-radius:14px;margin-top:26px;padding:28px 24px;align-items:center">
+      <div style="display:flex;color:${BLUE};font-size:15px;letter-spacing:2px">STORE CREDIT</div>
+      <div style="display:flex;color:#34d399;font-size:56px;font-weight:700;margin-top:8px">$${amt.toFixed(2)}</div>
+      <div style="display:flex;color:${TEXT};font-size:20px;margin-top:4px">${pts} reward points on your account</div>
+    </div>
+
+    <div style="display:flex;color:${BLUE};font-size:15px;letter-spacing:2px;margin-top:30px">HOW TO USE IT</div>
+    <div style="display:flex;flex-direction:column;margin-top:16px">${stepRows}</div>
+
+    <div style="display:flex;color:${MUTED};font-size:18px;line-height:1.5;margin-top:28px">The credit stays on your account until you use it — no rush. Any trouble at checkout, just reply to this email.</div>
+    <div style="display:flex;width:100%;height:1px;background:${BORDER};margin:28px 0 0"></div>
+    <div style="display:flex;color:#3a3f55;font-size:12px;letter-spacing:1px;margin-top:20px">FOR RESEARCH USE ONLY — NOT FOR HUMAN CONSUMPTION · OMENLABS.CO</div>
+  </div>`;
+
+  return new ImageResponse(markup, { width: 600, height: 980, fonts, format: 'png' });
+}
+
 export async function receiptImage(order, { title = 'Order Confirmed', message, tracking } = {}) {
   const fonts = await getFonts();
   const items = Array.isArray(order.items) ? order.items : [];

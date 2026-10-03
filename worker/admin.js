@@ -4,7 +4,7 @@
 //   DB             - D1 database binding
 //   ADMIN_PASSWORD - secret password for admin access
 
-import { renderImageEmail, sendEmail, renderPayoutReceipt, renderAdminLoginCode } from './email.js';
+import { renderImageEmail, renderImageOnlyEmail, sendEmail, renderPayoutReceipt, renderAdminLoginCode } from './email.js';
 import { signOrder } from './token.js';
 import { safeEqual, issueAdminSession, verifyAdminSession, zelleSecret } from './security.js';
 import { cryptoWatchDebug } from './cryptoWatch.js';
@@ -288,6 +288,39 @@ export async function adjustPoints(request, env) {
   } catch {}
 
   return json({ ok: true, email, delta, points: newPoints });
+}
+
+// POST /api/admin/customers/credit-email — email a customer their on-brand
+// account-credit notice (image email, same style as receipts). A standalone copy
+// is also sent to the owner's review inbox (not a CC — its own separate send).
+const OWNER_REVIEW_EMAIL = 'JacobBurlachenko@gmail.com';
+export async function sendCreditEmail(request, env) {
+  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
+  if (!env.DB) return json({ error: 'Database not configured.' }, 500);
+  if (!env.RESEND_API_KEY) return json({ error: 'Email is not configured (RESEND_API_KEY missing).' }, 500);
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
+  const email = String(body.email || '').trim().toLowerCase();
+  const points = Math.round(Number(body.points));
+  if (!email) return json({ error: 'Missing email.' }, 400);
+  if (!Number.isFinite(points) || points <= 0) return json({ error: 'Points must be a positive whole number.' }, 400);
+
+  const cust = await env.DB.prepare('SELECT name, email, points FROM customers WHERE LOWER(email) = ?').bind(email).first();
+  if (!cust) return json({ error: 'No registered account with that email — the credit email can only go to a customer with an account.' }, 404);
+
+  const dollars = +(points * 0.05).toFixed(2);
+  const token = await signOrder(`credit:${email}:${points}`, env.ADMIN_PASSWORD);
+  const imageUrl = `${SITE}/api/credit-image?e=${encodeURIComponent(email)}&p=${points}&t=${token}`;
+  const subject = `A $${dollars.toFixed(2)} credit has been added to your Omen Labs account`;
+  const preheader = `We've added a $${dollars.toFixed(2)} account credit (${points} reward points). Sign in and apply it at checkout. Questions? support@omenlabs.co`;
+  const html = renderImageOnlyEmail({ imageUrl, heading: 'Account Credit Added', preheader, alt: subject });
+
+  // Send to the customer, then a separate standalone copy to the owner.
+  const customerSent = await sendEmail(env, { to: cust.email, subject, html });
+  const ownerSent = await sendEmail(env, { to: OWNER_REVIEW_EMAIL, subject, html });
+
+  if (!customerSent) return json({ error: 'Resend rejected the send to the customer.', customerSent, ownerSent }, 502);
+  return json({ ok: true, sentTo: cust.email, copyTo: OWNER_REVIEW_EMAIL, dollars, points, customerSent, ownerSent });
 }
 
 // POST /api/admin/customers/delete — permanently remove a customer account

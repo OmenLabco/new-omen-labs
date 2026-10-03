@@ -220,6 +220,25 @@ export function renderImageEmail({ imageUrl, order, heading = 'Order Confirmed' 
 </html>`;
 }
 
+// Generic single-image email (no order context) — e.g. account-credit notices.
+export function renderImageOnlyEmail({ imageUrl, heading = 'Omen Labs', preheader = '', alt = '' }) {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
+</head>
+<body style="margin:0;padding:0;background:#0a0c14;font-family:-apple-system,Arial,sans-serif">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#0a0c14">${esc(preheader)}</div>
+  <a href="https://omenlabs.co" style="text-decoration:none;border:0">
+    <img src="${imageUrl}" width="600" alt="${esc(alt || heading)}" style="display:block;width:100%;max-width:600px;margin:0 auto;border:0" />
+  </a>
+</body>
+</html>`;
+}
+
 // Affiliate payout receipt — sent when the owner marks a payout as paid.
 export function renderPayoutReceipt({ name, code, amount, methodLabel, handle, receiptNo, paidDate }) {
   let when;
@@ -289,15 +308,17 @@ export function renderRestockBack({ productName, url }) {
 
 // Helper to send via Resend
 export async function sendEmail(env, { to, subject, html, replyTo }) {
-  if (!env.RESEND_API_KEY) return;
+  if (!env.RESEND_API_KEY) return false;
   const from = env.ORDER_FROM_EMAIL || 'Omen Labs <orders@omenlabs.co>';
   try {
-    await fetch('https://api.resend.com/emails', {
+    const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ from, to: [to], subject, html, ...(replyTo ? { reply_to: replyTo } : {}) }),
     });
+    return resp.ok;
   } catch {
     // best effort
+    return false;
   }
 }

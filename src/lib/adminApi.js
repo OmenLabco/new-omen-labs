@@ -249,6 +249,17 @@ export async function adjustCustomerPoints(email, delta, reason) {
   return data;
 }
 
+export async function sendCreditEmail(email, points) {
+  const resp = await fetch('/api/admin/customers/credit-email', {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ email, points }),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.error || 'Failed to send credit email.');
+  return data;
+}
+
 export async function deleteCustomer(email) {
   const resp = await fetch('/api/admin/customers/delete', {
     method: 'POST',
