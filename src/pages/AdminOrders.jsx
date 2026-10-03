@@ -9,7 +9,7 @@ import LiveView from '@/components/admin/LiveView';
 import StockView from '@/components/admin/StockView';
 import PromosView from '@/components/admin/PromosView';
 import NewOrderForm from '@/components/admin/NewOrderForm';
-import { adminAuth, adminLogin, adminVerify2fa, adminResend2fa, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout, fetchSubscribers, fetchStock, fetchFunnel, fetchReturning } from '@/lib/adminApi';
+import { adminAuth, adminLogin, adminVerify2fa, adminResend2fa, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout, fetchSubscribers, fetchStock, fetchFunnel, fetchReturning, adjustCustomerPoints } from '@/lib/adminApi';
 import { CRYPTO_WALLETS } from '@/data/cryptoWallets';
 
 // Build a CSV and trigger a client-side download.
@@ -542,6 +542,29 @@ function CustomersView({ onLogout, privacy }) {
     }
   };
 
+  // Manually grant/deduct loyalty points (points redeem at $0.05 each → 20 pts = $1).
+  const adjustPts = async (email, name) => {
+    const raw = window.prompt(
+      `Adjust points for ${name || email}.\n\nEnter points to grant (or a negative number to deduct).\nValue: 20 pts = $1 · 500 pts = $25.`,
+      '500'
+    );
+    if (raw == null) return;
+    const delta = Math.round(Number(raw));
+    if (!Number.isFinite(delta) || delta === 0) { setError('Enter a non-zero whole number of points.'); return; }
+    const dollars = (Math.abs(delta) * 0.05).toFixed(2);
+    const reason = window.prompt(`Reason for this ${delta > 0 ? 'credit' : 'deduction'} of ${Math.abs(delta)} pts ($${dollars})? (saved to the audit log)`, 'Overpayment credit') || '';
+    if (!window.confirm(`${delta > 0 ? 'Grant' : 'Deduct'} ${Math.abs(delta)} points ($${dollars}) ${delta > 0 ? 'to' : 'from'} ${name || email}?`)) return;
+    setBusy(email);
+    try {
+      const res = await adjustCustomerPoints(email, delta, reason);
+      setCustomers((prev) => prev.map((c) => (c.email === email ? { ...c, points: res.points } : c)));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between mb-2">
@@ -562,9 +585,17 @@ function CustomersView({ onLogout, privacy }) {
               {c.isVip && <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500">VIP</span>}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5 truncate"><Mask on={privacy}>{c.email}</Mask></p>
-            <p className="text-xs text-muted-foreground mt-0.5">{c.points} pts · {c.order_count} orders · ${Number(c.lifetime_spend || 0).toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{c.points} pts (${(Number(c.points || 0) * 0.05).toFixed(2)}) · {c.order_count} orders · ${Number(c.lifetime_spend || 0).toFixed(2)}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => adjustPts(c.email, c.name)}
+              disabled={busy === c.email}
+              className="h-8 px-3 text-xs"
+            >
+              {busy === c.email ? '…' : 'Adjust pts'}
+            </Button>
             <Button
               variant={c.isVip ? 'outline' : 'default'}
               onClick={() => toggleVip(c.email, !c.isVip)}

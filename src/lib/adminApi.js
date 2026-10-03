@@ -238,6 +238,17 @@ export async function setCustomerMembership(email, vip) {
   return resp.json();
 }
 
+export async function adjustCustomerPoints(email, delta, reason) {
+  const resp = await fetch('/api/admin/customers/points', {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ email, delta, reason }),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.error || 'Failed to adjust points.');
+  return data;
+}
+
 export async function deleteCustomer(email) {
   const resp = await fetch('/api/admin/customers/delete', {
     method: 'POST',

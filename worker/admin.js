@@ -258,6 +258,38 @@ export async function setMembership(request, env) {
   return json({ ok: true });
 }
 
+// POST /api/admin/customers/points — manually adjust a customer's points balance
+// (grant a credit, correct an overpayment, etc.). `delta` may be negative. Every
+// adjustment is written to a points_adjustments ledger so there's a record.
+export async function adjustPoints(request, env) {
+  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
+  if (!env.DB) return json({ error: 'Database not configured.' }, 500);
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
+  const email = String(body.email || '').trim().toLowerCase();
+  const delta = Math.round(Number(body.delta));
+  const reason = String(body.reason || '').slice(0, 200);
+  if (!email) return json({ error: 'Missing email.' }, 400);
+  if (!Number.isFinite(delta) || delta === 0) return json({ error: 'Adjustment must be a non-zero whole number of points.' }, 400);
+
+  const cust = await env.DB.prepare('SELECT id, points FROM customers WHERE LOWER(email) = ?').bind(email).first();
+  if (!cust) return json({ error: 'No registered account with that email. The customer must create an account (with this email) before points can be granted.' }, 404);
+
+  const newPoints = Math.max(0, (Number(cust.points) || 0) + delta);
+  await env.DB.prepare('UPDATE customers SET points = ? WHERE id = ?').bind(newPoints, cust.id).run();
+
+  try {
+    await env.DB.prepare(
+      'CREATE TABLE IF NOT EXISTS points_adjustments (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, delta INTEGER, balance_after INTEGER, reason TEXT, created_date TEXT)'
+    ).run();
+    await env.DB.prepare(
+      'INSERT INTO points_adjustments (email, delta, balance_after, reason, created_date) VALUES (?,?,?,?,?)'
+    ).bind(email, delta, newPoints, reason, new Date().toISOString()).run();
+  } catch {}
+
+  return json({ ok: true, email, delta, points: newPoints });
+}
+
 // POST /api/admin/customers/delete — permanently remove a customer account
 export async function deleteCustomer(request, env) {
   if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);

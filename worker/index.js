@@ -1,5 +1,5 @@
 import { handleOrder, orderStatus } from './order.js';
-import { listOrders, updateOrder, adminLogin, adminVerify2fa, adminResend2fa, listAffiliates, listCustomers, setMembership, deleteCustomer, zelleSetup, cryptoCheck, deleteOrder, profitCosts, listPayouts, updatePayout, createOrder } from './admin.js';
+import { listOrders, updateOrder, adminLogin, adminVerify2fa, adminResend2fa, listAffiliates, listCustomers, setMembership, adjustPoints, deleteCustomer, zelleSetup, cryptoCheck, deleteOrder, profitCosts, listPayouts, updatePayout, createOrder } from './admin.js';
 import { receiptImage } from './receiptImage.js';
 import { verifyOrder } from './token.js';
 import { loginAffiliate, affiliateStats, validateCode, requestPayout } from './affiliate.js';
@@ -340,6 +340,10 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/admin/customers/membership') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return setMembership(request, env);
+    }
+    if (pathname === '/api/admin/customers/points') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return adjustPoints(request, env);
     }
     if (pathname === '/api/admin/customers/delete') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
