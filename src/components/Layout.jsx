@@ -63,6 +63,24 @@ export default function Layout() {
       } catch {}
     };
     ping();
+
+    // Append-only pageview log for the admin Traffic analytics (one row per
+    // navigation, not per heartbeat). The traffic "source" (referrer + utm_source)
+    // is captured once on the session's landing page and reused for every hit.
+    try {
+      let srcRaw = sessionStorage.getItem('omenlabs_src');
+      if (srcRaw == null) {
+        const utm = new URLSearchParams(window.location.search).get('utm_source') || '';
+        srcRaw = JSON.stringify({ ref: document.referrer || '', utm });
+        sessionStorage.setItem('omenlabs_src', srcRaw);
+      }
+      const { ref, utm } = JSON.parse(srcRaw);
+      fetch('/api/pageview', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+        body: JSON.stringify({ sid, path, ref, utm }),
+      });
+    } catch {}
+
     // 45s heartbeat — stays within the server's 60s "online" window while cutting
     // D1 write volume ~3× vs. a 15s ping (the top capacity lever).
     const id = setInterval(ping, 45000);

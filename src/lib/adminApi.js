@@ -164,6 +164,13 @@ export async function fetchReturning() {
   return resp.json();
 }
 
+export async function fetchTraffic() {
+  const resp = await fetch('/api/admin/traffic', { headers: headers() });
+  if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }
+  if (!resp.ok) throw new Error('Failed to load traffic.');
+  return resp.json();
+}
+
 export async function fetchStock() {
   const resp = await fetch('/api/admin/stock', { headers: headers() });
   if (resp.status === 401) { adminAuth.clear(); throw new Error('unauthorized'); }

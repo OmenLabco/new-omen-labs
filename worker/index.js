@@ -54,6 +54,7 @@ import { handleShipstationWebhook, runShipstationSync } from './shipstation.js';
 import { runTrackingWatch } from './tracking.js';
 import { recordPresence, liveStats, socialProof } from './presence.js';
 import { recordCheckoutReached, funnelStats, returningStats } from './funnel.js';
+import { recordPageview, trafficStats } from './traffic.js';
 import { paypalConfig, paypalCreate, paypalCapture } from './paypal.js';
 import { createPaymentSession, paymentCallback, paymentStatus } from './payment.js';
 import { handleIncomingEmail } from './emailIn.js';
@@ -174,6 +175,14 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/admin/returning') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
       return returningStats(request, env);
+    }
+    if (pathname === '/api/pageview') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return recordPageview(request, env);
+    }
+    if (pathname === '/api/admin/traffic') {
+      if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+      return trafficStats(request, env);
     }
     if (pathname === '/api/admin/live') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });

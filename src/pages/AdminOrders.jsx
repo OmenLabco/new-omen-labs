@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut, Trash2, Eye, EyeOff, Check, Copy, Download, DollarSign, Clock, Wallet, Repeat } from 'lucide-react';
+import { Package, ChevronDown, ChevronUp, Search, Lock, LogOut, Trash2, Eye, EyeOff, Check, Copy, Download, DollarSign, Clock, Wallet, Repeat, TrendingUp, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import OrderEditForm from '@/components/admin/OrderEditForm';
 import SalesDashboard from '@/components/admin/SalesDashboard';
@@ -9,7 +9,7 @@ import LiveView from '@/components/admin/LiveView';
 import StockView from '@/components/admin/StockView';
 import PromosView from '@/components/admin/PromosView';
 import NewOrderForm from '@/components/admin/NewOrderForm';
-import { adminAuth, adminLogin, adminVerify2fa, adminResend2fa, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout, fetchSubscribers, fetchStock, fetchFunnel, fetchReturning, adjustCustomerPoints, sendCreditEmail } from '@/lib/adminApi';
+import { adminAuth, adminLogin, adminVerify2fa, adminResend2fa, fetchOrders, fetchAffiliates, fetchCustomers, setCustomerMembership, deleteCustomer, fetchZelleSetup, runCryptoCheck, deleteOrder, fetchPayouts, markPayout, fetchSubscribers, fetchStock, fetchFunnel, fetchReturning, adjustCustomerPoints, sendCreditEmail, fetchTraffic } from '@/lib/adminApi';
 import { CRYPTO_WALLETS } from '@/data/cryptoWallets';
 
 // Build a CSV and trigger a client-side download.
@@ -110,6 +110,110 @@ function FunnelCard() {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+// Site traffic — daily/weekly/monthly visits + where visitors come from.
+function TrafficView() {
+  const [d, setD] = useState(null);
+  const [err, setErr] = useState('');
+  useEffect(() => { fetchTraffic().then(setD).catch((e) => setErr(e.message)); }, []);
+
+  if (err) return <p className="text-sm text-destructive">{err}</p>;
+  if (!d) return <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" /></div>;
+
+  const t = d.totals || {};
+  const cards = [
+    { label: 'Today', data: t.today, Icon: Clock, tint: 'text-emerald-500 bg-emerald-500/10' },
+    { label: 'Last 7 days', data: t.d7, Icon: TrendingUp, tint: 'text-primary bg-primary/10' },
+    { label: 'Last 30 days', data: t.d30, Icon: TrendingUp, tint: 'text-blue-500 bg-blue-500/10' },
+    { label: 'All time', data: t.all, Icon: Globe, tint: 'text-amber-500 bg-amber-500/10' },
+  ];
+  const daily = d.daily || [];
+  const maxViews = Math.max(1, ...daily.map((x) => x.views));
+  const sources = d.sources || [];
+  const maxSrc = Math.max(1, ...sources.map((x) => x.visitors));
+  const pages = d.pages || [];
+  const fmtDay = (iso) => { try { return new Date(iso + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }); } catch { return iso; } };
+
+  return (
+    <div className="space-y-6">
+      {/* Totals */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {cards.map((c) => (
+          <div key={c.label} className="rounded-2xl border border-border bg-card p-4">
+            <div className={`h-9 w-9 rounded-lg flex items-center justify-center mb-3 ${c.tint}`}><c.Icon className="h-4 w-4" /></div>
+            <p className="text-2xl font-bold tabular-nums leading-none">{(c.data?.visitors ?? 0).toLocaleString()}</p>
+            <p className="text-[11px] text-muted-foreground mt-1.5">{c.label} · visitors</p>
+            <p className="text-[11px] text-muted-foreground/70">{(c.data?.views ?? 0).toLocaleString()} page views</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Daily visits chart */}
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <p className="text-sm font-semibold mb-1">Daily visits</p>
+        <p className="text-[11px] text-muted-foreground mb-4">Page views per day · last 30 days · bots excluded</p>
+        {daily.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-6 text-center">No visits logged yet — data starts accumulating now that tracking is live.</p>
+        ) : (
+          <div className="flex items-end gap-[3px] h-40">
+            {daily.map((x) => (
+              <div key={x.date} className="flex-1 group relative flex flex-col justify-end items-center h-full">
+                <div className="w-full rounded-t bg-primary/70 group-hover:bg-primary transition-colors" style={{ height: `${Math.max(2, (x.views / maxViews) * 100)}%` }} />
+                <div className="absolute bottom-full mb-1 hidden group-hover:block whitespace-nowrap rounded bg-foreground text-background text-[10px] px-1.5 py-0.5 z-10">
+                  {fmtDay(x.date)}: {x.views} views · {x.visitors} visitors
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Where from + top pages */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <p className="text-sm font-semibold mb-1">Where visitors come from</p>
+          <p className="text-[11px] text-muted-foreground mb-4">By visitors · last 30 days</p>
+          {sources.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-4">No source data yet.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {sources.map((s) => (
+                <div key={s.source}>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="font-medium truncate">{s.source}</span>
+                    <span className="text-muted-foreground tabular-nums shrink-0 ml-2">{s.visitors.toLocaleString()} <span className="text-muted-foreground/60">· {s.views.toLocaleString()} views</span></span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                    <div className="h-full rounded-full bg-primary/70" style={{ width: `${(s.visitors / maxSrc) * 100}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <p className="text-sm font-semibold mb-1">Top pages</p>
+          <p className="text-[11px] text-muted-foreground mb-4">By page views · last 30 days</p>
+          {pages.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-4">No page data yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {pages.map((p) => (
+                <div key={p.path} className="flex items-center justify-between gap-3 text-xs">
+                  <span className="font-mono truncate text-muted-foreground">{p.path}</span>
+                  <span className="tabular-nums shrink-0">{p.views.toLocaleString()} <span className="text-muted-foreground/60">· {p.visitors} v</span></span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <p className="text-[11px] text-muted-foreground">Visits are logged per page view (your own admin-signed-in sessions and detected bots/crawlers are excluded). “Visitors” counts unique sessions.</p>
     </div>
   );
 }
@@ -814,9 +918,9 @@ export default function AdminOrders() {
         <div className="mb-10 flex items-start justify-between">
           <div>
             <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Admin</span>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight">{tab === 'live' ? 'Live View' : tab === 'overview' ? 'Overview' : tab === 'orders' ? 'Orders' : tab === 'profit' ? 'Profit' : tab === 'stock' ? 'Inventory' : tab === 'promos' ? 'Promo Codes' : tab === 'affiliates' ? 'Affiliates' : 'Customers'}</h1>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight">{tab === 'live' ? 'Live View' : tab === 'overview' ? 'Overview' : tab === 'traffic' ? 'Traffic' : tab === 'orders' ? 'Orders' : tab === 'profit' ? 'Profit' : tab === 'stock' ? 'Inventory' : tab === 'promos' ? 'Promo Codes' : tab === 'affiliates' ? 'Affiliates' : 'Customers'}</h1>
             <p className="mt-1 text-sm text-muted-foreground flex items-center gap-2">
-              {tab === 'live' ? 'Who’s on your site right now' : tab === 'orders' ? `${orders.length} total orders` : tab === 'profit' ? 'Peptide revenue, cost & profit' : tab === 'stock' ? 'Vials on hand per product' : tab === 'promos' ? 'Create & manage discount codes' : tab === 'affiliates' ? 'Affiliate partners' : tab === 'customers' ? 'Reward members' : 'Store performance'}
+              {tab === 'live' ? 'Who’s on your site right now' : tab === 'traffic' ? 'Site visits & traffic sources' : tab === 'orders' ? `${orders.length} total orders` : tab === 'profit' ? 'Peptide revenue, cost & profit' : tab === 'stock' ? 'Vials on hand per product' : tab === 'promos' ? 'Create & manage discount codes' : tab === 'affiliates' ? 'Affiliate partners' : tab === 'customers' ? 'Reward members' : 'Store performance'}
               {tab === 'orders' && (
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/80">
                   ·
@@ -847,7 +951,7 @@ export default function AdminOrders() {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 rounded-xl border border-border p-1 w-fit max-w-full overflow-x-auto scrollbar-none">
-          {(adminAuth.role() === 'admin' ? ['live', 'overview', 'orders', 'profit', 'stock', 'promos', 'affiliates', 'customers'] : ['live', 'overview', 'orders', 'stock', 'affiliates', 'customers']).map((t) => (
+          {(adminAuth.role() === 'admin' ? ['live', 'overview', 'traffic', 'orders', 'profit', 'stock', 'promos', 'affiliates', 'customers'] : ['live', 'overview', 'orders', 'stock', 'affiliates', 'customers']).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -861,6 +965,8 @@ export default function AdminOrders() {
 
         {tab === 'live' ? (
           <LiveView onLogout={logout} />
+        ) : tab === 'traffic' ? (
+          <TrafficView />
         ) : tab === 'overview' ? (
           <>
             {/* At-a-glance widgets */}

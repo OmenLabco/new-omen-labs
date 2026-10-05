@@ -30,7 +30,7 @@ async function ensureTable(env) {
 const DC_RE = /(amazon|aws|google|azure|microsoft|digital ?ocean|ovh|hetzner|linode|akamai|vultr|choopa|m247|datacamp|data ?camp|leaseweb|contabo|cherry ?servers|hostinger|constant company|nforce|worldstream|scaleway|oracle|equinix|cogent|hostwinds|ip volume|psychz|quadranet|colocrossing|frantech|buyvm|clouvider|nordvpn|mullvad|surfshark|express ?vpn|cyberghost|proton|tefincom|private internet|pia |zscaler|fastly|cloudflare|alibaba|tencent|g-?core|stark|censys|shodan|palo alto|bytedance|datacenter|hosting|colo|server|vpn|proxy)/i;
 const UA_RE = /(bot|crawl|spider|slurp|headless|python|curl|wget|http[-_]?client|monitor|uptime|scan|censys|shodan|semrush|ahrefs|bingpreview|facebookexternal|preview|lighthouse|gtmetrix|pingdom)/i;
 
-function detectBot(request, network) {
+export function detectBot(request, network) {
   const ua = request.headers.get('User-Agent') || '';
   if (UA_RE.test(ua)) return 1;
   if (network && DC_RE.test(network)) return 1;
@@ -40,7 +40,7 @@ function detectBot(request, network) {
 // Read the visitor's approximate location from Cloudflare's edge geo (request.cf).
 // lat/lon are strings on request.cf — parse defensively; any field may be absent
 // (local dev, Tor/VPN, privacy-masked IPs).
-function readGeo(request) {
+export function readGeo(request) {
   const cf = request.cf || {};
   const lat = cf.latitude != null ? Number.parseFloat(cf.latitude) : null;
   const lon = cf.longitude != null ? Number.parseFloat(cf.longitude) : null;
