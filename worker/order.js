@@ -293,6 +293,10 @@ export async function processOrder(body, env, opts = {}) {
   // manual/invoice marked paid by admin). opts.paid = already captured (PayPal).
   const orderStatus = opts.paid ? 'confirmed' : 'awaiting_payment';
 
+  // Quote only: price the order exactly as it would be recorded, but write
+  // nothing — used to know the amount to charge before a card is captured.
+  if (opts.dryRun) return json({ ok: true, total, subtotal, discount, shipping_cost });
+
   // Points earned (on subtotal, multiplied by tier)
   const pointsEarned = account ? Math.floor(subtotal * POINTS_PER_DOLLAR * acctTier.multiplier) : 0;
 

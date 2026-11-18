@@ -56,7 +56,7 @@ import { recordPresence, liveStats, socialProof } from './presence.js';
 import { recordCheckoutReached, funnelStats, returningStats } from './funnel.js';
 import { recordPageview, trafficStats } from './traffic.js';
 import { paypalConfig, paypalCreate, paypalCapture } from './paypal.js';
-import { squareConfig, squareCreate, squareReturn } from './square.js';
+import { squareConfig, squareCreate, squareReturn, squarePay } from './square.js';
 import { createPaymentSession, paymentCallback, paymentStatus } from './payment.js';
 import { handleIncomingEmail } from './emailIn.js';
 
@@ -77,6 +77,9 @@ const LIMITS = {
   '/api/checkout-reached': { max: 30, windowMs: 10 * 60 * 1000 },
   '/api/order': { max: 40, windowMs: 10 * 60 * 1000 },
   '/api/pay/session': { max: 40, windowMs: 10 * 60 * 1000 },
+  // Card charges: tight per-IP and global caps — the classic card-testing target.
+  '/api/square/pay': { max: 8, windowMs: 10 * 60 * 1000, globalMax: 120 },
+  '/api/square/create': { max: 20, windowMs: 10 * 60 * 1000 },
 };
 const MAX_BODY_BYTES = 100 * 1024; // 100 KB cap on any request body
 
@@ -178,6 +181,10 @@ async function route(request, env, url, pathname, method) {
     }
     if (pathname === '/api/square/return') {
       return squareReturn(request, env);
+    }
+    if (pathname === '/api/square/pay') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return squarePay(request, env);
     }
     if (pathname === '/api/admin/funnel') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });

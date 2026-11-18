@@ -125,6 +125,148 @@ function PayPalButtonsBox({ clientId, getPayload, onSuccess, onError }) {
   return <div ref={ref} />;
 }
 
+// Square Web Payments SDK — card fields + Apple Pay + Google Pay rendered on our
+// own page (iframes hosted by Square, so card numbers never touch our servers).
+// The browser only produces a one-time token; /api/square/pay re-prices the
+// order, charges the token, and records the order.
+const SQ_CARD_STYLE = {
+  '.input-container': { borderColor: '#E4E4E7', borderRadius: '12px', borderWidth: '1px' },
+  '.input-container.is-focus': { borderColor: '#2B6CFF' },
+  '.input-container.is-error': { borderColor: '#DC2626' },
+  input: { color: '#0A0A0B', fontSize: '15px' },
+  'input::placeholder': { color: '#8A8C94' },
+  '.message-text': { color: '#65676F' },
+  '.message-text.is-error': { color: '#DC2626' },
+  '.message-icon.is-error': { color: '#DC2626' },
+};
+
+function loadSquareSdk(env) {
+  const src = env === 'production' ? 'https://web.squarecdn.com/v1/square.js' : 'https://sandbox.web.squarecdn.com/v1/square.js';
+  return new Promise((resolve, reject) => {
+    if (window.Square) return resolve();
+    let s = document.getElementById('square-sdk');
+    if (s) { s.addEventListener('load', () => resolve()); s.addEventListener('error', reject); return; }
+    s = document.createElement('script');
+    s.id = 'square-sdk';
+    s.src = src;
+    s.onload = () => resolve();
+    s.onerror = reject;
+    document.body.appendChild(s);
+  });
+}
+
+function SquarePayBox({ cfg, amount, ready, getPayload, onSuccess }) {
+  const cardRef = useRef(null);
+  const appleRef = useRef(null);
+  const googleRef = useRef(null);
+  const reqRef = useRef(null);
+  const payloadRef = useRef(getPayload);
+  payloadRef.current = getPayload;
+  const amountRef = useRef(amount);
+  amountRef.current = amount;
+  const [loaded, setLoaded] = useState(false);
+  const [wallets, setWallets] = useState({ apple: false, google: false });
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    let card, gpay, apay;
+    (async () => {
+      try {
+        await loadSquareSdk(cfg.env);
+        if (cancelled || !window.Square) return;
+        const payments = window.Square.payments(cfg.applicationId, cfg.locationId);
+        card = await payments.card({ style: SQ_CARD_STYLE });
+        if (cancelled) { card.destroy(); return; }
+        await card.attach('#omen-sq-card');
+        cardRef.current = card;
+        const req = payments.paymentRequest({
+          countryCode: 'US', currencyCode: 'USD',
+          total: { amount: Number(amountRef.current).toFixed(2), label: 'Omen Labs' },
+        });
+        reqRef.current = req;
+        const found = { apple: false, google: false };
+        // Each wallet throws when the browser/device can't use it — that just hides it.
+        try { apay = await payments.applePay(req); appleRef.current = apay; found.apple = true; } catch {}
+        try {
+          gpay = await payments.googlePay(req);
+          await gpay.attach('#omen-sq-gpay', { buttonColor: 'black', buttonSizeMode: 'fill', buttonType: 'long' });
+          googleRef.current = gpay; found.google = true;
+        } catch {}
+        if (!cancelled) { setWallets(found); setLoaded(true); }
+      } catch {
+        if (!cancelled) setMsg('Card payments could not load. Please refresh, or choose another payment method.');
+      }
+    })();
+    return () => {
+      cancelled = true;
+      try { card?.destroy(); } catch {}
+      try { gpay?.destroy(); } catch {}
+      try { apay?.destroy?.(); } catch {}
+    };
+  }, [cfg.applicationId, cfg.locationId, cfg.env]);
+
+  // Wallet sheets must show the same total we will charge.
+  useEffect(() => {
+    try { reqRef.current?.update({ total: { amount: Number(amount).toFixed(2), label: 'Omen Labs' } }); } catch {}
+  }, [amount]);
+
+  const pay = async (method) => {
+    if (!method || busy) return;
+    if (!ready) { setMsg('Please fill in your shipping details and choose a shipping method first.'); return; }
+    setMsg('');
+    setBusy(true);
+    try {
+      const tok = await method.tokenize();
+      if (tok.status !== 'OK') {
+        // Card-field problems are shown inline by Square; wallet cancels are silent.
+        if (tok.status === 'Cancel' || tok.status === 'Abort') { setBusy(false); return; }
+        throw new Error(tok.errors?.[0]?.message || 'Please check your card details and try again.');
+      }
+      const r = await fetch('/api/square/pay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payloadRef.current(), source_id: tok.token, expected_total: Number(amountRef.current.toFixed(2)) }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.ok) throw new Error(d.error || 'Your payment could not be completed. You were not charged.');
+      onSuccess(d);
+    } catch (e) {
+      setMsg(e.message);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-6">
+      <style>{`.omen-apple-pay{-webkit-appearance:-apple-pay-button;-apple-pay-button-type:plain;-apple-pay-button-style:black;display:block;width:100%;height:48px;border-radius:9999px;cursor:pointer}`}</style>
+      {/* One stable Google Pay container: the SDK attaches into it while loading,
+          so it must never be remounted. It needs real height during attach. */}
+      <div className="grid gap-2.5">
+        {wallets.apple && (
+          <button type="button" aria-label="Pay with Apple Pay" className="omen-apple-pay" disabled={busy} onClick={() => pay(appleRef.current)} />
+        )}
+        <div
+          id="omen-sq-gpay"
+          className={wallets.google ? 'h-12 rounded-full overflow-hidden' : loaded ? 'hidden' : 'h-12'}
+          onClickCapture={(e) => { e.preventDefault(); pay(googleRef.current); }}
+        />
+      </div>
+      {(wallets.apple || wallets.google) && (
+        <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+          <div className="h-px flex-1 bg-border" />or pay with card<div className="h-px flex-1 bg-border" />
+        </div>
+      )}
+      <div id="omen-sq-card" className={loaded ? '' : 'min-h-[50px] rounded-xl bg-muted animate-pulse'} />
+      {msg && <p className="mt-3 text-sm text-destructive">{msg}</p>}
+      <Button type="button" disabled={!loaded || busy} onClick={() => pay(cardRef.current)} className="w-full h-12 mt-4 text-sm font-medium tracking-wide">
+        {busy ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing payment…</> : `Pay $${Number(amount).toFixed(2)}`}
+      </Button>
+    </div>
+  );
+}
+
 export default function Checkout() {
   const { cartItems, loadCart } = useOutletContext();
   const navigate = useNavigate();
@@ -248,6 +390,30 @@ export default function Checkout() {
     cart.clear();
     loadCart();
     const confirmState = { paid: true, paypal: true, orderNumber: orderNumber || '', total: Number(total.toFixed(2)) };
+    try { sessionStorage.setItem('omenlabs_last_order', JSON.stringify(confirmState)); } catch {}
+    navigate('/order-confirmed', { state: confirmState });
+  };
+
+  // On-site card form (Square Web Payments). Needs the public application id;
+  // without it we fall back to the hosted Square page via handleSubmit.
+  const squareEmbedded = squareAvailable && !!squareCfg?.applicationId && !!squareCfg?.locationId;
+  // The server requires a full address even for pickup, so the card form does too.
+  const cardFormReady = !!(items.length && form.name && form.email && form.company && form.company_name
+    && form.address && form.city && form.zip && shipMethod);
+  const cardPayload = () => ({
+    customer: { ...form, notes },
+    items,
+    shipping_method: shipMethod,
+    affiliate_code: affiliate ? affiliate.code : null,
+    customer_token: customerAuth.token() || null,
+    points_to_redeem: pointsToRedeem,
+    billing: billingSame ? null : billing,
+    sid: sessionStorage.getItem('omenlabs_sid') || null,
+  });
+  const onCardSuccess = (d) => {
+    cart.clear();
+    loadCart();
+    const confirmState = { paid: true, orderNumber: d.order_number || '', statusToken: d.status_token || '', total: Number(d.total ?? total) };
     try { sessionStorage.setItem('omenlabs_last_order', JSON.stringify(confirmState)); } catch {}
     navigate('/order-confirmed', { state: confirmState });
   };
@@ -565,7 +731,7 @@ export default function Checkout() {
           <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-5">Payment Method</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
-              ...(squareAvailable ? [{ id: 'square', title: 'Credit / Debit Card', desc: 'Secure checkout via Square', badge: 'Card' }] : []),
+              ...(squareAvailable ? [{ id: 'square', title: 'Credit / Debit Card', desc: 'Card · Apple Pay · Google Pay', badge: 'Instant' }] : []),
               { id: 'cashapp', title: 'Cash App', desc: 'Pay to $omenlabs', badge: 'Auto-confirm' },
               { id: 'zelle', title: 'Zelle', desc: 'Pay from your bank', badge: 'Auto-confirm' },
               { id: 'crypto', title: 'Crypto', desc: 'USDC · USDT · BTC', badge: '10% off', badgeTone: 'save' },
@@ -606,7 +772,9 @@ export default function Checkout() {
           {payment && (
             <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-              Secure payment instructions are shown on the next step, right after you place your order.
+              {payment === 'square'
+                ? 'Enter your card, or use Apple Pay / Google Pay, at the bottom of this page.'
+                : 'Secure payment instructions are shown on the next step, right after you place your order.'}
             </p>
           )}
         </div>
@@ -657,7 +825,15 @@ export default function Checkout() {
 
           {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
 
-          {payment === 'paypal' && paypalAvailable ? (
+          {payment === 'square' && squareEmbedded ? (
+            <SquarePayBox
+              cfg={squareCfg}
+              amount={Number(total.toFixed(2))}
+              ready={cardFormReady}
+              getPayload={cardPayload}
+              onSuccess={onCardSuccess}
+            />
+          ) : payment === 'paypal' && paypalAvailable ? (
             paypalFormReady ? (
               <div className="mt-6">
                 <PayPalButtonsBox
@@ -690,7 +866,9 @@ export default function Checkout() {
             <span className="font-medium">Secure checkout · encrypted &amp; discreet</span>
           </div>
           <p className="mt-2 text-[12px] text-muted-foreground text-center">
-            We'll email you to confirm payment and shipping. No card is charged on this page.
+            {payment === 'square' && squareEmbedded
+              ? 'Card details are encrypted and processed by Square — they never touch our servers.'
+              : "We'll email you to confirm payment and shipping. No card is charged on this page."}
           </p>
           <p className="mt-2 font-mono text-[10px] text-destructive text-center uppercase tracking-wider">
             All sales are final — no returns or exchanges

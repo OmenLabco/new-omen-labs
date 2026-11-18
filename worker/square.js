@@ -1,5 +1,10 @@
-// Square hosted checkout — TEMPORARY main card checkout for the full catalog.
-// Flow: create an order in our DB as `awaiting_payment` (silently, no email) so
+// Square card checkout — TEMPORARY main card checkout for the full catalog.
+// Primary flow is on-site (squarePay): the Web Payments SDK tokenizes the card /
+// Apple Pay / Google Pay in our own checkout page and we charge the token here.
+// The hosted payment-link flow below (squareCreate/squareReturn) is kept as a
+// fallback and so any links already sent out still resolve.
+//
+// Hosted flow: create an order in our DB as `awaiting_payment` (silently, no email) so
 // the amount is computed by the one authoritative pricing path (processOrder),
 // then create a Square-hosted payment link for exactly that total and redirect
 // the buyer to Square. When Square redirects back (payment done), we verify the
@@ -9,6 +14,7 @@
 //   SQUARE_ACCESS_TOKEN   (access token for the Square account/application)
 //   SQUARE_LOCATION_ID    (the location that receives the payments)
 //   SQUARE_ENV            = "production" | "sandbox"  (default sandbox)
+//   SQUARE_APPLICATION_ID (public app id; required for the on-site card form)
 //
 // NOTE: Square prohibits research peptides; using this for peptide SKUs risks a
 // funds hold / account freeze / MATCH listing. Scope is the owner's decision.
@@ -59,9 +65,116 @@ function prefill(c = {}) {
   return out;
 }
 
-// GET /api/square/config — frontend asks whether to offer Square.
+// GET /api/square/config — frontend asks whether to offer Square. The
+// application id and location id are public by design (the Web Payments SDK
+// needs them in the browser); only the access token is secret.
 export async function squareConfig(request, env) {
-  return json({ enabled: enabled(env), env: env.SQUARE_ENV === 'production' ? 'production' : 'sandbox' });
+  return json({
+    enabled: enabled(env),
+    env: env.SQUARE_ENV === 'production' ? 'production' : 'sandbox',
+    applicationId: enabled(env) ? (env.SQUARE_APPLICATION_ID || null) : null,
+    locationId: enabled(env) ? env.SQUARE_LOCATION_ID : null,
+  });
+}
+
+// Square decline codes → a sentence the buyer can act on.
+const DECLINE_TEXT = {
+  CARD_DECLINED: 'Your card was declined. Please try a different card.',
+  GENERIC_DECLINE: 'Your card was declined. Please try a different card.',
+  INSUFFICIENT_FUNDS: 'Your card was declined for insufficient funds.',
+  CVV_FAILURE: 'The security code (CVV) didn’t match. Please check it and try again.',
+  ADDRESS_VERIFICATION_FAILURE: 'The billing ZIP code didn’t match your card. Please check it and try again.',
+  INVALID_EXPIRATION: 'The expiration date is invalid. Please check it and try again.',
+  CARD_EXPIRED: 'This card has expired. Please use a different card.',
+  INVALID_CARD: 'That card number isn’t valid. Please check it and try again.',
+  TRANSACTION_LIMIT: 'Your card issuer declined this amount. Please try a different card.',
+};
+
+async function refundPayment(env, paymentId, cents) {
+  try {
+    await fetch(`${apiBase(env)}/v2/refunds`, {
+      method: 'POST',
+      headers: headers(env),
+      body: JSON.stringify({
+        idempotency_key: `refund-${paymentId}`,
+        payment_id: paymentId,
+        amount_money: { amount: cents, currency: 'USD' },
+        reason: 'Order could not be recorded',
+      }),
+    });
+  } catch {}
+}
+
+// POST /api/square/pay — on-site card / Apple Pay / Google Pay.
+// Body: the /api/order body + { source_id, expected_total }.
+// Order of operations is what keeps money and records consistent:
+//   1. quote (no write)  2. refuse if it differs from what the buyer saw
+//   3. charge            4. record the order as paid (stock out, emails)
+//   5. if recording fails after the charge, refund — never keep unrecorded money.
+// A declined card writes nothing, so retries don't create junk orders or points.
+export async function squarePay(request, env) {
+  if (!enabled(env)) return json({ error: 'Card payments are not enabled.' }, 503);
+  let b; try { b = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
+  const sourceId = String(b.source_id || '');
+  if (!sourceId) return json({ error: 'Missing card details. Please re-enter your card.' }, 400);
+  const orderBody = { ...b, payment_method: 'square' };
+  delete orderBody.source_id;
+  delete orderBody.expected_total;
+
+  // 1) Authoritative quote.
+  const qResp = await processOrder(orderBody, env, { dryRun: true });
+  let q = {}; try { q = await qResp.json(); } catch {}
+  if (!qResp.ok || !q.ok) return json({ error: q.error || 'Could not price your order.' }, qResp.status || 400);
+  const cents = Math.round(Number(q.total) * 100);
+  if (!(cents > 0)) return json({ error: 'Invalid order total.' }, 400);
+
+  // 2) Never charge a different amount than the buyer was shown.
+  const shown = Math.round(Number(b.expected_total) * 100);
+  if (!Number.isFinite(shown) || Math.abs(shown - cents) > 1) {
+    return json({ error: `Your order total is $${(cents / 100).toFixed(2)}. Please review it and place the order again.`, total: cents / 100 }, 409);
+  }
+
+  // 3) Charge.
+  let pay;
+  try {
+    const r = await fetch(`${apiBase(env)}/v2/payments`, {
+      method: 'POST',
+      headers: headers(env),
+      body: JSON.stringify({
+        source_id: sourceId,
+        idempotency_key: crypto.randomUUID(),
+        amount_money: { amount: cents, currency: 'USD' },
+        location_id: env.SQUARE_LOCATION_ID,
+        autocomplete: true,
+        ...(b.verification_token ? { verification_token: String(b.verification_token) } : {}),
+        ...(b?.customer?.email ? { buyer_email_address: String(b.customer.email).trim() } : {}),
+        note: 'Omen Labs online order',
+      }),
+    });
+    pay = await r.json();
+  } catch (e) {
+    return json({ error: 'Could not reach the payment processor. You were not charged — please try again.' }, 502);
+  }
+  const payment = pay?.payment;
+  if (!payment || payment.status !== 'COMPLETED') {
+    const code = pay?.errors?.[0]?.code;
+    return json({ error: DECLINE_TEXT[code] || 'Your payment could not be completed. You were not charged — please try a different card.', code: code || null }, 402);
+  }
+
+  // 4) Record the order as paid (decrements stock, sends confirmation + owner emails).
+  const rec = await processOrder(orderBody, env, { paid: true, paymentLabel: 'Card — paid (Square)' });
+  let d = {}; try { d = await rec.json(); } catch {}
+  if (!rec.ok || !d.order_number || Math.round(Number(d.total) * 100) !== cents) {
+    // 5) Charged but not recorded (or recorded at a different amount) — refund.
+    await refundPayment(env, payment.id, cents);
+    return json({ error: 'Something went wrong recording your order, so your payment was refunded. Please try again.' }, 500);
+  }
+
+  try { await env.DB.prepare('ALTER TABLE orders ADD COLUMN square_payment_id TEXT').run(); } catch {}
+  try { await env.DB.prepare('ALTER TABLE orders ADD COLUMN square_order_id TEXT').run(); } catch {}
+  try { await env.DB.prepare('UPDATE orders SET square_payment_id=?, square_order_id=? WHERE order_number=?').bind(payment.id, payment.order_id || null, d.order_number).run(); } catch {}
+
+  return json({ ok: true, order_number: d.order_number, status_token: d.status_token, total: cents / 100 });
 }
 
 // POST /api/square/create — same body as /api/order. Creates a pending order +
