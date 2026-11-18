@@ -15,6 +15,13 @@
   "triggers": {
     "crons": ["*/2 * * * *"]
   },
+  // Non-secret runtime vars (mirrored from the Cloudflare dashboard so git
+  // deploys keep them in sync). SQUARE_ACCESS_TOKEN stays a dashboard SECRET —
+  // never put it here. Flip SQUARE_ENV to "production" (+ prod location id) to go live.
+  "vars": {
+    "SQUARE_ENV": "sandbox",
+    "SQUARE_LOCATION_ID": "L8DE5MMO5TRYZ"
+  },
   "d1_databases": [
     {
       "binding": "DB",
