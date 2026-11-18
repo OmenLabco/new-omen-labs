@@ -84,7 +84,8 @@ export async function squareCreate(request, env) {
   if (!url) {
     // Couldn't start Square — cancel the pending order so it doesn't linger.
     try { await env.DB.prepare("UPDATE orders SET status='cancelled' WHERE order_number=?").bind(order_number).run(); } catch {}
-    return json({ error: 'Could not start Square checkout.' }, 502);
+    const detail = link?.errors || link?._error || null;
+    return json({ error: 'Could not start Square checkout.', detail }, 502);
   }
   // Remember the Square order id so the return step can verify payment.
   try { await env.DB.prepare('ALTER TABLE orders ADD COLUMN square_order_id TEXT').run(); } catch {}
