@@ -99,6 +99,10 @@ export async function squareCreate(request, env) {
           checkout_options: {
             redirect_url,
             ask_for_shipping_address: false,
+            // Discounts are applied on our checkout; a Square-side coupon would break
+            // the amount check in squareReturn.
+            enable_coupon: false,
+            enable_loyalty: false,
             // Wallets appear only where the device supports them (Apple Pay = Safari/Apple devices).
             accepted_payment_methods: { apple_pay: true, google_pay: true, cash_app_pay: true, afterpay_clearpay: false },
           },
