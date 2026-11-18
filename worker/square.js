@@ -125,7 +125,10 @@ export async function squareReturn(request, env) {
     return redirect(`${SITE}/order-confirmed?order=${encodeURIComponent(o)}&paid=1`);
   }
 
-  // Verify the Square order actually completed, and that its amount matches ours.
+  // Verify the Square order was actually paid, and that its amount matches ours.
+  // A payment-link order can sit in state OPEN with the payment attached (a tender
+  // and nothing left due) rather than flipping to COMPLETED — so confirm by the
+  // tender + amount-due, not just the state.
   let paid = false;
   if (order.square_order_id && enabled(env)) {
     try {
@@ -133,7 +136,10 @@ export async function squareReturn(request, env) {
       const d = await r.json();
       const sq = d?.order;
       const cents = Math.round(Number(order.total) * 100);
-      if (sq && sq.state === 'COMPLETED' && Number(sq.total_money?.amount) === cents) paid = true;
+      const amountOk = sq && Number(sq.total_money?.amount) === cents;
+      const hasTender = Array.isArray(sq?.tenders) && sq.tenders.length > 0;
+      const dueZero = sq?.net_amount_due_money == null || Number(sq.net_amount_due_money.amount) === 0;
+      if (amountOk && (sq.state === 'COMPLETED' || (hasTender && dueZero))) paid = true;
     } catch {}
   }
 
