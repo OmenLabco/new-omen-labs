@@ -4,7 +4,7 @@
 //   DB             - D1 database binding
 //   ADMIN_PASSWORD - secret password for admin access
 
-import { renderImageEmail, renderImageOnlyEmail, sendEmail, renderPayoutReceipt, renderAdminLoginCode } from './email.js';
+import { renderImageEmail, renderImageOnlyEmail, orderSubject, sendEmail, renderPayoutReceipt, renderAdminLoginCode } from './email.js';
 import { signOrder } from './token.js';
 import { safeEqual, issueAdminSession, verifyAdminSession, zelleSecret } from './security.js';
 import { cryptoWatchDebug } from './cryptoWatch.js';
@@ -83,8 +83,10 @@ async function sendStatusEmail(env, order, status) {
   const imageUrl = `${SITE}/api/receipt-image?o=${encodeURIComponent(order.order_number)}&t=${token}&type=status&status=${encodeURIComponent(status)}`;
   await sendEmail(env, {
     to: order.customer_email,
-    subject: `Order ${order.order_number} — ${label}`,
-    html: renderImageEmail({ imageUrl, order: { ...order, items: safeParse(order.items) } }),
+    subject: ['confirmed', 'shipped', 'out_for_delivery', 'delivered'].includes(status)
+      ? orderSubject(order.order_number, status)
+      : `Order ${order.order_number} — ${label}`,
+    html: renderImageEmail({ imageUrl, order: { ...order, items: safeParse(order.items) }, heading: label, status }),
   });
 }
 

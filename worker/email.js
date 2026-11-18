@@ -194,15 +194,46 @@ export function renderOwnerNotification(order) {
 // Image-based email — the receipt is a PNG (immune to Gmail dark-mode inversion).
 // Includes a hidden preheader + a real text summary so it isn't "image-only"
 // (image-only emails get spam-filtered).
-export function renderImageEmail({ imageUrl, order, heading = 'Order Confirmed' }) {
+// The one-line preview a phone shows under the subject. It should read like a
+// message, not a receipt: who it's for, what happened, what's next.
+function previewLine(order, status) {
   const items = Array.isArray(order.items) ? order.items : [];
-  const itemsText = items
-    .map((i) => `${esc(i.product_name || i.name)} × ${esc(i.quantity)} — $${(Number(i.price) * Number(i.quantity)).toFixed(2)}`)
-    .join('<br/>');
+  const names = items.map((i) => `${i.product_name || i.name}${Number(i.quantity) > 1 ? ` ×${i.quantity}` : ''}`);
+  const what = names.length <= 2 ? names.join(' & ') : `${names.slice(0, 2).join(', ')} + ${names.length - 2} more`;
+  const first = String(order.customer_name || '').trim().split(/\s+/)[0];
+  const hi = first ? `, ${first}` : '';
+  const total = `$${Number(order.total || 0).toFixed(2)}`;
+  switch (status) {
+    case 'shipped':
+      return `Your ${what} is on the way${order.tracking_number ? ` · Tracking ${order.tracking_number}` : ''}.`;
+    case 'out_for_delivery':
+      return `Your ${what} is out for delivery and should arrive today.`;
+    case 'delivered':
+      return `Your ${what} was delivered. Thanks for ordering with Omen Labs${hi}.`;
+    default:
+      return `Thanks${hi}! We've got your order: ${what} · ${total}. We'll email tracking as soon as it ships.`;
+  }
+}
+
+// Subject per status. The sender already reads "Omen Labs", so the subject
+// leads with what happened.
+export function orderSubject(orderNumber, status) {
+  const n = `#${orderNumber}`;
+  switch (status) {
+    case 'shipped': return `Your order has shipped 📦 ${n}`;
+    case 'out_for_delivery': return `Out for delivery today 🚚 ${n}`;
+    case 'delivered': return `Delivered ✓ ${n}`;
+    default: return `Order confirmed ✓ ${n}`;
+  }
+}
+
+export function renderImageEmail({ imageUrl, order, heading = 'Order Confirmed', status = 'confirmed' }) {
   // Hidden preheader carries the text content for spam filters / previews,
   // but nothing visible is HTML — so there is no background to invert. The whole
-  // visible email is the PNG, which stays navy in every mode.
-  const preheader = `${esc(heading)} — Order #${esc(order.order_number)}. ${itemsText.replace(/<br\/>/g, ', ')}. Total $${Number(order.total).toFixed(2)}. Questions? support@omenlabs.co`;
+  // visible email is the PNG, which stays navy in every mode. The trailing
+  // spacer stops mail apps from padding the preview with the image's alt text.
+  const spacer = '&#847;&zwnj;&nbsp;'.repeat(90);
+  const preheader = `${esc(previewLine(order, status))}${spacer}`;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -214,7 +245,7 @@ export function renderImageEmail({ imageUrl, order, heading = 'Order Confirmed' 
 <body style="margin:0;padding:0;background:#0a0c14;font-family:-apple-system,Arial,sans-serif">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#0a0c14">${preheader}</div>
   <a href="https://omenlabs.co" style="text-decoration:none;border:0">
-    <img src="${imageUrl}" width="600" alt="${esc(heading)} — Order #${esc(order.order_number)}. Total $${Number(order.total).toFixed(2)}. Questions? support@omenlabs.co" style="display:block;width:100%;max-width:600px;margin:0 auto;border:0" />
+    <img src="${imageUrl}" width="600" alt="${esc(heading)} — Order #${esc(order.order_number)}" style="display:block;width:100%;max-width:600px;margin:0 auto;border:0" />
   </a>
 </body>
 </html>`;

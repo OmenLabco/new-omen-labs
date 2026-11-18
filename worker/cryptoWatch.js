@@ -155,7 +155,7 @@ async function confirmOrder(env, order, payment) {
       const orderObj = { ...order, status: 'confirmed', payment_method: fixedLabel, items };
       await sendEmail(env, {
         to: order.customer_email,
-        subject: `Payment Received — Order Confirmed ${order.order_number}`,
+        subject: `Payment received ✓ #${order.order_number}`,
         html: renderImageEmail({ imageUrl, order: orderObj }),
       });
     } catch {}

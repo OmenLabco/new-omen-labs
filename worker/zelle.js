@@ -103,7 +103,7 @@ export async function reconcilePayment(env, text, opts = {}) {
       const orderObj = { ...order, status: 'confirmed', payment_method: confirmedLabel, items: safeParse(order.items), billing: order.billing ? safeParse(order.billing) : null };
       await sendEmail(env, {
         to: order.customer_email,
-        subject: `Payment Received — Order Confirmed ${order.order_number}`,
+        subject: `Payment received ✓ #${order.order_number}`,
         html: renderImageEmail({ imageUrl, order: orderObj }),
       });
     } catch {}

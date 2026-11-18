@@ -6,7 +6,7 @@
 //   ORDER_TO_EMAIL   - owner notification inbox (default: support@omenlabs.co)
 //   ORDER_FROM_EMAIL - verified sender (default: Omen Labs <orders@omenlabs.co>)
 
-import { renderImageEmail, renderOwnerNotification, sendEmail } from './email.js';
+import { renderImageEmail, renderOwnerNotification, sendEmail, orderSubject } from './email.js';
 import { signOrder, verifyOrder } from './token.js';
 import { priceFor } from './prices.js';
 import { getStockMap, decrementStockForOrder } from './stock.js';
@@ -432,7 +432,7 @@ export async function processOrder(body, env, opts = {}) {
     } else {
       await sendEmail(env, {
         to: customer.email,
-        subject: `Order Confirmed — ${order_number}`,
+        subject: orderSubject(order_number, 'confirmed'),
         html: renderImageEmail({ imageUrl, order }),
       });
     }

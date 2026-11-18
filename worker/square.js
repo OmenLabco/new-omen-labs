@@ -20,7 +20,7 @@
 // funds hold / account freeze / MATCH listing. Scope is the owner's decision.
 import { processOrder } from './order.js';
 import { signOrder, verifyOrder } from './token.js';
-import { renderImageEmail, renderOwnerNotification, sendEmail } from './email.js';
+import { renderImageEmail, renderOwnerNotification, sendEmail, orderSubject } from './email.js';
 import { decrementStockForOrder } from './stock.js';
 
 const SITE = 'https://omenlabs.co';
@@ -299,7 +299,7 @@ export async function squareReturn(request, env) {
     const sig = await signOrder(o, env.ADMIN_PASSWORD);
     const imageUrl = `${SITE}/api/receipt-image?o=${encodeURIComponent(o)}&t=${sig}&type=confirmation`;
     try {
-      await sendEmail(env, { to: order.customer_email, subject: `Order Confirmed — ${o}`, html: renderImageEmail({ imageUrl, order: orderObj }) });
+      await sendEmail(env, { to: order.customer_email, subject: orderSubject(o, 'confirmed'), html: renderImageEmail({ imageUrl, order: orderObj }) });
       await sendEmail(env, {
         to: env.ORDER_TO_EMAIL || 'support@omenlabs.co',
         subject: `New Order ${o} — ${order.customer_name} — $${Number(order.total).toFixed(2)} (Square)`,
