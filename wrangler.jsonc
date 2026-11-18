@@ -20,7 +20,7 @@
   // never put it here. Flip SQUARE_ENV to "production" (+ prod location id) to go live.
   "vars": {
     "SQUARE_ENV": "sandbox",
-    "SQUARE_LOCATION_ID": "L8DE5MMO5TRYZ"
+    "SQUARE_LOCATION_ID": "L8DE5MM05TRYZ"
   },
   "d1_databases": [
     {
