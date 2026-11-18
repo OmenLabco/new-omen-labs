@@ -234,7 +234,10 @@ export default function Checkout() {
   useEffect(() => { fetch('/api/paypal/config').then((r) => r.json()).then(setPaypalCfg).catch(() => {}); }, []);
   // Square — hosted card checkout for the whole catalog (temporary main checkout).
   useEffect(() => { fetch('/api/square/config').then((r) => r.json()).then(setSquareCfg).catch(() => {}); }, []);
-  const squareAvailable = !!squareCfg?.enabled;
+  // In sandbox (test) mode, only reveal Square via the secret ?squaretest=1 link so
+  // real customers never hit a test checkout that declines real cards. Live = always.
+  const squareTestUnlock = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('squaretest') === '1';
+  const squareAvailable = !!(squareCfg?.enabled && (squareCfg?.env === 'production' || squareTestUnlock));
   const paypalEligible = items.length > 0 && items.every((i) => PAYPAL_OK_SKUS.has(i.product_id));
   // In sandbox (test) mode, only reveal PayPal via the secret ?paypaltest=1 link,
   // so real customers never see a test button that can't complete. Live = always.
