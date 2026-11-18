@@ -39,22 +39,6 @@ export async function squareConfig(request, env) {
   return json({ enabled: enabled(env), env: env.SQUARE_ENV === 'production' ? 'production' : 'sandbox' });
 }
 
-// GET /api/square/locations — sandbox-only helper that lists the location ids
-// valid for the configured Square token (so you can set SQUARE_LOCATION_ID right).
-// Disabled in production (404) — it only ever exposes throwaway sandbox data.
-export async function squareLocations(request, env) {
-  if (!enabled(env)) return json({ error: 'Square is not enabled.' }, 503);
-  if (env.SQUARE_ENV === 'production') return json({ error: 'Not found' }, 404);
-  try {
-    const r = await fetch(`${apiBase(env)}/v2/locations`, { headers: headers(env) });
-    const d = await r.json();
-    const locations = (d?.locations || []).map((l) => ({ id: l.id, name: l.name, status: l.status, currency: l.currency }));
-    return json({ configured: env.SQUARE_LOCATION_ID, locations, errors: d?.errors || null });
-  } catch (e) {
-    return json({ error: String(e) }, 502);
-  }
-}
-
 // POST /api/square/create — same body as /api/order. Creates a pending order +
 // a Square payment link; returns { url, order_number } for the client to redirect.
 export async function squareCreate(request, env) {

@@ -56,7 +56,7 @@ import { recordPresence, liveStats, socialProof } from './presence.js';
 import { recordCheckoutReached, funnelStats, returningStats } from './funnel.js';
 import { recordPageview, trafficStats } from './traffic.js';
 import { paypalConfig, paypalCreate, paypalCapture } from './paypal.js';
-import { squareConfig, squareCreate, squareReturn, squareLocations } from './square.js';
+import { squareConfig, squareCreate, squareReturn } from './square.js';
 import { createPaymentSession, paymentCallback, paymentStatus } from './payment.js';
 import { handleIncomingEmail } from './emailIn.js';
 
@@ -178,9 +178,6 @@ async function route(request, env, url, pathname, method) {
     }
     if (pathname === '/api/square/return') {
       return squareReturn(request, env);
-    }
-    if (pathname === '/api/square/locations') {
-      return squareLocations(request, env);
     }
     if (pathname === '/api/admin/funnel') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
