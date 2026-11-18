@@ -56,6 +56,7 @@ import { recordPresence, liveStats, socialProof } from './presence.js';
 import { recordCheckoutReached, funnelStats, returningStats } from './funnel.js';
 import { recordPageview, trafficStats } from './traffic.js';
 import { paypalConfig, paypalCreate, paypalCapture } from './paypal.js';
+import { squareConfig, squareCreate, squareReturn } from './square.js';
 import { createPaymentSession, paymentCallback, paymentStatus } from './payment.js';
 import { handleIncomingEmail } from './emailIn.js';
 
@@ -167,6 +168,16 @@ async function route(request, env, url, pathname, method) {
     if (pathname === '/api/paypal/capture') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
       return paypalCapture(request, env);
+    }
+    if (pathname === '/api/square/config') {
+      return squareConfig(request, env);
+    }
+    if (pathname === '/api/square/create') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return squareCreate(request, env);
+    }
+    if (pathname === '/api/square/return') {
+      return squareReturn(request, env);
     }
     if (pathname === '/api/admin/funnel') {
       if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 });

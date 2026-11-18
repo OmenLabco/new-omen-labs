@@ -12,10 +12,15 @@ function readLastOrder() {
 export default function OrderConfirmed() {
   const loc = useLocation();
   const state = loc.state || readLastOrder() || {};
+  // Square redirects back here with ?order=&paid=1 (or &pending=1) — no route state.
+  const params = new URLSearchParams(loc.search);
+  const qOrder = params.get('order') || '';
+  const qPaid = params.get('paid') === '1';
+  const qPending = params.get('pending') === '1';
   const isZelle = state?.zelle;
   const isCashapp = state?.cashapp;
   const isCrypto = state?.crypto;
-  const orderNumber = state?.orderNumber || '';
+  const orderNumber = state?.orderNumber || qOrder || '';
   const statusToken = state?.statusToken || '';
   const total = typeof state?.total === 'number' ? state.total : null;
   const handle = state?.handle || '“omenlabs” — Zelle to (509) 842-7930';
@@ -60,7 +65,7 @@ export default function OrderConfirmed() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canPoll, orderNumber, statusToken]);
 
-  const paid = state?.paid || (liveStatus && liveStatus !== 'awaiting_payment');
+  const paid = state?.paid || qPaid || (liveStatus && liveStatus !== 'awaiting_payment');
 
   const noteWord = isZelle ? 'memo' : isCrypto ? 'transaction' : 'note';
   const supportHref = `mailto:support@omenlabs.co?subject=${encodeURIComponent(`Payment help — ${orderNumber || 'my order'}`)}`;
@@ -282,6 +287,31 @@ export default function OrderConfirmed() {
         <div className="flex flex-col sm:flex-row gap-3 justify-center mt-7">
           <Button asChild variant="outline"><Link to="/account">View My Orders</Link></Button>
           <Button asChild><Link to="/catalog">Continue Shopping</Link></Button>
+        </div>
+      </Wrap>
+    );
+  }
+
+  // ---- Square: returned without a completed payment ----
+  if (qPending && !paid) {
+    return (
+      <Wrap>
+        <div className="h-20 w-20 rounded-full bg-amber-500/10 border border-amber-500/25 flex items-center justify-center mx-auto mb-6">
+          <Clock className="h-10 w-10 text-amber-500" />
+        </div>
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <div className="h-px w-6 bg-amber-500" />
+          <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-amber-600">Payment Not Completed</span>
+          <div className="h-px w-6 bg-amber-500" />
+        </div>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">Your card payment didn't finish</h1>
+        <p className="text-muted-foreground leading-relaxed mb-2">
+          Order <span className="font-semibold text-foreground">{orderNumber}</span> is saved but not paid yet. If you closed the card page or it was declined, you can try again — you won't be charged twice.
+        </p>
+        {paymentHelp}
+        <div className="flex flex-col sm:flex-row gap-3 justify-center mt-7">
+          <Button asChild><Link to="/checkout">Return to Checkout</Link></Button>
+          <Button asChild variant="outline"><Link to="/catalog">Continue Shopping</Link></Button>
         </div>
       </Wrap>
     );

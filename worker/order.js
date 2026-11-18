@@ -274,6 +274,7 @@ export async function processOrder(body, env, opts = {}) {
   let total = +(subtotal - discount + shipping_cost).toFixed(2);
   const isZelle = payment_method === 'zelle';
   const isCashapp = payment_method === 'cashapp';
+  const isSquare = payment_method === 'square';
   // Crypto: nudge the total by a few cents so it's UNIQUE among open awaiting
   // crypto orders — lets the on-chain watcher map a payment to exactly one order.
   if (isCrypto && env.DB) {
@@ -287,7 +288,7 @@ export async function processOrder(body, env, opts = {}) {
       }
     } catch {}
   }
-  const paymentLabel = opts.paid ? (opts.paymentLabel || 'Paid') : (isZelle ? 'Zelle — awaiting payment' : isCashapp ? 'Cash App — awaiting payment' : isCrypto ? 'Crypto — awaiting payment' : 'Manual — invoice to follow');
+  const paymentLabel = opts.paid ? (opts.paymentLabel || 'Paid') : (isZelle ? 'Zelle — awaiting payment' : isCashapp ? 'Cash App — awaiting payment' : isCrypto ? 'Crypto — awaiting payment' : isSquare ? 'Square — awaiting payment' : 'Manual — invoice to follow');
   // New orders start awaiting payment (Zelle/Cash App/crypto auto-reconcile;
   // manual/invoice marked paid by admin). opts.paid = already captured (PayPal).
   const orderStatus = opts.paid ? 'confirmed' : 'awaiting_payment';
@@ -399,8 +400,10 @@ export async function processOrder(body, env, opts = {}) {
   // Already-paid (PayPal capture): subtract stock now, just like a confirmed order.
   if (opts.paid) { try { await decrementStockForOrder(env, { order_number, items, stock_decremented: 0 }); } catch {} }
 
-  // 2) Emails via Resend (best effort — order is already saved)
-  if (env.RESEND_API_KEY) {
+  // 2) Emails via Resend (best effort — order is already saved).
+  // opts.silent suppresses them — used when an order is created pending an
+  // off-site redirect (Square), so the customer is emailed only once paid.
+  if (env.RESEND_API_KEY && !opts.silent) {
     const ownerInbox = env.ORDER_TO_EMAIL || 'support@omenlabs.co';
     const token = await signOrder(order_number, env.ADMIN_PASSWORD);
     const imageUrl = `${SITE}/api/receipt-image?o=${encodeURIComponent(order_number)}&t=${token}&type=confirmation`;
@@ -442,5 +445,5 @@ export async function processOrder(body, env, opts = {}) {
   }
 
   const status_token = await signOrder(order_number, env.ADMIN_PASSWORD);
-  return json({ ok: true, order_number, points_earned: pointsEarned, points_redeemed: pointsRedeemed, status_token });
+  return json({ ok: true, order_number, total, points_earned: pointsEarned, points_redeemed: pointsRedeemed, status_token });
 }

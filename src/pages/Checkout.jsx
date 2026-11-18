@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Package, Loader2, Check, Bitcoin, Receipt, Truck, Zap, Store, ShieldCheck, Copy, X } from 'lucide-react';
+import { ArrowLeft, Package, Loader2, Check, Bitcoin, Receipt, Truck, Zap, Store, ShieldCheck, Copy, X, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cart } from '@/lib/cart';
 import { adminAuth } from '@/lib/adminApi';
@@ -34,6 +34,7 @@ const PAY_META = {
   crypto:  { Icon: Bitcoin, tile: 'bg-gradient-to-br from-amber-400 to-orange-600', sel: 'border-amber-400 bg-amber-500/[0.06] ring-1 ring-amber-400/40' },
   manual:  { Icon: Receipt, tile: 'bg-gradient-to-br from-slate-400 to-slate-600',  sel: 'border-primary bg-primary/[0.05] ring-1 ring-primary/40' },
   paypal:  { glyph: 'P', tile: 'bg-gradient-to-br from-sky-500 to-indigo-700',      sel: 'border-sky-400 bg-sky-500/[0.06] ring-1 ring-sky-400/40' },
+  square:  { Icon: CreditCard, tile: 'bg-gradient-to-br from-slate-700 to-black',   sel: 'border-foreground bg-foreground/[0.06] ring-1 ring-foreground/30' },
 };
 const SHIP_META = { ground: Truck, first: Zap, pickup: Store };
 
@@ -134,6 +135,7 @@ export default function Checkout() {
   const [billingSame, setBillingSame] = useState(true);
   const [payment, setPayment] = useState('');
   const [paypalCfg, setPaypalCfg] = useState(null);
+  const [squareCfg, setSquareCfg] = useState(null);
   const [copiedPay, setCopiedPay] = useState('');
   const copyPay = (key, text) => { navigator.clipboard?.writeText(text); setCopiedPay(key); setTimeout(() => setCopiedPay(''), 1500); };
   const [shipMethod, setShipMethod] = useState('');
@@ -230,6 +232,9 @@ export default function Checkout() {
   // PayPal — only for carts made up entirely of PayPal-safe supplies, and only
   // when configured. (Peptides are never eligible.)
   useEffect(() => { fetch('/api/paypal/config').then((r) => r.json()).then(setPaypalCfg).catch(() => {}); }, []);
+  // Square — hosted card checkout for the whole catalog (temporary main checkout).
+  useEffect(() => { fetch('/api/square/config').then((r) => r.json()).then(setSquareCfg).catch(() => {}); }, []);
+  const squareAvailable = !!squareCfg?.enabled;
   const paypalEligible = items.length > 0 && items.every((i) => PAYPAL_OK_SKUS.has(i.product_id));
   // In sandbox (test) mode, only reveal PayPal via the secret ?paypaltest=1 link,
   // so real customers never see a test button that can't complete. Live = always.
@@ -310,6 +315,38 @@ export default function Checkout() {
     if (!shipMethod) { setError('Please choose a shipping method.'); return; }
     if (!payment) { setError('Please choose a payment method.'); return; }
     setSubmitting(true);
+
+    // Square: create the order + a hosted payment link, then redirect to Square.
+    if (payment === 'square') {
+      try {
+        const resp = await fetch('/api/square/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer: { ...form, notes },
+            items,
+            shipping_method: shipMethod,
+            affiliate_code: affiliate ? affiliate.code : null,
+            customer_token: customerAuth.token() || null,
+            points_to_redeem: pointsToRedeem,
+            billing: billingSame ? null : billing,
+            sid: sessionStorage.getItem('omenlabs_sid') || null,
+          }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.url) throw new Error(data.error || 'Could not start card checkout.');
+        // Remember the order so the confirmation page can show it after redirect-back.
+        try { sessionStorage.setItem('omenlabs_last_order', JSON.stringify({ orderNumber: data.order_number || '', total: Number(data.total ?? total) })); } catch {}
+        cart.clear();
+        window.location.href = data.url;
+        return;
+      } catch (err) {
+        setError(err.message);
+        setSubmitting(false);
+        return;
+      }
+    }
+
     try {
       const resp = await fetch('/api/order', {
         method: 'POST',
@@ -525,6 +562,7 @@ export default function Checkout() {
           <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-5">Payment Method</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
+              ...(squareAvailable ? [{ id: 'square', title: 'Credit / Debit Card', desc: 'Secure checkout via Square', badge: 'Card' }] : []),
               { id: 'cashapp', title: 'Cash App', desc: 'Pay to $omenlabs', badge: 'Auto-confirm' },
               { id: 'zelle', title: 'Zelle', desc: 'Pay from your bank', badge: 'Auto-confirm' },
               { id: 'crypto', title: 'Crypto', desc: 'USDC · USDT · BTC', badge: '10% off', badgeTone: 'save' },
