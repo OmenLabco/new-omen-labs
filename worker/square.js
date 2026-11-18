@@ -84,30 +84,38 @@ export async function squareCreate(request, env) {
   // 2) Create the Square-hosted payment link for exactly that total.
   const sig = await signOrder(order_number, env.ADMIN_PASSWORD);
   const redirect_url = `${SITE}/api/square/return?o=${encodeURIComponent(order_number)}&t=${sig}`;
-  let link;
-  try {
-    const r = await fetch(`${apiBase(env)}/v2/online-checkout/payment-links`, {
-      method: 'POST',
-      headers: headers(env),
-      body: JSON.stringify({
-        idempotency_key: `${order_number}`,
-        quick_pay: {
-          name: `Omen Labs — Order ${order_number}`,
-          price_money: { amount: cents, currency: 'USD' },
-          location_id: env.SQUARE_LOCATION_ID,
-        },
-        checkout_options: {
-          redirect_url,
-          ask_for_shipping_address: false,
-          // Wallets appear only where the device supports them (Apple Pay = Safari/Apple devices).
-          accepted_payment_methods: { apple_pay: true, google_pay: true, cash_app_pay: true, afterpay_clearpay: false },
-        },
-        pre_populated_data: prefill(b?.customer),
-      }),
-    });
-    link = await r.json();
-  } catch (e) {
-    link = { _error: String(e) };
+  const createLink = async (prefillData, key) => {
+    try {
+      const r = await fetch(`${apiBase(env)}/v2/online-checkout/payment-links`, {
+        method: 'POST',
+        headers: headers(env),
+        body: JSON.stringify({
+          idempotency_key: key,
+          quick_pay: {
+            name: `Omen Labs — Order ${order_number}`,
+            price_money: { amount: cents, currency: 'USD' },
+            location_id: env.SQUARE_LOCATION_ID,
+          },
+          checkout_options: {
+            redirect_url,
+            ask_for_shipping_address: false,
+            // Wallets appear only where the device supports them (Apple Pay = Safari/Apple devices).
+            accepted_payment_methods: { apple_pay: true, google_pay: true, cash_app_pay: true, afterpay_clearpay: false },
+          },
+          ...(prefillData ? { pre_populated_data: prefillData } : {}),
+        }),
+      });
+      return await r.json();
+    } catch (e) {
+      return { _error: String(e) };
+    }
+  };
+  let link = await createLink(prefill(b?.customer), order_number);
+  // Pre-fill is a convenience: if Square rejects one of those fields (e.g. an
+  // email it considers invalid), retry bare rather than losing the sale.
+  const prefillRejected = (link?.errors || []).some((e) => String(e.field || '').startsWith('pre_populated_data'));
+  if (!link?.payment_link?.url && prefillRejected) {
+    link = await createLink(null, `${order_number}-np`);
   }
   const url = link?.payment_link?.url;
   const squareOrderId = link?.payment_link?.order_id;
