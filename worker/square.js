@@ -34,6 +34,31 @@ const headers = (env) => ({
 
 function safeParse(s) { try { return JSON.parse(s); } catch { return []; } }
 
+// Pre-fill Square's contact form from what the customer already typed on our
+// checkout. Phone is only sent when it normalizes to E.164 — Square rejects the
+// whole link on a malformed number, so a bad phone must be dropped, not passed.
+function prefill(c = {}) {
+  const out = {};
+  if (c.email) out.buyer_email = String(c.email).trim();
+  const digits = String(c.phone || '').replace(/\D/g, '');
+  if (digits.length === 10) out.buyer_phone_number = `+1${digits}`;
+  else if (digits.length === 11 && digits.startsWith('1')) out.buyer_phone_number = `+${digits}`;
+  if (c.address && c.city && c.zip) {
+    const [first, ...rest] = String(c.name || '').trim().split(/\s+/);
+    out.buyer_address = {
+      address_line_1: c.address,
+      ...(c.address2 ? { address_line_2: c.address2 } : {}),
+      locality: c.city,
+      ...(c.state ? { administrative_district_level_1: c.state } : {}),
+      postal_code: c.zip,
+      country: 'US',
+      ...(first ? { first_name: first } : {}),
+      ...(rest.length ? { last_name: rest.join(' ') } : {}),
+    };
+  }
+  return out;
+}
+
 // GET /api/square/config — frontend asks whether to offer Square.
 export async function squareConfig(request, env) {
   return json({ enabled: enabled(env), env: env.SQUARE_ENV === 'production' ? 'production' : 'sandbox' });
@@ -71,8 +96,13 @@ export async function squareCreate(request, env) {
           price_money: { amount: cents, currency: 'USD' },
           location_id: env.SQUARE_LOCATION_ID,
         },
-        checkout_options: { redirect_url, ask_for_shipping_address: false },
-        pre_populated_data: { buyer_email: b?.customer?.email || undefined },
+        checkout_options: {
+          redirect_url,
+          ask_for_shipping_address: false,
+          // Wallets appear only where the device supports them (Apple Pay = Safari/Apple devices).
+          accepted_payment_methods: { apple_pay: true, google_pay: true, cash_app_pay: true, afterpay_clearpay: false },
+        },
+        pre_populated_data: prefill(b?.customer),
       }),
     });
     link = await r.json();
