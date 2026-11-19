@@ -325,33 +325,6 @@ export async function sendCreditEmail(request, env) {
   return json({ ok: true, sentTo: cust.email, copyTo: OWNER_REVIEW_EMAIL, dollars, points, customerSent, ownerSent });
 }
 
-// POST /api/email-previews — TEMPORARY: mails one of each customer order email
-// (confirmed / shipped / out for delivery / delivered) to the owner's review inbox
-// only. The recipient is fixed, so it can't be used to mail anyone else; it is
-// also tightly rate-limited. Remove once the owner has reviewed them.
-export async function sendEmailPreviews(request, env) {
-  if (!env.RESEND_API_KEY || !env.DB) return json({ error: 'Email is not configured.' }, 500);
-  let order = await env.DB.prepare('SELECT * FROM orders WHERE order_number = ?').bind('OMEN-LDCLMI').first();
-  if (!order) order = await env.DB.prepare('SELECT * FROM orders ORDER BY id DESC LIMIT 1').first();
-  if (!order) return json({ error: 'No order to use as a sample.' }, 404);
-  const items = safeParse(order.items);
-  const sig = await signOrder(order.order_number, env.ADMIN_PASSWORD);
-  const sent = [];
-  for (const status of ['confirmed', 'shipped', 'out_for_delivery', 'delivered']) {
-    const type = status === 'confirmed' ? 'type=confirmation' : `type=status&status=${status}`;
-    const imageUrl = `${SITE}/api/receipt-image?o=${encodeURIComponent(order.order_number)}&t=${sig}&${type}`;
-    const label = status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-    const sample = { ...order, items, tracking_number: order.tracking_number || (status === 'confirmed' ? '' : '1Z999AA10123456784') };
-    const ok = await sendEmail(env, {
-      to: OWNER_REVIEW_EMAIL,
-      subject: orderSubject(order.order_number, status),
-      html: renderImageEmail({ imageUrl, order: sample, heading: status === 'confirmed' ? 'Order Confirmed' : label, status }),
-    });
-    sent.push({ status, ok });
-  }
-  return json({ ok: true, sample_order: order.order_number, sent });
-}
-
 // POST /api/admin/customers/delete — permanently remove a customer account
 export async function deleteCustomer(request, env) {
   if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);

@@ -20,14 +20,21 @@ export async function safeEqual(a, b) {
 // Balanced Content-Security-Policy: scripts/connections only from our own
 // origin, Google Fonts allowed, inline styles allowed (Tailwind/framer-motion
 // need them), site cannot be framed (clickjacking), no plugins, forms stay local.
+// Payment providers are the only third parties: PayPal, and Square's Web
+// Payments SDK (card iframes, PCI tokenization, 3-D Secure via Cardinal) plus
+// Google Pay. Without these the on-site card form silently fails to load.
+const SQUARE_JS = 'https://*.squarecdn.com https://js.squareup.com https://js.squareupsandbox.com';
+const SQUARE_CONNECT = 'https://pci-connect.squareup.com https://pci-connect.squareupsandbox.com https://o160250.ingest.sentry.io';
+const SQUARE_FRAMES = 'https://*.squarecdn.com https://api.squareup.com https://api.squareupsandbox.com https://geoissuer.cardinalcommerce.com https://geostag.cardinalcommerce.com https://geo.cardinalcommerce.com https://1eafstag.cardinalcommerce.com https://centinelapi.cardinalcommerce.com';
+const GPAY = 'https://pay.google.com';
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' https://*.paypal.com https://*.paypalobjects.com",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com data:",
-  "img-src 'self' data: blob: https://*.paypal.com https://*.paypalobjects.com",
-  "connect-src 'self' https://*.paypal.com https://*.paypalobjects.com",
-  "frame-src https://*.paypal.com https://*.paypalobjects.com",
+  `script-src 'self' https://*.paypal.com https://*.paypalobjects.com ${SQUARE_JS} ${GPAY}`,
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.squarecdn.com https://d1g145x70srn7h.cloudfront.net",
+  "font-src 'self' https://fonts.gstatic.com data: https://*.squarecdn.com https://d1g145x70srn7h.cloudfront.net",
+  `img-src 'self' data: blob: https://*.paypal.com https://*.paypalobjects.com https://*.squarecdn.com ${GPAY} https://www.gstatic.com`,
+  `connect-src 'self' https://*.paypal.com https://*.paypalobjects.com ${SQUARE_CONNECT} ${GPAY}`,
+  `frame-src https://*.paypal.com https://*.paypalobjects.com ${SQUARE_FRAMES} ${GPAY}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -40,9 +47,13 @@ const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Permissions-Policy': 'geolocation=(), microphone=(), camera=(), payment=(), usb=()',
+  // payment=(self …) — Apple Pay / Google Pay need the Payment Request API; an
+  // empty allowlist switches it off for our own checkout.
+  'Permissions-Policy': 'geolocation=(), microphone=(), camera=(), payment=(self "https://pay.google.com" "https://web.squarecdn.com"), usb=()',
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
-  'Cross-Origin-Opener-Policy': 'same-origin',
+  // allow-popups: payment pop-ups we open (Google Pay fallback, PayPal) must be
+  // able to report back to this page; same-origin severed that link.
+  'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
   'X-DNS-Prefetch-Control': 'off',
 };
 
