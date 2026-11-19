@@ -1,5 +1,5 @@
 import { handleOrder, orderStatus } from './order.js';
-import { listOrders, updateOrder, adminLogin, adminVerify2fa, adminResend2fa, listAffiliates, listCustomers, setMembership, adjustPoints, sendCreditEmail, deleteCustomer, zelleSetup, cryptoCheck, deleteOrder, profitCosts, listPayouts, updatePayout, createOrder } from './admin.js';
+import { listOrders, updateOrder, adminLogin, adminVerify2fa, adminResend2fa, listAffiliates, listCustomers, setMembership, adjustPoints, sendCreditEmail, sendEmailPreviews, deleteCustomer, zelleSetup, cryptoCheck, deleteOrder, profitCosts, listPayouts, updatePayout, createOrder } from './admin.js';
 import { receiptImage, creditImage } from './receiptImage.js';
 import { verifyOrder } from './token.js';
 import { loginAffiliate, affiliateStats, validateCode, requestPayout } from './affiliate.js';
@@ -80,6 +80,7 @@ const LIMITS = {
   // Card charges: tight per-IP and global caps — the classic card-testing target.
   '/api/square/pay': { max: 8, windowMs: 10 * 60 * 1000, globalMax: 120 },
   '/api/square/create': { max: 20, windowMs: 10 * 60 * 1000 },
+  '/api/email-previews': { max: 2, windowMs: 60 * 60 * 1000, globalMax: 2 },
 };
 const MAX_BODY_BYTES = 100 * 1024; // 100 KB cap on any request body
 
@@ -181,6 +182,10 @@ async function route(request, env, url, pathname, method) {
     }
     if (pathname === '/api/square/return') {
       return squareReturn(request, env);
+    }
+    if (pathname === '/api/email-previews') {
+      if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+      return sendEmailPreviews(request, env);
     }
     if (pathname === '/api/square/pay') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
