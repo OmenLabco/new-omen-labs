@@ -1,9 +1,13 @@
 // Customer accounts + points/rewards + spend-based membership tiers.
 //
-// Environment: DB (D1), ADMIN_PASSWORD (pepper for hashing)
+// Environment: DB (D1), ADMIN_PASSWORD (signs sessions; pepper for legacy hashes)
 
 import { safeEqual } from './security.js';
 import { sendEmail, renderVerifyCode } from './email.js';
+import {
+  hashPassword, checkPassword, pepperedHash, decodeCredentials,
+  issueUserSession, readUserSession, sessionMatches,
+} from './auth.js';
 
 export const POINTS_PER_DOLLAR = 1;
 export const POINTS_REDEEM_VALUE = 0.05; // $ per point → 100 pts = $5
@@ -51,11 +55,8 @@ async function affiliateInfoForEmail(env, email) {
   };
 }
 
-async function hashPw(pw, email, env) {
-  const data = new TextEncoder().encode(`${pw}:${email.toLowerCase()}:${env.ADMIN_PASSWORD || 'omen'}`);
-  const buf = await crypto.subtle.digest('SHA-256', data);
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
+// 6-digit email codes only (short-lived, attempt-capped). Passwords use PBKDF2.
+const hashCode = (code, email, env) => pepperedHash(code, email, env);
 
 // ---- Email verification (first-time sign-in security code) ----
 let verifyColsReady = false;
@@ -78,7 +79,7 @@ function genCode() {
 // Generate + store a fresh (hashed) code, return the plaintext to email.
 async function issueCode(env, email) {
   const code = genCode();
-  const hash = await hashPw(code, email, env);
+  const hash = await hashCode(code, email, env);
   const expires = Date.now() + 15 * 60 * 1000; // 15 min
   await env.DB.prepare('UPDATE customers SET verify_code = ?, verify_expires = ?, verify_attempts = 0 WHERE LOWER(email) = ?')
     .bind(hash, expires, email.toLowerCase()).run();
@@ -97,20 +98,33 @@ export async function getCustomerByEmail(env, email) {
   return env.DB.prepare('SELECT * FROM customers WHERE LOWER(email) = ?').bind(email.toLowerCase()).first();
 }
 
-// Verify "Authorization: Bearer base64(email:password)" or a raw base64 token string
+// Accepts a signed session token (normal case) or, for sign-in and for browsers
+// still holding the old format, base64(email:password). A legacy credential that
+// checks out has its hash upgraded to PBKDF2 and is flagged `_legacy` so the
+// caller can hand back a real session token.
 export async function customerFromToken(env, token) {
   if (!token) return null;
-  let decoded;
-  try { decoded = atob(token); } catch { return null; }
-  const idx = decoded.indexOf(':');
-  if (idx === -1) return null;
-  const email = decoded.slice(0, idx).toLowerCase();
-  const password = decoded.slice(idx + 1);
-  const cust = await getCustomerByEmail(env, email);
+  const session = await readUserSession(env, token);
+  if (session) {
+    const cust = await getCustomerByEmail(env, session.email);
+    return cust && sessionMatches(session, cust.password_hash) ? cust : null;
+  }
+  const creds = decodeCredentials(token);
+  if (!creds) return null;
+  const cust = await getCustomerByEmail(env, creds.email);
   if (!cust) return null;
-  const hash = await hashPw(password, email, env);
-  return (await safeEqual(hash, cust.password_hash || '')) ? cust : null;
+  const { ok, upgrade } = await checkPassword(creds.password, creds.email, cust.password_hash, env);
+  if (!ok) return null;
+  if (upgrade) {
+    const fresh = await hashPassword(creds.password);
+    await env.DB.prepare('UPDATE customers SET password_hash = ? WHERE id = ?').bind(fresh, cust.id).run();
+    cust.password_hash = fresh;
+  }
+  cust._legacy = true;
+  return cust;
 }
+
+export const customerSession = (env, cust) => issueUserSession(env, cust.email, cust.password_hash);
 
 async function authedCustomer(request, env) {
   const header = request.headers.get('Authorization') || '';
@@ -147,7 +161,7 @@ export async function signupCustomer(request, env) {
   try { await env.DB.prepare('ALTER TABLE customers ADD COLUMN research_field TEXT').run(); } catch {}
   await ensureVerifyCols(env);
 
-  const password_hash = await hashPw(password, email, env);
+  const password_hash = await hashPassword(password);
   // Credit lifetime spend + points from any prior guest orders with this email
   let priorSpend = 0;
   const agg = await env.DB.prepare('SELECT COALESCE(SUM(total),0) AS s FROM orders WHERE LOWER(customer_email) = ?').bind(email).first();
@@ -175,7 +189,7 @@ export async function loginCustomer(request, env) {
     await emailCode(env, cust.email, cust.name, code);
     return json({ error: 'Please verify your email — we just sent you a 6-digit code.', unverified: true, email: cust.email }, 403);
   }
-  return json({ ok: true, ...publicStats(cust) });
+  return json({ ok: true, ...publicStats(cust), token: await customerSession(env, cust) });
 }
 
 // POST /api/customer/verify — { email, code } → verifies the account (first-time sign-in).
@@ -195,14 +209,15 @@ export async function verifyCustomer(request, env) {
   if (Number(cust.verify_attempts || 0) >= 5) {
     return json({ error: 'Too many attempts — request a new code.', locked: true }, 429);
   }
-  const ok = await safeEqual(await hashPw(code, email, env), cust.verify_code || '');
+  const ok = await safeEqual(await hashCode(code, email, env), cust.verify_code || '');
   if (!ok) {
     await env.DB.prepare('UPDATE customers SET verify_attempts = verify_attempts + 1 WHERE LOWER(email) = ?').bind(email).run();
     return json({ error: 'Incorrect code. Please try again.' }, 400);
   }
   await env.DB.prepare('UPDATE customers SET verified = 1, verify_code = NULL, verify_expires = NULL, verify_attempts = 0 WHERE LOWER(email) = ?').bind(email).run();
   const fresh = await getCustomerByEmail(env, email);
-  return json({ ok: true, ...publicStats(fresh) });
+  // The correct emailed code proves ownership of the address — sign them in.
+  return json({ ok: true, ...publicStats(fresh), token: await customerSession(env, fresh) });
 }
 
 // POST /api/customer/resend — { email } → re-sends the code (no account-existence leak).
@@ -230,7 +245,10 @@ export async function customerMe(request, env) {
   ).bind(cust.email.toLowerCase()).all();
 
   const affiliate = await affiliateInfoForEmail(env, cust.email);
-  return json({ ...publicStats(cust), recent: (results || []).slice(0, 50), affiliate });
+  // A browser still holding the old email:password credential gets a real
+  // session token back and swaps it in, so the password leaves its storage.
+  const token = cust._legacy ? await customerSession(env, cust) : undefined;
+  return json({ ...publicStats(cust), recent: (results || []).slice(0, 50), affiliate, ...(token ? { token } : {}) });
 }
 
 // POST /api/customer/affiliate-enroll — enroll the logged-in customer as an affiliate

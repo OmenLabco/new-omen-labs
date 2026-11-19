@@ -364,7 +364,8 @@ export async function processOrder(body, env, opts = {}) {
       // Count a promo-code redemption (for usage limits / reporting)
       if (promoCode) await incrementPromoUse(env, promoCode);
     } catch (e) {
-      return json({ error: 'Failed to save order.', detail: String(e) }, 500);
+      console.error('processOrder: save failed', e); // internal detail stays in logs, not the response
+      return json({ error: 'Failed to save order.' }, 500);
     }
   }
 

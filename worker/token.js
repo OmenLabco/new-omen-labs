@@ -1,8 +1,11 @@
 // Small HMAC token so receipt-image URLs can't be enumerated.
 async function hmac(orderNumber, secret) {
+  // No fallback: a hardcoded key would let anyone mint valid receipt / status /
+  // Square-return links whenever the secret was missing.
+  if (!secret) throw new Error('Server secret is not configured.');
   const key = await crypto.subtle.importKey(
     'raw',
-    new TextEncoder().encode(secret || 'omenlabs'),
+    new TextEncoder().encode(secret),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign']
@@ -16,7 +19,7 @@ export async function signOrder(orderNumber, secret) {
 }
 
 export async function verifyOrder(orderNumber, token, secret) {
-  if (!token) return false;
+  if (!token || !secret) return false;
   const expected = await hmac(orderNumber, secret);
   // constant-time compare to prevent token-guessing via timing
   if (token.length !== expected.length) return false;

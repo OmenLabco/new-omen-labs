@@ -61,26 +61,51 @@ import { createPaymentSession, paymentCallback, paymentStatus } from './payment.
 import { handleIncomingEmail } from './emailIn.js';
 
 // Per-endpoint rate limits (max attempts / window). Keyed by client IP.
+const M10 = 10 * 60 * 1000;
+const M30 = 30 * 60 * 1000;
+const H1 = 60 * 60 * 1000;
+// Every public endpoint that writes to D1, sends email, or calls a paid API is
+// listed here. max = per client IP; globalMax = across ALL IPs, which is what
+// stops a distributed botnet from burning the email quota or the D1 bill.
 const LIMITS = {
-  // globalMax also caps TOTAL attempts across all IPs (catches distributed brute-force).
-  '/api/admin/login': { max: 8, windowMs: 10 * 60 * 1000, globalMax: 40 },
-  '/api/admin/verify-2fa': { max: 20, windowMs: 10 * 60 * 1000, globalMax: 60 },
-  '/api/admin/resend-2fa': { max: 6, windowMs: 30 * 60 * 1000 },
-  '/api/customer/login': { max: 10, windowMs: 10 * 60 * 1000 },
-  '/api/affiliate/login': { max: 10, windowMs: 10 * 60 * 1000 },
-  '/api/customer/signup': { max: 10, windowMs: 60 * 60 * 1000 },
-  '/api/customer/verify': { max: 20, windowMs: 10 * 60 * 1000 },
-  '/api/customer/resend': { max: 6, windowMs: 30 * 60 * 1000 },
-  '/api/affiliate/payout': { max: 12, windowMs: 60 * 60 * 1000 },
-  '/api/subscribe': { max: 20, windowMs: 60 * 60 * 1000 },
-  '/api/restock-notify': { max: 20, windowMs: 60 * 60 * 1000 },
-  '/api/checkout-reached': { max: 30, windowMs: 10 * 60 * 1000 },
-  '/api/order': { max: 40, windowMs: 10 * 60 * 1000 },
-  '/api/pay/session': { max: 40, windowMs: 10 * 60 * 1000 },
-  // Card charges: tight per-IP and global caps — the classic card-testing target.
-  '/api/square/pay': { max: 8, windowMs: 10 * 60 * 1000, globalMax: 120 },
-  '/api/square/create': { max: 20, windowMs: 10 * 60 * 1000 },
+  // Sign-in
+  '/api/admin/login': { max: 8, windowMs: M10, globalMax: 40 },
+  '/api/admin/verify-2fa': { max: 20, windowMs: M10, globalMax: 60 },
+  '/api/admin/resend-2fa': { max: 6, windowMs: M30, globalMax: 20 },
+  '/api/customer/login': { max: 10, windowMs: M10, globalMax: 300 },
+  '/api/affiliate/login': { max: 10, windowMs: M10, globalMax: 300 },
+  '/api/customer/verify': { max: 20, windowMs: M10 },
+  // Send email to an address the caller chooses — capped globally so the Resend
+  // quota (and our sender reputation) can't be burned to block real receipts.
+  '/api/customer/signup': { max: 10, windowMs: H1, globalMax: 60 },
+  '/api/customer/resend': { max: 6, windowMs: M30, globalMax: 60 },
+  '/api/subscribe': { max: 20, windowMs: H1, globalMax: 150 },
+  '/api/restock-notify': { max: 20, windowMs: H1, globalMax: 150 },
+  '/api/order': { max: 20, windowMs: M10, globalMax: 300 },
+  // Money
+  '/api/square/pay': { max: 8, windowMs: M10, globalMax: 120 }, // card-testing target
+  '/api/square/create': { max: 20, windowMs: M10, globalMax: 200 },
+  '/api/square/return': { max: 30, windowMs: M10 },
+  '/api/paypal/create': { max: 20, windowMs: M10 },
+  '/api/paypal/capture': { max: 20, windowMs: M10 },
+  '/api/pay/session': { max: 40, windowMs: M10 },
+  '/api/affiliate/payout': { max: 12, windowMs: H1 },
+  '/api/customer/affiliate-enroll': { max: 10, windowMs: H1 },
+  // Lookups that could be enumerated (promo / affiliate codes, order status)
+  '/api/affiliate/validate': { max: 30, windowMs: M10 },
+  '/api/order/status': { max: 120, windowMs: M10 }, // confirmation page polls every 12s
+  // High-volume analytics writes — generous per visitor, hard ceiling overall
+  '/api/presence': { max: 60, windowMs: M10, globalMax: 20000 },
+  '/api/pageview': { max: 120, windowMs: M10, globalMax: 20000 },
+  '/api/checkout-reached': { max: 30, windowMs: M10 },
+  '/api/cart/sync': { max: 60, windowMs: M10 },
+  // Inbound webhooks (secret-checked too, but don't let them be flooded)
+  '/api/zelle/notify': { max: 60, windowMs: M10 },
+  '/api/shipstation/webhook': { max: 120, windowMs: M10 },
+  '/api/pay/callback': { max: 120, windowMs: M10 },
 };
+// Webhook senders we don't control may stream bodies without Content-Length.
+const NO_LENGTH_OK = new Set(['/api/zelle/notify', '/api/shipstation/webhook', '/api/pay/callback']);
 const MAX_BODY_BYTES = 100 * 1024; // 100 KB cap on any request body
 
 const STATUS_MESSAGE = {
@@ -103,15 +128,21 @@ export default {
 
     // Reject oversized request bodies before doing any work.
     if ((method === 'POST' || method === 'PUT' || method === 'PATCH') && pathname.startsWith('/api/')) {
-      const len = Number(request.headers.get('Content-Length') || 0);
-      if (len > MAX_BODY_BYTES) {
+      const raw = request.headers.get('Content-Length');
+      // Without a length the cap above can't be enforced up front, so browsers
+      // (which always send it) are required to; known webhooks are exempt.
+      if (raw == null && !NO_LENGTH_OK.has(pathname)) {
+        return withSecurity(new Response(JSON.stringify({ error: 'Content-Length required.' }), { status: 411, headers: { 'Content-Type': 'application/json' } }));
+      }
+      const len = Number(raw || 0);
+      if (!Number.isFinite(len) || len > MAX_BODY_BYTES) {
         return withSecurity(new Response(JSON.stringify({ error: 'Request too large.' }), { status: 413, headers: { 'Content-Type': 'application/json' } }));
       }
     }
 
     // Rate-limit sensitive endpoints by client IP.
     const limit = LIMITS[pathname];
-    if (limit && method === 'POST') {
+    if (limit && method !== 'OPTIONS' && method !== 'HEAD') {
       const { allowed, retryAfter } = await rateLimit(env, `${pathname}:${clientIp(request)}`, limit.max, limit.windowMs);
       if (!allowed) return withSecurity(tooMany(retryAfter));
       if (limit.globalMax) {

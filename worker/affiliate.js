@@ -2,10 +2,10 @@
 //
 // Environment:
 //   DB             - D1 database binding
-//   ADMIN_PASSWORD - also used as a pepper for affiliate password hashing
+//   ADMIN_PASSWORD - signs sessions; pepper for legacy (pre-PBKDF2) hashes
 
-import { safeEqual } from './security.js';
 import { getPromo, promoUsable } from './promos.js';
+import { hashPassword, checkPassword, decodeCredentials, issueUserSession, readUserSession, sessionMatches } from './auth.js';
 
 export const NEW_CUSTOMER_DISCOUNT = 0.20;       // 20% off for first-time customers
 export const RETURNING_CUSTOMER_DISCOUNT = 0.10; // 10% off for returning customers
@@ -31,12 +31,6 @@ export async function isNewCustomer(env, email) {
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
-
-async function hashPw(pw, email, env) {
-  const data = new TextEncoder().encode(`${pw}:${email.toLowerCase()}:${env.ADMIN_PASSWORD || 'omen'}`);
-  const buf = await crypto.subtle.digest('SHA-256', data);
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
 
 const normCode = (c = '') => String(c).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 20);
 
@@ -88,34 +82,52 @@ export async function getAffiliateByEmail(env, email) {
 
 export const normalizeCode = normCode;
 
-// Decode "Authorization: Bearer base64(email:password)" and verify
-async function authedAffiliate(request, env) {
-  const header = request.headers.get('Authorization') || '';
-  const token = header.replace(/^Bearer\s+/i, '');
+// Resolves the bearer to { aff, hash } — `hash` is the stored hash that vouched
+// for the caller (the affiliate row's own, or the linked customer account's,
+// since one website login works for both).
+async function resolveAffiliate(request, env) {
+  const token = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
   if (!token) return null;
-  let decoded;
-  try { decoded = atob(token); } catch { return null; }
-  const idx = decoded.indexOf(':');
-  if (idx === -1) return null;
-  const email = decoded.slice(0, idx).toLowerCase();
-  const password = decoded.slice(idx + 1);
-  const aff = await env.DB.prepare('SELECT * FROM affiliates WHERE LOWER(email) = ?').bind(email).first();
+  const cust = (email) => env.DB.prepare('SELECT password_hash FROM customers WHERE LOWER(email) = ?').bind(email).first();
+
+  const session = await readUserSession(env, token);
+  if (session) {
+    const aff = await getAffiliateByEmail(env, session.email);
+    if (!aff) return null;
+    if (sessionMatches(session, aff.password_hash)) return { aff, hash: aff.password_hash };
+    const c = await cust(session.email);
+    return c && sessionMatches(session, c.password_hash) ? { aff, hash: c.password_hash } : null;
+  }
+
+  const creds = decodeCredentials(token);
+  if (!creds) return null;
+  const aff = await getAffiliateByEmail(env, creds.email);
   if (!aff) return null;
-  const hash = await hashPw(password, email, env);
-  if (await safeEqual(hash, aff.password_hash || '')) return aff;
-  // Unified login: the website (customer) account with the same email also works,
-  // so affiliates never need a separate password. Same hashing scheme + pepper.
-  const cust = await env.DB.prepare('SELECT password_hash FROM customers WHERE LOWER(email) = ?').bind(email).first();
-  if (cust && (await safeEqual(hash, cust.password_hash || ''))) return aff;
+  for (const [table, row] of [['affiliates', aff], ['customers', await cust(creds.email)]]) {
+    if (!row) continue;
+    const { ok, upgrade } = await checkPassword(creds.password, creds.email, row.password_hash, env);
+    if (!ok) continue;
+    let hash = row.password_hash;
+    if (upgrade) {
+      hash = await hashPassword(creds.password);
+      // `table` is one of two literals above, never user input.
+      await env.DB.prepare(`UPDATE ${table} SET password_hash = ? WHERE LOWER(email) = ?`).bind(hash, creds.email).run();
+    }
+    return { aff, hash, legacy: true };
+  }
   return null;
+}
+
+async function authedAffiliate(request, env) {
+  return (await resolveAffiliate(request, env))?.aff || null;
 }
 
 // POST /api/affiliate/login
 export async function loginAffiliate(request, env) {
   if (!env.DB) return json({ error: 'Service unavailable.' }, 500);
-  const aff = await authedAffiliate(request, env);
-  if (!aff) return json({ error: 'Incorrect email or password.' }, 401);
-  return json({ ok: true, name: aff.name, code: aff.code });
+  const r = await resolveAffiliate(request, env);
+  if (!r) return json({ error: 'Incorrect email or password.' }, 401);
+  return json({ ok: true, name: r.aff.name, code: r.aff.code, token: await issueUserSession(env, r.aff.email, r.hash) });
 }
 
 // GET /api/affiliate/stats  (auth required)

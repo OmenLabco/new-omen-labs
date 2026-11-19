@@ -1,10 +1,10 @@
-// Affiliate API helpers. Credentials kept in sessionStorage; sent as Basic-style bearer.
+// Affiliate API helpers. Holds the same server-issued session token as the
+// customer login (never a password).
 const KEY = 'omenlabs_affiliate_auth';
 
 export const affiliateAuth = {
   get: () => sessionStorage.getItem(KEY) || localStorage.getItem(KEY) || '',
-  set: (email, password) => sessionStorage.setItem(KEY, btoa(`${email}:${password}`)),
-  setRaw: (token) => sessionStorage.setItem(KEY, token), // mirror a customer token (same email:password format)
+  setRaw: (token) => { if (token) sessionStorage.setItem(KEY, token); },
   clear: () => { sessionStorage.removeItem(KEY); localStorage.removeItem(KEY); },
 };
 

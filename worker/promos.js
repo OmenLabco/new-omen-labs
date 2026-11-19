@@ -56,7 +56,10 @@ export async function listPromos(request, env) {
 }
 
 export async function upsertPromo(request, env) {
-  if (!(await verifyAdminSession(env, bearer(request)))) return json({ error: 'Unauthorized' }, 401);
+  const role = await verifyAdminSession(env, bearer(request));
+  if (!role) return json({ error: 'Unauthorized' }, 401);
+  // A promo code is a discount on real money — owner account only.
+  if (role !== 'admin') return json({ error: 'Only the owner account can do this.' }, 403);
   if (!env.DB) return json({ error: 'Service unavailable.' }, 500);
   await ensureTable(env);
   let b; try { b = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
@@ -81,7 +84,10 @@ export async function upsertPromo(request, env) {
 }
 
 export async function deletePromo(request, env) {
-  if (!(await verifyAdminSession(env, bearer(request)))) return json({ error: 'Unauthorized' }, 401);
+  const role = await verifyAdminSession(env, bearer(request));
+  if (!role) return json({ error: 'Unauthorized' }, 401);
+  // A promo code is a discount on real money — owner account only.
+  if (role !== 'admin') return json({ error: 'Only the owner account can do this.' }, 403);
   if (!env.DB) return json({ error: 'Service unavailable.' }, 500);
   await ensureTable(env);
   let b; try { b = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }

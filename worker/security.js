@@ -42,7 +42,7 @@ const CSP = [
   "upgrade-insecure-requests",
 ].join('; ');
 
-const SECURITY_HEADERS = {
+export const SECURITY_HEADERS = {
   'Content-Security-Policy': CSP,
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
@@ -70,8 +70,11 @@ export function withSecurity(resp) {
 // Stateless, signed, expiring tokens so the browser never stores the raw admin
 // password. Signed with HMAC-SHA256 keyed by ADMIN_PASSWORD (server-only secret).
 async function hmacHex(secret, msg) {
+  // No fallback key: a missing secret must fail closed, never sign with a
+  // value that is sitting in the source code.
+  if (!secret) throw new Error('Server secret is not configured.');
   const key = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(secret || 'omen'),
+    'raw', new TextEncoder().encode(secret),
     { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
   );
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg));
@@ -98,6 +101,29 @@ export async function verifyAdminSession(env, token) {
   return payload.role || 'admin';
 }
 
+// ---- Generic signed sessions (customer / affiliate) ----
+// Token = "<kind>.<base64 json>.<hmac>". The kind is part of the signed message,
+// so an admin token can't be replayed as a customer token or vice versa.
+const b64json = (o) => btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+const unb64json = (s) => JSON.parse(decodeURIComponent(escape(atob(s))));
+
+export async function signSession(env, kind, data, ttlMs) {
+  const body = b64json({ ...data, k: kind, exp: Date.now() + ttlMs });
+  return `${kind}.${body}.${await hmacHex(env.ADMIN_PASSWORD, `${kind}.${body}`)}`;
+}
+
+export async function readSession(env, kind, token) {
+  if (!env.ADMIN_PASSWORD || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 3 || parts[0] !== kind) return null;
+  const expected = await hmacHex(env.ADMIN_PASSWORD, `${kind}.${parts[1]}`);
+  if (!(await safeEqual(parts[2], expected))) return null;
+  let p;
+  try { p = unb64json(parts[1]); } catch { return null; }
+  if (!p || p.k !== kind || typeof p.exp !== 'number' || p.exp <= Date.now()) return null;
+  return p;
+}
+
 // Secret for the Zelle SMS-forward webhook. Derived from ADMIN_PASSWORD so it's
 // a distinct value (safe to paste into the phone Shortcut) without a new env var.
 export async function zelleSecret(env) {
@@ -105,7 +131,9 @@ export async function zelleSecret(env) {
 }
 
 export function clientIp(request) {
-  return request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || 'unknown';
+  // Only Cloudflare's own header: X-Forwarded-For is client-controlled, and
+  // honoring it would let anyone dodge rate limits with a random value per request.
+  return request.headers.get('CF-Connecting-IP') || 'unknown';
 }
 
 // D1-backed fixed-window rate limiter. Returns { allowed, retryAfter }.
@@ -122,6 +150,11 @@ export async function rateLimit(env, key, max, windowMs) {
         'CREATE TABLE IF NOT EXISTS rate_limits (k TEXT PRIMARY KEY, count INTEGER NOT NULL, reset_at INTEGER NOT NULL)'
       ).run();
       rateSchemaReady = true;
+    }
+    // One row per IP per endpoint would otherwise accumulate forever; sweep
+    // long-expired rows on a small fraction of calls.
+    if (Math.random() < 0.02) {
+      await env.DB.prepare('DELETE FROM rate_limits WHERE reset_at < ?').bind(now - 24 * 60 * 60 * 1000).run();
     }
     const row = await env.DB.prepare('SELECT count, reset_at FROM rate_limits WHERE k = ?').bind(key).first();
     if (!row || Number(row.reset_at) < now) {

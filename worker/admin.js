@@ -58,7 +58,8 @@ export async function createOrder(request, env) {
       JSON.stringify(items), subtotal, shipping_cost, SHIP_LABEL[ship], 0, 0, 0, null, 0, 0, 0, 0, total, payment_method, null, status, created_date
     ).run();
   } catch (e) {
-    return json({ error: 'Failed to save order.', detail: String(e) }, 500);
+    console.error('createOrder: save failed', e); // internal detail stays in logs, not the response
+    return json({ error: 'Failed to save order.' }, 500);
   }
 
   if (paid) {
@@ -184,7 +185,10 @@ export async function listPayouts(request, env) {
 // POST /api/admin/payouts/update — mark a payout request paid (or revert).
 // On "paid" we stamp a receipt number + timestamp and email the affiliate a receipt.
 export async function updatePayout(request, env) {
-  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
+  const role = await authorized(request, env);
+  if (!role) return json({ error: 'Unauthorized' }, 401);
+  // Money-moving / destructive: owner account only, never staff.
+  if (role !== 'admin') return json({ error: 'Only the owner account can do this.' }, 403);
   if (!env.DB) return json({ error: 'Service unavailable.' }, 500);
   await ensureAffiliateSchema(env);
   let b; try { b = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
@@ -248,7 +252,10 @@ export async function listCustomers(request, env) {
 
 // POST /api/admin/customers/membership — activate/deactivate VIP for a customer
 export async function setMembership(request, env) {
-  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
+  const role = await authorized(request, env);
+  if (!role) return json({ error: 'Unauthorized' }, 401);
+  // Money-moving / destructive: owner account only, never staff.
+  if (role !== 'admin') return json({ error: 'Only the owner account can do this.' }, 403);
   if (!env.DB) return json({ error: 'Database not configured.' }, 500);
   let body;
   try { body = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
@@ -264,7 +271,10 @@ export async function setMembership(request, env) {
 // (grant a credit, correct an overpayment, etc.). `delta` may be negative. Every
 // adjustment is written to a points_adjustments ledger so there's a record.
 export async function adjustPoints(request, env) {
-  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
+  const role = await authorized(request, env);
+  if (!role) return json({ error: 'Unauthorized' }, 401);
+  // Money-moving / destructive: owner account only, never staff.
+  if (role !== 'admin') return json({ error: 'Only the owner account can do this.' }, 403);
   if (!env.DB) return json({ error: 'Database not configured.' }, 500);
   let body;
   try { body = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
@@ -297,7 +307,10 @@ export async function adjustPoints(request, env) {
 // is also sent to the owner's review inbox (not a CC — its own separate send).
 const OWNER_REVIEW_EMAIL = 'JacobBurlachenko@gmail.com';
 export async function sendCreditEmail(request, env) {
-  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
+  const role = await authorized(request, env);
+  if (!role) return json({ error: 'Unauthorized' }, 401);
+  // Money-moving / destructive: owner account only, never staff.
+  if (role !== 'admin') return json({ error: 'Only the owner account can do this.' }, 403);
   if (!env.DB) return json({ error: 'Database not configured.' }, 500);
   if (!env.RESEND_API_KEY) return json({ error: 'Email is not configured (RESEND_API_KEY missing).' }, 500);
   let body;
@@ -327,7 +340,10 @@ export async function sendCreditEmail(request, env) {
 
 // POST /api/admin/customers/delete — permanently remove a customer account
 export async function deleteCustomer(request, env) {
-  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
+  const role = await authorized(request, env);
+  if (!role) return json({ error: 'Unauthorized' }, 401);
+  // Money-moving / destructive: owner account only, never staff.
+  if (role !== 'admin') return json({ error: 'Only the owner account can do this.' }, 403);
   if (!env.DB) return json({ error: 'Database not configured.' }, 500);
   let body;
   try { body = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
@@ -341,7 +357,10 @@ export async function deleteCustomer(request, env) {
 
 // POST /api/admin/orders/delete — permanently remove an order (test/abandoned)
 export async function deleteOrder(request, env) {
-  if (!(await authorized(request, env))) return json({ error: 'Unauthorized' }, 401);
+  const role = await authorized(request, env);
+  if (!role) return json({ error: 'Unauthorized' }, 401);
+  // Money-moving / destructive: owner account only, never staff.
+  if (role !== 'admin') return json({ error: 'Only the owner account can do this.' }, 403);
   if (!env.DB) return json({ error: 'Database not configured.' }, 500);
   let body;
   try { body = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
@@ -436,7 +455,8 @@ function randHex(bytes) {
   return [...a].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 async function hash2fa(code, env) {
-  const data = new TextEncoder().encode(`2fa:${code}:${env.ADMIN_PASSWORD || 'omen'}`);
+  if (!env.ADMIN_PASSWORD) throw new Error('Server secret is not configured.');
+  const data = new TextEncoder().encode(`2fa:${code}:${env.ADMIN_PASSWORD}`);
   const buf = await crypto.subtle.digest('SHA-256', data);
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
