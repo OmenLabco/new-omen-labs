@@ -218,9 +218,9 @@ function previewLine(order, status) {
 export function orderSubject(orderNumber, status) {
   const n = `– #${orderNumber}`;
   switch (status) {
-    case 'shipped': return `Your order has shipped ${n}`;
-    case 'out_for_delivery': return `Your order is out for delivery ${n}`;
-    case 'delivered': return `Your order has been delivered ${n}`;
+    case 'shipped': return `📦 Your order has shipped ${n}`;
+    case 'out_for_delivery': return `🚚 Your order is out for delivery ${n}`;
+    case 'delivered': return `✅ Your order has been delivered ${n}`;
     default: return `Order confirmation ${n}`;
   }
 }
