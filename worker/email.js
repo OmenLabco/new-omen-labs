@@ -194,36 +194,34 @@ export function renderOwnerNotification(order) {
 // Image-based email — the receipt is a PNG (immune to Gmail dark-mode inversion).
 // Includes a hidden preheader + a real text summary so it isn't "image-only"
 // (image-only emails get spam-filtered).
-// The one-line preview a phone shows under the subject. It should read like a
-// message, not a receipt: who it's for, what happened, what's next.
+// The one-line preview a phone shows under the subject. Formal register, like a
+// large retailer: no emoji, no first-name familiarity — just the key fact and
+// the next step. The order number lives in the subject, so it isn't repeated.
 function previewLine(order, status) {
-  const items = Array.isArray(order.items) ? order.items : [];
-  const names = items.map((i) => `${i.product_name || i.name}${Number(i.quantity) > 1 ? ` ×${i.quantity}` : ''}`);
-  const what = names.length <= 2 ? names.join(' & ') : `${names.slice(0, 2).join(', ')} + ${names.length - 2} more`;
-  const first = String(order.customer_name || '').trim().split(/\s+/)[0];
-  const hi = first ? `, ${first}` : '';
   const total = `$${Number(order.total || 0).toFixed(2)}`;
   switch (status) {
     case 'shipped':
-      return `Your ${what} is on the way${order.tracking_number ? ` · Tracking ${order.tracking_number}` : ''}.`;
+      return order.tracking_number
+        ? `Your order is on its way via UPS. Tracking number: ${order.tracking_number}.`
+        : 'Your order is on its way via UPS. Tracking details are available in your account.';
     case 'out_for_delivery':
-      return `Your ${what} is out for delivery and should arrive today.`;
+      return 'Your package is out for delivery and is scheduled to arrive today.';
     case 'delivered':
-      return `Your ${what} was delivered. Thanks for ordering with Omen Labs${hi}.`;
+      return 'Your package has been delivered. For any questions, contact support@omenlabs.co.';
     default:
-      return `Thanks${hi}! We've got your order: ${what} · ${total}. We'll email tracking as soon as it ships.`;
+      return `Thank you for your order. Order total: ${total}. A shipping confirmation with tracking will follow once your order ships.`;
   }
 }
 
 // Subject per status. The sender already reads "Omen Labs", so the subject
-// leads with what happened.
+// states the event plainly, followed by the order number.
 export function orderSubject(orderNumber, status) {
-  const n = `#${orderNumber}`;
+  const n = `– #${orderNumber}`;
   switch (status) {
-    case 'shipped': return `Your order has shipped 📦 ${n}`;
-    case 'out_for_delivery': return `Out for delivery today 🚚 ${n}`;
-    case 'delivered': return `Delivered ✓ ${n}`;
-    default: return `Order confirmed ✓ ${n}`;
+    case 'shipped': return `Your order has shipped ${n}`;
+    case 'out_for_delivery': return `Your order is out for delivery ${n}`;
+    case 'delivered': return `Your order has been delivered ${n}`;
+    default: return `Order confirmation ${n}`;
   }
 }
 
